@@ -9,7 +9,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
     """
     Parametry wejściowe:
       - engine_type: 'jet' lub 'prop'
-      - v_stall_kmh: prędkość przeciążenia / podejścia [km/h] (np. 110 km/h)
+      - v_stall_kmh: prędkość przeciągnięcia / podejścia [km/h] (np. 110 km/h)
       - takeoff_run_m: wymagana droga rozbiegu [m] (np. 450 m)
       - climb_rate_ms: wymagana prędkość wznoszenia przy ziemi [m/s] (np. 6.0 m/s)
       - cruise_speed_kmh: prędkość przelotowa [km/h]
@@ -65,7 +65,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
     ws_stall_max = 0.5 * RHO0 * (v_stall_ms ** 2) * cz_max_lnd
     
     # Tworzymy wektor punktów W/S od 200 N/m^2 do 1.15 * ws_stall_max
-    ws_min = 200.0
+    ws_min = min(200.0, 0.25 * ws_stall_max)
     ws_max = max(ws_stall_max * 1.15, 800.0)
     steps = 40
     ws_values = [ws_min + i * (ws_max - ws_min) / steps for i in range(steps + 1)]
@@ -117,14 +117,14 @@ def calculate_matching_chart(params: dict, m0: float = None):
         cx_cr = cx0 + k_ind * (cz_cr ** 2)
         
         tw_cr_alt = cx_cr / cz_cr
-        engine_lapse = math.pow(sigma_cr, 0.85)
-        tw_cr_sl = tw_cr_alt / max(engine_lapse, 0.2)
+        engine_lapse = math.pow(sigma_cr, 0.80)
+        tw_cr_sl = tw_cr_alt / engine_lapse
         
         if engine_type == "jet":
             curve_cruise.append(round(tw_cr_sl, 4))
         else:
             power_lapse = math.pow(sigma_cr, 0.85)
-            pw_cr_sl = (tw_cr_alt * v_cr_ms) / (eta_p * max(power_lapse, 0.25))
+            pw_cr_sl = (tw_cr_alt * v_cr_ms) / (eta_p * power_lapse)
             curve_cruise.append(round(pw_cr_sl, 2))
 
     # Dobór punktu projektowego (Design Point):
@@ -137,7 +137,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
     q_cr = 0.5 * rho_cr * (v_cr_ms ** 2)
     cz_cr = ws_design / q_cr
     cx_cr = cx0 + k_ind * (cz_cr ** 2)
-    tw_cr_sl_design = (cx_cr / cz_cr) / max(math.pow(sigma_cr, 0.85), 0.2)
+    tw_cr_sl_design = (cx_cr / cz_cr) / math.pow(sigma_cr, 0.80)
     
     if engine_type == "jet":
         cz_climb = math.sqrt(cx0 / k_ind)
@@ -158,7 +158,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
         v_y = math.sqrt(2.0 * ws_design / (RHO0 * cz_climb))
         pw_climb_design = (wy_req + (v_y / ld_climb)) / eta_p
         
-        pw_cr_sl_design = ((cx_cr / cz_cr) * v_cr_ms) / (eta_p * max(math.pow(sigma_cr, 0.85), 0.25))
+        pw_cr_sl_design = ((cx_cr / cz_cr) * v_cr_ms) / (eta_p * math.pow(sigma_cr, 0.85))
         
         pw_required = max(pw_to_design, pw_climb_design, pw_cr_sl_design) * 1.08 # 8% margines projektowy
         pw_design = round(pw_required, 2)

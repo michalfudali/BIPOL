@@ -1,39 +1,12 @@
-"""
-Klasyfikacja statków powietrznych wg wymagań EASA (European Union Aviation Safety Agency)
-oraz polskiego prawa lotniczego (Dz. U. 2025 poz. 1137).
+"""Pomocnicze sprawdzenia wybranych warunków projektu, nie ocena certyfikacyjna.
 
-Podstawy przepisowe EASA:
-  1. EASA CS-23 Amendment 5 (ED Decision 2017/013/R):
-     - Jednolita kategoria 'Normal Category' dzielona na:
-       * Poziomy certyfikacji (Certification Levels CS 23.2005):
-         Level 1: 0 do 1 pasażera (max 1 pax)
-         Level 2: 2 do 6 pasażerów
-         Level 3: 7 do 9 pasażerów
-         Level 4: 10 do 19 pasażerów (dawniej Commuter, MTOM ≤ 8618 kg)
-       * Poziomy osiągów (Performance Levels):
-         Low Speed: Vno/Vmo ≤ 250 KCAS (lub Mmo ≤ 0.6)
-         High Speed: Vno/Vmo > 250 KCAS (lub Mmo > 0.6)
-       * Dopuszczenie do akrobacji:
-         Non-Aerobatic: standardowe manewry (przechylenie ≤ 60°), n = +3.8 / -1.52
-         Certified for Aerobatics: manewry akrobacyjne bez ograniczeń, n = +6.0 / -3.0
-  2. EASA CS-25 (Large Aeroplanes):
-     - Duże samoloty transportowe/komunikacyjne, MTOM > 5700 kg, załoga min. 2 pilotów, n = +2.5 / -1.0.
-  3. EASA CS-VLA (Very Light Aeroplanes):
-     - Bardzo lekkie samoloty, MTOM ≤ 750 kg, max 2 osoby (1 pilot + 1 pax), 1 silnik tłokowy/elektryczny, Vs0 ≤ 45 kt CAS.
-  4. EASA CS-LSA (Light Sport Aeroplanes / ASTM F2245):
-     - Lekkie samoloty sportowe, MTOM ≤ 600 kg (lądowy) / 650 kg (wodny), max 2 osoby, Vs0 ≤ 45 kt CAS, n = +4.0 / -2.0.
-  5. EASA CS-22 (Sailplanes and Powered Sailplanes):
-     - Szybowce i motoszybowce turystyczne (TMG), MTOM ≤ 850 kg (do 900 kg), max 2 osoby, Utility (n = +5.3 / -2.65).
-  6. Rozporządzenie (UE) 2018/1139 Załącznik I (Opt-Out dla ultralekkich ULM 600 kg wg art. 2 ust. 8):
-     - Samoloty ultralekkie pod nadzorem krajowym (w Polsce klasa UL podkategoria UL-A, LTF-UL n = +4.0 / -2.0).
-     - Mikroloty jednomiejscowe (UL-115, masa własna ≤ 115 kg, paliwo ≤ 20 l, Vmax ≤ 102 km/h, W_empty/S ≤ 10 kg/m²).
-  7. Rozporządzenia (UE) 2019/947 & (UE) 2019/945 oraz EASA CS-LUAS / CS-UAS / STANAG 4671:
-     - Bezzałogowe statki powietrzne UAS:
-       * Kategoria 'Specific' (średnie ryzyko, SORA SAIL I-VI, CS-LUAS, MTOM ≤ 600 kg, 0 osób na pokładzie).
-       * Kategoria 'Certified' (wysokie ryzyko, certyfikat typu TC, CS-UAS / STANAG 4671 USAR, MTOM > 600 kg, 0 osób na pokładzie).
-
-Podstawa prawa krajowego:
-  Obwieszczenie Ministra Infrastruktury z dnia 6 sierpnia 2025 r. (Dz. U. 2025 poz. 1137).
+CS 23.2005: do 19 miejsc pasażerskich i MTOM do 8618 kg dla wszystkich
+poziomów 1–4. Poziom osiągów wymaga VNO/VMO (KCAS) i MMO, nie Vcr (TAS).
+UE 2019/947 art. 3, 5, 6: kategorie operacji UAS zależą od ryzyka i warunków
+operacji. Próg 600 kg nie rozdziela kategorii Specific i Certified.
+Przyjęte obciążenia i uproszczona obwiednia są założeniami dydaktycznymi.
+Źródła: https://www.easa.europa.eu/en/downloads/22283/en
+https://www.easa.europa.eu/en/domains/drones-air-mobility/operating-drone
 """
 
 KT_TO_KMH = 1.852
@@ -71,7 +44,7 @@ SUBCATEGORIES = {
         "name": "EASA CS-23 Level 1 (Normal • 0–1 pasażer • Lekki / Treningowy)",
         "easa_spec": "CS-23 Amdt 5 (CS 23.2005 Level 1)",
         "mtom_min": None,
-        "mtom_max": 5700.0,
+        "mtom_max": 8618.0,
         "pax_min": 0,
         "pax_max": 1,
         "occupants_max": 2,
@@ -93,7 +66,7 @@ SUBCATEGORIES = {
         "name": "EASA CS-23 Level 2 (Normal • 2–6 pasażerów • Turystyczny / GA)",
         "easa_spec": "CS-23 Amdt 5 (CS 23.2005 Level 2)",
         "mtom_min": None,
-        "mtom_max": 5700.0,
+        "mtom_max": 8618.0,
         "pax_min": 2,
         "pax_max": 6,
         "occupants_max": 8,
@@ -159,7 +132,7 @@ SUBCATEGORIES = {
         "name": "EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)",
         "easa_spec": "CS-23 Amdt 5 (CS 23.2005 Certified for Aerobatics)",
         "mtom_min": None,
-        "mtom_max": 5700.0,
+        "mtom_max": 8618.0,
         "pax_min": 0,
         "pax_max": 2,
         "occupants_max": 3,
@@ -238,9 +211,9 @@ SUBCATEGORIES = {
         "polish_code": "A1",
         "class": "A",
         "class_name": "A. Samolot (EASA CS-25)",
-        "name": "EASA CS-25 (Duży komunikacyjny • MTOM > 5700 kg, n = +2.5 / -1.0)",
+        "name": "EASA CS-25 (Large Aeroplanes • podstawa certyfikacji)",
         "easa_spec": "EASA CS-25 (Large Aeroplanes)",
-        "mtom_min": 5700.0,
+        "mtom_min": None,
         "mtom_max": None,
         "pax_min": 10,
         "pax_max": None,
@@ -338,35 +311,13 @@ SUBCATEGORIES = {
     # -------------------------------------------------------------
     "easa_uas_specific": {
         "code": "UAS-Spec",
-        "easa_code": "UAS Specific / CS-LUAS",
-        "polish_code": "UML",
+        "easa_code": "UAS Specific",
+        "polish_code": "UM (odrębna klasyfikacja krajowa)",
         "class": "UM",
         "class_name": "UM. Bezzałogowy statek powietrzny (EASA UAS Specific)",
-        "name": "EASA UAS Specific (CS-LUAS • Lekki bezzałogowiec MTOM ≤ 600 kg, 0 osób)",
-        "easa_spec": "Rozporządzenie wykonawcze (UE) 2019/947 kategoria 'Specific' / CS-LUAS",
+        "name": "EASA UAS Specific (kategoria operacji wg ryzyka, bez progu 600 kg)",
+        "easa_spec": "UE 2019/947 art. 5 – kategoria operacji Specific",
         "mtom_min": None,
-        "mtom_max": 600.0,
-        "occupants_max": 0,
-        "pax_min": 0,
-        "pax_max": 0,
-        "crew_min": 0,
-        "crew_max": 0,
-        "unmanned": True,
-        "load_basis": "stanag4671",
-        "design_code": "EASA CS-LUAS / UE 2019/947 Specific",
-        "k_allowed": ["K1"],
-        "occupant_mass_kg": 0.0,
-        "aerobatic": False,
-    },
-    "easa_uas_certified": {
-        "code": "UAS-Cert",
-        "easa_code": "UAS Certified / CS-UAS",
-        "polish_code": "UMW",
-        "class": "UM",
-        "class_name": "UM. Bezzałogowy statek powietrzny (EASA UAS Certified)",
-        "name": "EASA UAS Certified (CS-UAS / STANAG 4671 • Ciężki UAV MTOM > 600 kg, 0 osób)",
-        "easa_spec": "Rozporządzenie wykonawcze (UE) 2019/947 kategoria 'Certified' / CS-UAS / STANAG 4671",
-        "mtom_min": 600.0,
         "mtom_max": None,
         "occupants_max": 0,
         "pax_min": 0,
@@ -375,7 +326,29 @@ SUBCATEGORIES = {
         "crew_max": 0,
         "unmanned": True,
         "load_basis": "stanag4671",
-        "design_code": "EASA CS-UAS / STANAG 4671 USAR",
+        "design_code": "Założenie obliczeniowe STANAG 4671; podstawa zdatności wymaga ustalenia",
+        "k_allowed": ["K1"],
+        "occupant_mass_kg": 0.0,
+        "aerobatic": False,
+    },
+    "easa_uas_certified": {
+        "code": "UAS-Cert",
+        "easa_code": "UAS Certified",
+        "polish_code": "UM (odrębna klasyfikacja krajowa)",
+        "class": "UM",
+        "class_name": "UM. Bezzałogowy statek powietrzny (EASA UAS Certified)",
+        "name": "EASA UAS Certified (kategoria operacji wg ryzyka, bez progu 600 kg)",
+        "easa_spec": "UE 2019/947 art. 6 – kategoria operacji Certified",
+        "mtom_min": None,
+        "mtom_max": None,
+        "occupants_max": 0,
+        "pax_min": 0,
+        "pax_max": 0,
+        "crew_min": 0,
+        "crew_max": 0,
+        "unmanned": True,
+        "load_basis": "stanag4671",
+        "design_code": "Założenie obliczeniowe STANAG 4671; podstawa zdatności wymaga ustalenia",
         "k_allowed": ["K1"],
         "occupant_mass_kg": 0.0,
         "aerobatic": False,
@@ -412,8 +385,8 @@ CATEGORY_ALIASES = {
 
 # Dozwolone klasy konstrukcyjne statku w danej podkategorii EASA
 AIRCRAFT_TYPE_ALLOWED = {
-    "cs23_level1": ["piston_ga"],
-    "cs23_level2": ["piston_ga", "turboprop_regional"],
+    "cs23_level1": ["piston_ga", "turboprop_regional", "jet_business"],
+    "cs23_level2": ["piston_ga", "turboprop_regional", "jet_business"],
     "cs23_level3": ["piston_ga", "turboprop_regional", "jet_business"],
     "cs23_commuter": ["turboprop_regional", "piston_ga", "jet_business"],
     "cs23_aerobatic": ["piston_ga", "turboprop_regional"],
@@ -489,7 +462,7 @@ def normalize_occupants(params: dict):
         n_crew, n_pax = 0, 0
         p["m_pax"] = 0.0
         m_cargo = float(p.get("m_cargo", 0.0) or 0.0)
-        if m_cargo <= 0.0:
+        if "m_cargo" not in p:
             p["m_cargo"] = 80.0
             notes.append("UAV bez ładunku – przyjęto domyślnie 80 kg wyposażenia zadaniowego (sensory, łącze C2).")
     else:
@@ -497,22 +470,8 @@ def normalize_occupants(params: dict):
         if n_crew < crew_min:
             notes.append(f"EASA {sub['easa_code']}: Wymagane min. {crew_min} pilot(ów) na pokładzie – skorygowano.")
             n_crew = crew_min
-        crew_max = sub.get("crew_max")
-        if crew_max is not None and n_crew > crew_max:
-            notes.append(f"EASA {sub['easa_code']}: Maksymalna liczba pilotów ograniczona do {crew_max}.")
-            n_crew = crew_max
-
-        occ_max = sub.get("occupants_max")
-        if occ_max is not None and n_crew + n_pax > occ_max:
-            new_pax = max(0, occ_max - n_crew)
-            notes.append(f"EASA {sub['easa_code']}: Całkowita liczba osób na pokładzie ograniczona do {occ_max} "
-                         f"(załoga {n_crew} + pasażerowie {new_pax}).")
-            n_pax = new_pax
-
-        pax_max = sub.get("pax_max")
-        if pax_max is not None and n_pax > pax_max:
-            notes.append(f"EASA {sub['easa_code']}: Liczba pasażerów ograniczona do poziomu {pax_max}.")
-            n_pax = pax_max
+        # Nie zmieniaj żądanej liczby pasażerów: naruszenie limitu ma być
+        # widoczne w wynikach, zamiast obliczania lżejszego, innego samolotu.
 
         # Masa pilota dla ultralekkich wg przypisów do prawa lotniczego min. 77 kg
         if sub["class"] == "UL":
@@ -596,8 +555,8 @@ def envelope_speed_family(category) -> str:
 def suggest_subcategory(m0: float, n_crew: int, n_pax: int, unmanned: bool, engine_type: str) -> str:
     """Rekomenduje optymalną kategorię EASA na podstawie obliczonej masy startowej i osób."""
     if unmanned:
-        return "easa_uas_certified" if m0 > 600.0 else "easa_uas_specific"
-    if m0 > 5700.0:
+        return "easa_uas_specific"  # tylko wariant roboczy; wymagana ocena operacji
+    if m0 > 8618.0 or n_pax > 19:
         return "cs25_transport"
     if n_pax >= 10:
         return "cs23_commuter"
@@ -740,22 +699,32 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
         vs0_lim_kmh = sub["vs0_max_kmh"]
         vs0_lim_kt = vs0_lim_kmh * KMH_TO_KT
         checks.append(_chk(
-            "Prędkość lądowania / przeciążenia VS0 (CAS)",
+            "Prędkość przeciągnięcia VS0 (CAS)",
             f"≤ {vs0_lim_kmh:.1f} km/h ({vs0_lim_kt:.0f} kt)",
             f"{vs0:.1f} km/h ({vs0 * KMH_TO_KT:.1f} kt)",
             vs0 <= vs0_lim_kmh + 0.1,
             f"{sub['easa_spec']} (wymóg VS0 ≤ 45 kt)"
         ))
 
-    # 5. Klasyfikacja osiągowa CS-23 Amdt 5: Low Speed vs High Speed (granica 250 kt CAS)
+    # Vcr jest TAS; nie wolno używać jej zamiast granicznych VMO/VNO (KCAS).
+    perf_lvl = "Nie określono – wymagane VMO/VNO (KCAS) i MMO"
     if cat_key.startswith("cs23_"):
-        perf_level = "High Speed" if v_cr_kt > 250.0 else "Low Speed"
+        if params.get("vmo_kcas") is not None and params.get("mmo") is not None:
+            high_speed = float(params["vmo_kcas"]) > 250 or float(params["mmo"]) > 0.6
+            perf_lvl = "High Speed" if high_speed else "Low Speed"
         checks.append(_chk(
-            "Poziom osiągów EASA CS 23.2005 (Performance Level)",
-            "Low Speed (≤250 kt) lub High Speed (>250 kt)",
-            f"{perf_level} (Vcr = {v_cr_kt:.0f} kt / {v_cr:.0f} km/h)",
-            True,
-            "EASA CS 23.2005(b)"
+            "Poziom osiągów CS 23.2005(c)",
+            "VMO/VNO ≤ 250 KCAS i MMO ≤ 0,6 dla Low Speed",
+            perf_lvl,
+            params.get("vmo_kcas") is not None and params.get("mmo") is not None,
+            "EASA CS 23.2005(c); Vcr (TAS) nie określa poziomu osiągów", "warning"
+        ))
+    if sub["unmanned"]:
+        checks.append(_chk(
+            "Kategoria operacji UAS wymaga odrębnej oceny ryzyka",
+            "Ocena operacji wg UE 2019/947 art. 5–6",
+            "Wybrano wariant roboczy; MTOM nie wyznacza kategorii operacji",
+            False, "UE 2019/947; kategorie Open / Specific / Certified", "warning"
         ))
 
     # 6. Napęd pojedynczy tłokowy dla CS-VLA i CS-LSA
@@ -817,10 +786,9 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
 
     errors = [c for c in checks if c["severity"] == "error"]
     warnings = [c for c in checks if c["severity"] == "warning"]
-    suggested = suggest_subcategory(m0, n_crew, n_pax, sub["unmanned"], engine_type)
+    suggested = cat_key if sub["unmanned"] else suggest_subcategory(m0, n_crew, n_pax, False, engine_type)
     n_pos, n_neg, n_ref = limit_load_factors(cat_key, m0)
 
-    perf_lvl = ("High Speed (>250 kt)" if v_cr_kt > 250.0 else "Low Speed (≤250 kt)") if cat_key.startswith("cs23_") else "Standard"
 
     return {
         "easa_basis": EASA_REF,
@@ -842,6 +810,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
         "load_factors": {"n_pos": n_pos, "n_neg": n_neg, "reference": n_ref},
         "checks": checks,
         "compliant": len(errors) == 0,
+        "assessment_scope": "Sprawdzono tylko wybrane warunki modelu dydaktycznego; wynik nie potwierdza zdatności ani certyfikacji.",
         "n_errors": len(errors),
         "n_warnings": len(warnings),
         "suggested_category": suggested,

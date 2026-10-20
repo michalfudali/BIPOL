@@ -70,7 +70,7 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         cz_wy = min(cz_max_clean * 0.92, cz_econ)
         v_wy_opt = math.sqrt((2.0 * ws) / (RHO0 * cz_wy))
 
-    wy_max = max(0.2, eval_wy_at_alt(v_wy_opt, 0.0))
+    wy_max = eval_wy_at_alt(v_wy_opt, 0.0)
     v_wy_max = v_wy_opt
 
     # 4. Dokładna prędkość maksymalna na poziomie morza V_max_SL (zrównanie ciągu i oporu: wy(V_max) = 0, wzory 59-61)
@@ -95,7 +95,7 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
 
     climb_curve = []
     for v in v_samples:
-        wy_val = max(0.0, eval_wy_at_alt(v, 0.0))
+        wy_val = eval_wy_at_alt(v, 0.0)
         if wy_val > wy_max:
             wy_max = wy_val
             v_wy_max = v
@@ -122,23 +122,25 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
             q_wy_h = (ts_h + math.sqrt((ts_h ** 2) + 12.0 * cx0 * k_clean * (ws ** 2))) / (6.0 * cx0)
             v_opt_h = max(vs_h * 1.05, math.sqrt((2.0 * q_wy_h) / rho_h))
         else:
-            v_opt_h = v_wy_max / math.sqrt(max(0.1, sigma))
+            v_opt_h = v_wy_max / math.sqrt(sigma)
         return eval_wy_at_alt(v_opt_h, h_m)
 
-    h_low = 0.0
-    h_high = 15000.0 if engine_type == "jet" else 10500.0
-    if max_wy_at_h(h_high) >= 0.5:
-        h_pract = h_high
-    elif max_wy_at_h(0.0) <= 0.5:
-        h_pract = 500.0
-    else:
+    def ceiling_for(required_climb):
+        h_low, h_high = 0.0, 20000.0
+        if max_wy_at_h(0.0) <= required_climb:
+            return 0.0
+        if max_wy_at_h(h_high) >= required_climb:
+            return h_high
         for _ in range(30):
             h_mid = 0.5 * (h_low + h_high)
-            if max_wy_at_h(h_mid) > 0.5:
+            if max_wy_at_h(h_mid) > required_climb:
                 h_low = h_mid
             else:
                 h_high = h_mid
-        h_pract = round(0.5 * (h_low + h_high), -1)
+        return round(0.5 * (h_low + h_high), -1)
+
+    h_pract = ceiling_for(0.5)
+    h_absolute = ceiling_for(0.0)
     
     # 8. Długość startu i lądowania nad przeszkodę H = 15 m (50 ft) wg Fiszdon / Filcek / Raymer
     b_span = float(geom["wing"]["b"])
@@ -253,7 +255,9 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         },
         "ceiling": {
             "service_ceiling_m": int(h_pract),
-            "service_ceiling_ft": int(h_pract * 3.28084)
+            "service_ceiling_ft": int(h_pract * 3.28084),
+            "absolute_ceiling_m": int(h_absolute),
+            "model_upper_limit_m": 20000
         },
         "takeoff": {
             "ground_roll_m": round(s_g_to, 1),

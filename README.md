@@ -4,6 +4,30 @@ Kompletne środowisko projektowo-obliczeniowe wspierające przedmioty **BIPOL I*
 
 ---
 
+## Uruchomienie i sprawdzenie zmian
+
+Python 3.12 lub nowszy:
+
+```sh
+python -m venv work/venv
+work/venv/bin/pip install -r requirements-dev.txt
+work/venv/bin/python -m flask --app app run --port 5000
+```
+
+Testy regresji: `work/venv/bin/python -m pytest tests -q`.
+Raporty są dokumentami HTML, które można wydrukować do PDF w przeglądarce.
+
+Model służy do obliczeń dydaktycznych. Sprawdza wybrane warunki i nie stanowi
+potwierdzenia certyfikacji. Wszystkie poziomy CS-23 1–4 obejmuje limit 8618 kg
+i maksymalnie 19 miejsc pasażerskich. Poziomu osiągów nie określa się z Vcr TAS;
+wymagane są VMO/VNO KCAS oraz MMO. Kategorie operacji UAS wynikają z oceny
+ryzyka, a nie z podziału na masy poniżej i powyżej 600 kg.
+
+Źródła: [EASA CS 23.2005](https://www.easa.europa.eu/en/downloads/22283/en),
+[EASA: kategorie operacji UAS](https://www.easa.europa.eu/en/domains/drones-air-mobility/operating-drone).
+
+---
+
 ## 🌐 Adresy uruchomionej aplikacji
 
 - **Główny kokpit projektowy:** 👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**

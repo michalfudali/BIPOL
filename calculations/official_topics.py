@@ -4,6 +4,7 @@ Zawiera wszystkie 110 tematów z listy wydziałowej BIPOL1_samoloty.pdf
 wraz z przypisanymi kategoriami, sugerowanymi parametrami taktyczno-technicznymi.
 """
 import re
+from pathlib import Path
 
 OFFICIAL_CATEGORIES = {
     "motoszybowce": "Motoszybowce (rozpiętość 13.5m, 15m, >20m)",
@@ -25,7 +26,7 @@ OFFICIAL_CATEGORIES = {
 def build_official_topics():
     topics = []
     try:
-        with open("bipol_topics_list.txt", "r", encoding="utf-8") as f:
+        with (Path(__file__).resolve().parent.parent / "bipol_topics_list.txt").open(encoding="utf-8") as f:
             content = f.read()
         items = re.findall(r'(\d+)\s*\n([^\n\d][^\n]+)', content)
         for num_str, title in items:

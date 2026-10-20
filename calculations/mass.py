@@ -75,13 +75,12 @@ def calculate_mass_sizing(params: dict):
     if unmanned:
         n_crew = 0
         n_pax = 0
-        if m_cargo <= 0.0:
+        if "m_cargo" not in params:
             m_cargo = 80.0
     m_payload = n_pax * (m_pax + m_bag) + m_cargo
     m_crew = n_crew * m_crew_person
     if m_payload + m_crew <= 0.0:
-        # Zabezpieczenie iteracji MTOW przed zerową masą użyteczną
-        m_payload = 25.0
+        raise ValueError("Do wyznaczenia MTOW podaj dodatnią masę załogi lub ładunku.")
     
     # 2. Wyznaczenie ułamka zużycia paliwa (Fuel Fractions)
     # Etap 1: Rozruch i kołowanie (Warm-up & Taxi)
@@ -131,7 +130,9 @@ def calculate_mass_sizing(params: dict):
     
     # Względna masa zużytego paliwa i całkowita z rezerwą nienaruszalną (5% rezerwa technologiczna)
     f_trapped = 1.05
-    fuel_fraction = min(0.55, f_trapped * (1.0 - m_ff))
+    fuel_fraction = f_trapped * (1.0 - m_ff)
+    if fuel_fraction >= 0.62:
+        raise ValueError("Brak wykonalnego bilansu masy dla tej misji: wymagany udział paliwa jest zbyt duży.")
     
     # 3. Parametry korelacji statystycznej dla masy pustej: m_empty / m_0 = A * m_0^C
     # wg Roskama / Raymera / ZSiS MEiL PW dla różnych kategorii
@@ -162,33 +163,29 @@ def calculate_mass_sizing(params: dict):
         struct_mod *= 1.012  # Wózki szynowe i mechanizm klap Fowlera / dwuszczelinowych
     
     # 4. Pętla iteracyjna dla m_0 (MTOW)
-    m0 = coeff["guess"]
-    max_iter = 100
-    tol = 0.05
+    def empty_share(mass):
+        return min(max(A_coeff * max(50.0, mass) ** C_coeff * struct_mod, 0.38), 0.74)
+
+    useful_mass = m_payload + m_crew
+    low, high = 0.0, max(coeff["guess"], useful_mass * 2)
+    while high * (1 - fuel_fraction - empty_share(high)) < useful_mass:
+        high *= 2
+        if high > 1e9:
+            raise ValueError("Nie uzyskano wykonalnego bilansu masy dla zadanej misji.")
     history = []
-    
-    for i in range(max_iter):
-        empty_fraction = A_coeff * math.pow(max(50.0, m0), C_coeff) * struct_mod
-        # Zabezpieczenie przed nierealistycznymi ułamkami
-        empty_fraction = min(max(empty_fraction, 0.38), 0.74)
-        
-        denom = 1.0 - fuel_fraction - empty_fraction
-        if denom <= 0.08:
-            denom = 0.08
-            
-        m0_new = (m_payload + m_crew) / denom
-        diff = abs(m0_new - m0)
-        history.append({
-            "iter": i + 1,
-            "m0": round(m0_new, 1),
-            "empty_fraction": round(empty_fraction, 4),
-            "diff": round(diff, 2)
-        })
-        
-        m0 = 0.5 * (m0 + m0_new) # Tłumienie relaksacyjne
-        if diff < tol:
+    for i in range(100):
+        m0 = (low + high) / 2
+        empty_fraction = empty_share(m0)
+        residual = m0 * (1 - fuel_fraction - empty_fraction) - useful_mass
+        history.append({"iter": i + 1, "m0": round(m0, 1),
+                        "empty_fraction": round(empty_fraction, 4), "diff": round(abs(residual), 2)})
+        if abs(residual) < 0.001:
             break
-            
+        if residual > 0:
+            high = m0
+        else:
+            low = m0
+
     m_empty = empty_fraction * m0
     m_fuel = fuel_fraction * m0
     

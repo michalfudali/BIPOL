@@ -55,8 +55,8 @@ def calculate_vn_envelope(m0: float, geom: dict, aero: dict, perf: dict, params:
     v_g_ms = vs_clean_ms * math.sqrt(abs(n_min) * (cz_max / abs(cz_min)))
     
     # Obliczeniowa prędkość przelotowa VC wg CS-23.335(a)
-    # Obciążenie powierzchni w lb/ft^2: 1 N/m^2 = 0.0208854 lb/ft^2
-    ws_psf = ws * 0.0208854
+    # 1 lbf/ft² = 47.88026 N/m²; używamy siły ciężkości, nie masy.
+    ws_psf = ws / 47.88026
     vc_Factor_kts = 36.0 if category in ("aerobatic", "acrobatic") else 33.0
     v_c_min_ms = (vc_Factor_kts * math.sqrt(max(1.0, ws_psf))) * 0.514444
     v_h_ms = float(perf["speeds"].get("v_max_sl_kmh", v_cr_ms * 3.6 * 1.12)) / 3.6

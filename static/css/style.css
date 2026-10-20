@@ -78,6 +78,23 @@ html, body {
   color: #cbd5e1;
 }
 
+.navbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  max-width: 1680px;
+  margin: auto;
+}
+
+.navbar-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.navbar-actions .btn { min-height: 40px; }
+.calculation-status { margin-top: 0.65rem; font-size: 0.82rem; color: #334155; }
+.calculation-status.is-error, .wizard-validation-status { color: #b91c1c; }
+.wizard-validation-status:not(:empty) { padding: 0.65rem 1rem; background: #fef2f2; }
+[aria-disabled="true"] { pointer-events: none; opacity: 0.55; }
+:focus-visible { outline: 3px solid #0284c7; outline-offset: 3px; }
+
 /* Layout */
 .app-container {
   max-width: 1680px;
@@ -2194,4 +2211,46 @@ body.show-inline-hints .param-didactic-hint {
   .page-break {
     page-break-after: always;
   }
+}
+
+/* Małe ekrany: nagłówek nie zasłania formularza, treści zachowują czytelność. */
+@media (max-width: 900px) {
+  .bipol-navbar { position: static; }
+  .navbar-inner { flex-direction: column; align-items: stretch; }
+  .navbar-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .navbar-actions .btn { padding: 0.5rem; width: 100%; }
+  .bipol-navbar .brand-subtitle { line-height: 1.5; }
+  .portal-mode-toggle { flex-wrap: wrap; }
+  .portal-mode-btn { flex: 1 1 140px; min-height: 44px; }
+  .kpi-label > span:first-child { white-space: normal; overflow: visible; }
+  .module-header { flex-wrap: wrap; }
+  .mod-pill { white-space: normal; }
+}
+@media (max-width: 560px) {
+  .app-container { padding: 0.75rem; }
+  .bipol-navbar { padding: 0.75rem; }
+  .b-card-body { padding: 0.75rem; }
+  .b-card-header { padding: 0.75rem; }
+  .project-bar-container { padding: 0.75rem; }
+  .project-bar-left, .project-bar-right { width: 100%; min-width: 0; }
+  .project-switcher-select { min-width: 0; width: 100%; }
+  .sidebar-mode-bar { flex-wrap: wrap; gap: 0.5rem; }
+  .kpi-card { padding: 0.65rem; }
+  .kpi-value { font-size: 1.2rem; }
+  .kpi-label { min-height: 2.2rem; align-items: start; }
+  .bipol-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .bipol-tab { flex-shrink: 0; min-height: 44px; }
+  .table-responsive { max-width: 100%; }
+  .wizard-backdrop, .project-modal-backdrop { padding: 0.5rem; }
+  .wizard-modal, .project-modal, .session-starter-modal { max-height: 96dvh; }
+  .wizard-body { padding: 0.75rem; min-height: 0; }
+  .wizard-header { padding: 0.75rem; }
+  .wizard-header h3 { font-size: 1rem; }
+  .wizard-footer { padding: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+  .wizard-stepper { padding: 0.5rem; }
+  .wizard-step-tab { min-width: 0; }
+  .didactic-popover { max-width: calc(100vw - 24px); max-height: 80dvh; overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

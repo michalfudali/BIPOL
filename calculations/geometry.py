@@ -32,7 +32,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     
     # 1. Geometria skrzydła
     weight_n = m0 * G0
-    S = max(1.0, weight_n / max(ws, 10.0))
+    S = weight_n / ws
     eta = max(0.1, min(1.0, float(params.get("taper_ratio", 0.55))))
     AR = max(2.0, min(35.0, float(params.get("aspect_ratio", 8.0))))
 
@@ -44,7 +44,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
 
     if req_span_val > 0.5:
         b = req_span_val
-        AR = max(2.0, (b ** 2) / S)
+        AR = (b ** 2) / S
     else:
         b = max(1.0, math.sqrt(S * AR))
 

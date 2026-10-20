@@ -1,7 +1,7 @@
 """
 Główny moduł integrujący obliczenia wstępnego projektowania samolotu BIPOL I
 """
-from calculations.atmosphere import isa_atmosphere
+from calculations.atmosphere import G0
 from calculations.mass import calculate_mass_sizing
 from calculations.sizing import calculate_matching_chart
 from calculations.geometry import calculate_geometry
@@ -12,15 +12,14 @@ from calculations.balance import calculate_balance_and_stability
 from calculations.bipol_projects import calculate_all_bipol_projects
 from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
+from calculations.validation import validate_parameters
 
 def run_bipol_project(params: dict):
     """
     Wykonuje pełny ciąg obliczeniowy projektu BIPOL I (etapy P1 - P6).
     """
     # Normalizacja domeny: napęd odrzutowy nie występuje w konfiguracji ciągnącej w nosie kadłuba (GA tractor)
-    params = dict(params)
-    if params.get("aircraft_type") in ("jet_business", "jet_transport") and "engine_type" not in params:
-        params["engine_type"] = "jet"
+    params = validate_parameters(params)
     if params.get("engine_type") == "jet" and params.get("engine_location") == "nose":
         params["engine_location"] = "wing" if params.get("aircraft_type") == "jet_transport" else "rear"
 
@@ -32,13 +31,7 @@ def run_bipol_project(params: dict):
     mass_res = calculate_mass_sizing(params)
     m0 = mass_res["m0"]
 
-    # Automatyczny dobór podkategorii EASA UAS (Certified > 600 kg / Specific ≤ 600 kg), gdy kategoria została dobrana automatycznie
-    if params.get("_um_auto") and mass_res.get("unmanned"):
-        auto_cat = "easa_uas_certified" if m0 > 600.0 else "easa_uas_specific"
-        if auto_cat != params.get("category"):
-            params["category"] = auto_cat
-            law_corrections.append(f"Na podstawie obliczonego MTOM = {m0:.0f} kg zaklasyfikowano statek bezzałogowy do kategorii EASA "
-                                   f"{'UAS Certified (CS-UAS / STANAG 4671 • MTOM > 600 kg)' if auto_cat == 'easa_uas_certified' else 'UAS Specific (CS-LUAS • MTOM ≤ 600 kg)'}.")
+    # Kategoria operacji UAS zależy od ryzyka operacji, a nie od progu masy 600 kg.
     
     # Etap P2: Dobór obciążenia powierzchni skrzydła i ciągu/mocy (Matching Chart)
     sizing_res = calculate_matching_chart(params, m0=m0)
@@ -46,6 +39,25 @@ def run_bipol_project(params: dict):
     
     # Etap P3: Wymiarowanie zespołów (skrzydło, kadłub, usterzenia, Schrenk)
     geom_res = calculate_geometry(m0, ws, params)
+
+    # Narzucona rozpiętość zmienia wydłużenie. Uzgodnij bilans masowy i napęd
+    # z tą samą geometrią, z której następnie korzystają aerodynamika i osiągi.
+    if params.get("wingspan_m") or params.get("span_limit"):
+        for _ in range(80):
+            span = params.get("wingspan_m") or params.get("span_limit")
+            actual_ar = float(span) ** 2 * ws / (m0 * G0)
+            if not 2 <= actual_ar <= 35:
+                raise ValueError("Narzucona rozpiętość daje wydłużenie poza zakresem modelu 2–35. Zmień rozpiętość lub wymaganie VS0.")
+            if abs(actual_ar - params["aspect_ratio"]) < 0.001:
+                break
+            params["aspect_ratio"] = actual_ar
+            mass_res = calculate_mass_sizing(params)
+            m0 = mass_res["m0"]
+            sizing_res = calculate_matching_chart(params, m0=m0)
+            ws = sizing_res["design_point"]["ws"]
+            geom_res = calculate_geometry(m0, ws, params)
+        else:
+            raise ValueError("Nie uzyskano zgodności masy i narzuconej rozpiętości.")
     
     # Etap P4: Charakterystyki aerodynamiczne (biegunowe, doskonałość)
     aero_res = calculate_aerodynamics(geom_res, params)
@@ -61,11 +73,11 @@ def run_bipol_project(params: dict):
     
     # Ocena zgodności z wymaganiami taktyczno-technicznymi
     checks = []
-    # 1. Zgodność z prędkością przeciążenia
+    # 1. Zgodność z prędkością przeciągnięcia
     req_v_stall = float(params.get("v_stall_kmh", 100.0))
     act_v_stall = perf_res["speeds"]["vs_lnd_kmh"]
     checks.append({
-        "parameter": "Prędkość przeciążenia z klapami Vs0",
+        "parameter": "Prędkość przeciągnięcia z klapami Vs0",
         "required": f"≤ {req_v_stall} km/h",
         "actual": f"{act_v_stall} km/h",
         "passed": act_v_stall <= req_v_stall + 1.0,
@@ -117,6 +129,7 @@ def run_bipol_project(params: dict):
             "required": c["limit"],
             "actual": c["value"],
             "passed": c["ok"],
+            "severity": c["severity"],
             "note": c["source"] + (" (zalecenie)" if c["severity"] == "warning" else "")
         })
 

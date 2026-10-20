@@ -142,7 +142,7 @@ function drawMatchingChart(canvasId, sizing) {
     { label: 'Rozbieg (Sto)', color: '#dc2626' },
     { label: 'Wznoszenie (wy)', color: '#2563eb' },
     { label: 'Przelot (Vcr)', color: '#059669' },
-    { label: 'Granica przeciążenia', color: '#9333ea' }
+    { label: 'Granica przeciągnięcia', color: '#9333ea' }
   ];
   let legX = pad.left + 10;
   leg.forEach((item) => {

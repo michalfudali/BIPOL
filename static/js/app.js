@@ -11,6 +11,7 @@ let currentResults = null;
 let presetsData = {};
 let topicsData = [];
 let categoriesData = {};
+let formBaseParams = {};
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
@@ -124,10 +125,10 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   if (sfcEl) {
     const curVal = parseFloat(sfcEl.value);
     if (eng === 'jet') {
-      if (labelSfc) labelSfc.innerHTML = 'Zużycie TSFC c_j [1/h (kg/daN&bull;h)]';
+      if (labelSfc) labelSfc.innerHTML = 'Zużycie TSFC c_j [1/h]';
       sfcEl.min = '0.25';
       sfcEl.max = '1.80';
-      sfcEl.step = '0.02';
+      sfcEl.step = 'any';
       if (triggerAutoSfc || isNaN(curVal) || curVal > 4.0) {
         sfcEl.value = (acType === 'jet_transport') ? '0.58' : '0.62';
       }
@@ -135,7 +136,7 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
       if (labelSfc) labelSfc.innerHTML = 'Zużycie SFC c_p [g/(kW&bull;h)]';
       sfcEl.min = '140';
       sfcEl.max = '500';
-      sfcEl.step = '5';
+      sfcEl.step = 'any';
       if (triggerAutoSfc || isNaN(curVal) || curVal < 50.0) {
         if (!triggerAutoSfc && curVal >= 0.15 && curVal <= 1.5) {
           sfcEl.value = String(Math.round(curVal * 1000));
@@ -147,19 +148,32 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   }
 }
 
-function syncAircraftClassAndEASAUI(isWizard = false) {
+function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
   const pfx = isWizard ? 'wiz_' : '';
   const acEl = document.getElementById(pfx + 'aircraft_type');
   const catEl = document.getElementById(pfx + 'category');
   const crewEl = document.getElementById(pfx + 'n_crew');
   const paxEl = document.getElementById(pfx + 'n_pax');
   const mpaxEl = document.getElementById(pfx + 'm_pax');
-  const cargoEl = document.getElementById(pfx + 'm_cargo');
 
+
+  const categoryIsUas = () => catEl?.value.startsWith('easa_uas_');
+  if (source === 'aircraft' && acEl?.value !== 'uav' && categoryIsUas()) {
+    catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
+  }
+  if (source === 'category' && !categoryIsUas() && acEl?.value === 'uav') {
+    acEl.value = catEl.value === 'cs25_transport' ? 'jet_transport' : 'piston_ga';
+    const engEl = document.getElementById(pfx + 'engine_type');
+    const locEl = document.getElementById(pfx + 'engine_location');
+    if (engEl) engEl.value = acEl.value === 'jet_transport' ? 'jet' : 'prop';
+    if (locEl) locEl.value = acEl.value === 'jet_transport' ? 'wing' : 'nose';
+    if (isWizard) syncWizardPropulsionUI(true);
+    else syncFormPropulsionUI(true);
+  }
   const ac = acEl ? acEl.value : 'piston_ga';
   const cat = catEl ? catEl.value : 'cs23_level2';
-
-  const isUas = (ac === 'uav' || cat === 'easa_uas_specific' || cat === 'easa_uas_certified' || cat === 'uav' || cat === 'um_light' || cat === 'um_heavy');
+  const isUas = ac === 'uav' || categoryIsUas();
+  if (crewEl) crewEl.min = isUas ? '0' : (cat === 'cs25_transport' ? '2' : '1');
 
   // 1. Spójność dropdownów klasy i przepisów
   if (isUas) {
@@ -182,8 +196,8 @@ function syncAircraftClassAndEASAUI(isWizard = false) {
     const rowOcc1 = document.getElementById('wiz_row_occupants_1');
     const groupMpax = document.getElementById('wiz_group_m_pax');
     const labelCargo = document.getElementById('label_wiz_m_cargo');
-    if (rowOcc1) rowOcc1.style.display = isUas ? 'none' : 'flex';
-    if (groupMpax) groupMpax.style.display = isUas ? 'none' : 'block';
+    if (rowOcc1) rowOcc1.style.display = isUas ? 'none' : '';
+    if (groupMpax) groupMpax.style.display = isUas ? 'none' : '';
     if (labelCargo) {
       labelCargo.textContent = isUas
         ? 'Masa wyposażenia zadaniowego / sensorów UAV [kg]:'
@@ -193,12 +207,13 @@ function syncAircraftClassAndEASAUI(isWizard = false) {
     const groupPax = document.getElementById('group_n_pax');
     const rowCrew = document.getElementById('row_main_crew');
     const labelCargoText = document.getElementById('label_m_cargo_text');
-    if (groupPax) groupPax.style.display = isUas ? 'none' : 'block';
-    if (rowCrew) rowCrew.style.display = isUas ? 'none' : 'flex';
+    if (groupPax) groupPax.style.display = isUas ? 'none' : '';
+    if (rowCrew) rowCrew.style.display = isUas ? 'none' : '';
     if (labelCargoText) {
-      labelCargoText.innerHTML = isUas
-        ? 'Wyposażenie zadaniowe / sensory UAV [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span>'
-        : 'Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span>';
+      labelCargoText.firstChild.textContent = isUas
+        ? 'Wyposażenie zadaniowe / sensory UAV [kg] '
+        : 'Ładunek cargo [kg] ';
+
     }
   }
 
@@ -207,9 +222,7 @@ function syncAircraftClassAndEASAUI(isWizard = false) {
     if (crewEl) crewEl.value = '0';
     if (paxEl) paxEl.value = '0';
     if (mpaxEl) mpaxEl.value = '0';
-    if (cargoEl && (!parseFloat(cargoEl.value) || parseFloat(cargoEl.value) <= 0)) {
-      cargoEl.value = '80';
-    }
+
   } else {
     if (crewEl && (parseFloat(crewEl.value) === 0 || isNaN(parseFloat(crewEl.value)))) {
       crewEl.value = (cat === 'cs25_transport') ? '2' : '1';
@@ -218,25 +231,19 @@ function syncAircraftClassAndEASAUI(isWizard = false) {
       mpaxEl.value = '100';
     }
     if (paxEl) {
-      const curPax = parseInt(paxEl.value, 10) || 0;
       if (cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'easa_optout_ul') {
         paxEl.max = '1';
-        if (curPax > 1) paxEl.value = '1';
       } else if (cat === 'easa_optout_ul115') {
         paxEl.max = '0';
-        paxEl.value = '0';
+
       } else if (cat === 'cs23_level1') {
         paxEl.max = '1';
-        if (curPax > 1) paxEl.value = '1';
       } else if (cat === 'cs23_level2') {
         paxEl.max = '6';
-        if (curPax > 6) paxEl.value = '6';
       } else if (cat === 'cs23_level3') {
         paxEl.max = '9';
-        if (curPax > 9) paxEl.value = '9';
       } else if (cat === 'cs23_commuter') {
         paxEl.max = '19';
-        if (curPax > 19) paxEl.value = '19';
       } else {
         paxEl.max = '300';
       }
@@ -276,7 +283,7 @@ function initSidebarModularity() {
           if (locEl) locEl.value = (ac === 'turboprop_regional') ? 'wing' : (ac === 'uav' ? 'rear' : 'nose');
         }
       }
-      syncAircraftClassAndEASAUI(false);
+      syncAircraftClassAndEASAUI(false, 'aircraft');
       syncFormPropulsionUI(true);
       updateAccordionPills();
       performCalculation();
@@ -285,7 +292,7 @@ function initSidebarModularity() {
 
   if (catEl) {
     catEl.addEventListener('change', () => {
-      syncAircraftClassAndEASAUI(false);
+      syncAircraftClassAndEASAUI(false, 'category');
       updateAccordionPills();
       performCalculation();
     });
@@ -737,6 +744,15 @@ function loadTopic(topicId) {
   if (!topic) return;
 
   const def = topic.defaults;
+  formBaseParams = {};
+  const passengers = Number(def.n_pax || 0);
+  setFieldValue('category', topic.category === 'motoszybowce' ? 'cs22_motoglider'
+    : topic.category === 'ultralight' ? 'easa_optout_ul'
+    : def.aircraft_type === 'jet_transport' || passengers > 19 ? 'cs25_transport'
+    : passengers > 9 ? 'cs23_commuter' : passengers > 6 ? 'cs23_level3'
+    : passengers > 1 ? 'cs23_level2' : 'cs23_level1');
+  setFieldValue('n_crew', passengers > 19 ? 2 : 1);
+  setFieldValue('m_pax', 100);
   const pnd = document.getElementById('projectNameDisplay');
   if (pnd) pnd.textContent = topic.title;
 
@@ -781,6 +797,7 @@ function loadTopic(topicId) {
     setFieldValue('takeoff_run_m', 280);
   }
 
+  syncAircraftClassAndEASAUI(false);
   syncFormPropulsionUI(true);
   renderWingConfigDidacticCard();
   renderFlapDidacticCard(true);
@@ -810,6 +827,7 @@ function populatePresetsSelect() {
 function loadPreset(presetKey) {
   const p = presetsData[presetKey];
   if (!p) return;
+  formBaseParams = { ...p, m_bag: 0 };
 
   const pnd = document.getElementById('projectNameDisplay');
   if (pnd) pnd.textContent = p.name;
@@ -860,7 +878,7 @@ function loadPreset(presetKey) {
 }
 
 function collectFormData() {
-  const data = {};
+  const data = { ...formBaseParams };
   const inputs = document.querySelectorAll('#designForm input, #designForm select');
   inputs.forEach(input => {
     if (!input.id) return;
@@ -876,7 +894,10 @@ function collectFormData() {
   if (typeof DIDACTIC_DATABASE !== 'undefined') {
     const flap = DIDACTIC_DATABASE.flaps[data.flap_type] || DIDACTIC_DATABASE.flaps.single_slotted;
     data['delta_cx0_flaps_lnd'] = flap.delta_cx0_lnd;
-    data['cz_max_to'] = +(data.cz_max_clean + flap.delta_cz_max * 0.6).toFixed(2);
+    const sameLift = data.cz_max_clean === formBaseParams.cz_max_clean && data.cz_max_lnd === formBaseParams.cz_max_lnd;
+    data.cz_max_to = sameLift && formBaseParams.cz_max_to != null
+      ? formBaseParams.cz_max_to
+      : +(data.cz_max_clean + 0.6 * (data.cz_max_lnd - data.cz_max_clean)).toFixed(2);
   }
 
   const activeProj = typeof getActiveProject === 'function' ? getActiveProject() : null;
@@ -885,38 +906,68 @@ function collectFormData() {
   return data;
 }
 
-async function performCalculation() {
-  const formData = collectFormData();
-  const btn = document.getElementById('calcBtn');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Obliczanie P1–P6 i Rysunku CAD...';
+let calculationSequence = 0;
+let calculationController = null;
+
+function showCalculationStatus(message, error = false) {
+  const status = document.getElementById('calculationStatus');
+  if (status) {
+    status.textContent = message;
+    status.classList.toggle('is-error', error);
+    status.setAttribute('role', error ? 'alert' : 'status');
   }
+}
 
+function validateNumericFields(root) {
+  for (const input of root.querySelectorAll('input[type="number"]')) {
+    if (input.value.trim() === '' || !Number.isFinite(Number(input.value)) || !input.checkValidity()) {
+      const label = document.querySelector(`label[for="${input.id}"]`)?.textContent.trim() || input.id;
+      throw new Error(`Sprawdź pole „${label}”. ${input.validationMessage || 'Podaj liczbę.'}`);
+    }
+  }
+}
+
+async function performCalculation() {
+  const sequence = ++calculationSequence;
+  calculationController?.abort();
+  const controller = new AbortController();
+  calculationController = controller;
+  const projectId = getActiveProjectId();
+  const btn = document.getElementById('calcBtn');
+  const reportBtn = document.getElementById('openReportBtn');
+  if (reportBtn) reportBtn.setAttribute('aria-disabled', 'true');
   try {
-    const resp = await fetch('/api/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
-
-    if (!resp.ok) {
-      const errData = await resp.json();
-      throw new Error(errData.message || 'Błąd obliczeń');
-    }
-
-    currentResults = await resp.json();
-    updateUI(currentResults);
-
-    if (typeof autoSaveActiveProject === 'function') {
-      autoSaveActiveProject(currentResults);
-    }
-  } catch (err) {
-    alert('Błąd podczas obliczeń: ' + err.message);
-  } finally {
+    validateNumericFields(document.getElementById('designForm'));
+    const formData = collectFormData();
     if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Obliczanie…';
+    }
+    showCalculationStatus('Trwają obliczenia.');
+    const resp = await fetch('/api/calculate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData), signal: controller.signal
+    });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.message || 'Błąd obliczeń');
+    if (sequence !== calculationSequence || projectId !== getActiveProjectId()) return;
+    if (JSON.stringify(formData) !== JSON.stringify(collectFormData())) {
+      showCalculationStatus('Parametry zmieniły się w trakcie obliczeń. Oblicz projekt ponownie.');
+      return;
+    }
+    currentResults = result;
+    updateUI(result);
+    autoSaveActiveProject(result);
+    showCalculationStatus('Wyniki i zapis projektu są aktualne.');
+    if (reportBtn) reportBtn.setAttribute('aria-disabled', 'false');
+  } catch (err) {
+    if (err.name !== 'AbortError' && sequence === calculationSequence) {
+      showCalculationStatus('Błąd: ' + err.message + ' Wyświetlane wyniki nie zostały zaktualizowane.', true);
+    }
+  } finally {
+    if (btn && sequence === calculationSequence) {
       btn.disabled = false;
-      btn.innerHTML = '⚙️ Wykonaj Obliczenia BIPOL (P1–P6) i Odśwież Rysunek Techniczny CAD';
+      btn.textContent = 'Oblicz projekt i odśwież wyniki';
     }
   }
 }
@@ -985,8 +1036,8 @@ function updateUI(res) {
           <td>${c.required}</td>
           <td><b>${c.actual}</b></td>
           <td>
-            <span class="badge ${c.passed ? 'badge-success' : 'badge-danger'}">
-              ${c.passed ? '✓ Zgodne' : '✗ Przekroczone'}
+            <span class="badge ${c.passed ? 'badge-success' : (c.severity === 'warning' ? 'badge-warning' : 'badge-danger')}">
+              ${c.passed ? '✓ Zgodne' : (c.severity === 'warning' ? 'Do oceny' : '✗ Niespełnione')}
             </span>
           </td>
         </tr>
@@ -1004,7 +1055,7 @@ function updateUI(res) {
     const reportBtn = document.getElementById('openReportBtn');
     if (reportBtn) {
       const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
-      const currentParams = collectFormData();
+      const currentParams = res.params;
       reportBtn.href = `/report?preset=${encodeURIComponent(presetKey)}&params_json=${encodeURIComponent(JSON.stringify(currentParams))}`;
       reportBtn.onclick = () => {
         localStorage.setItem('bipol_custom_report_data', JSON.stringify({
@@ -1119,7 +1170,7 @@ function populateP1P2Tables(res) {
 
   const p1Req = document.getElementById('p1MissionReqBody');
   if (p1Req) {
-    const fd = collectFormData();
+    const fd = res.params;
     const isUas = res.mass?.unmanned || fd.aircraft_type === 'uav';
     const occRows = isUas ? `
       <tr><td>Załoga na pokładzie</td><td><b>n_crew</b></td><td class="num"><b>0</b></td><td>os.</td><td>EASA UAS: sterowanie ze stacji naziemnej (GCS)</td></tr>
@@ -1135,7 +1186,7 @@ function populateP1P2Tables(res) {
       <tr><td>Wysokość przelotu</td><td><b>H</b></td><td class="num"><b>${fd.cruise_altitude_m}</b></td><td>m</td><td>Optymalna wysokość ekonomiczna w atmosferze ISA</td></tr>
       ${occRows}
       <tr><td>Prędkość przelotowa</td><td><b>V_cr</b></td><td class="num"><b>${fd.cruise_speed_kmh}</b></td><td>km/h</td><td>Prędkość marszowa w konfiguracji gładkiej</td></tr>
-      <tr><td>Maks. prędkość lądowania</td><td><b>V_s0</b></td><td class="num"><b>${fd.v_stall_kmh}</b></td><td>km/h</td><td>Prędkość przeciążenia z pełnymi klapami lądowania</td></tr>
+      <tr><td>Maks. prędkość przeciągnięcia</td><td><b>V_s0</b></td><td class="num"><b>${fd.v_stall_kmh}</b></td><td>km/h</td><td>Prędkość przeciągnięcia z pełnymi klapami lądowania</td></tr>
       <tr><td>Dopuszczalny rozbieg</td><td><b>S_to</b></td><td class="num"><b>${fd.takeoff_run_m}</b></td><td>m</td><td>Maksymalna długość rozbiegu z nawierzchni trawiastej/utwardzonej</td></tr>
       <tr><td>Wznoszenie przy ziemi</td><td><b>w_y</b></td><td class="num"><b>${fd.climb_rate_ms}</b></td><td>m/s</td><td>Minimalna prędkość wznoszenia w warunkach ISA MSL</td></tr>
     `;
@@ -1291,7 +1342,7 @@ function populateP3Tables(res) {
 function populateP4Tables(res) {
   const p4Card = document.getElementById('p4FlapJustificationCard');
   if (p4Card && typeof DIDACTIC_DATABASE !== 'undefined') {
-    const fd = collectFormData();
+    const fd = res.params;
     const flap = DIDACTIC_DATABASE.flaps[fd.flap_type] || DIDACTIC_DATABASE.flaps.single_slotted;
     const slat = DIDACTIC_DATABASE.slats[fd.slat_type] || DIDACTIC_DATABASE.slats.none;
     p4Card.innerHTML = `
@@ -1398,10 +1449,10 @@ function populateP5Tables(res) {
     const vClean = Number(sp.vs_clean_kmh ?? 0);
     const machCr = Number(sp.mach_cruise ?? (vCr / 1225));
     p5Speeds.innerHTML = `
-      <tr><td>Prędkość przeciążenia z klapami do lądowania</td><td><b>V_s0</b></td><td class="num"><b>${vLnd.toFixed(1)}</b></td><td class="num">${(vLnd/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Ograniczenie przepisowe lądowania (Vs0 &le; zadana)</td></tr>
-      <tr><td>Prędkość przeciążenia w konfiguracji gładkiej</td><td><b>V_s1</b></td><td class="num"><b>${vClean.toFixed(1)}</b></td><td class="num">${(vClean/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Baza do wyznaczenia prędkości oderwania i manewrowej</td></tr>
-      <tr><td>Prędkość oderwania przy starcie (1.15 &bull; Vs_TO)</td><td><b>V_LOF</b></td><td class="num"><b>${(sp.v_liftoff_kmh ?? (vClean * 1.15)).toFixed(1)}</b></td><td class="num">${((sp.v_liftoff_kmh ?? (vClean * 1.15))/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Bezpieczny margines prędkości przy oderwaniu kół</td></tr>
-      <tr><td>Prędkość podejścia do lądowania (1.3 &bull; Vs0)</td><td><b>V_app</b></td><td class="num"><b>${(sp.v_approach_kmh ?? (vLnd * 1.3)).toFixed(1)}</b></td><td class="num">${((sp.v_approach_kmh ?? (vLnd * 1.3))/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Podejście po ścieżce schodzenia (H = 15 m)</td></tr>
+      <tr><td>Prędkość przeciągnięcia z klapami do lądowania</td><td><b>V_s0</b></td><td class="num"><b>${vLnd.toFixed(1)}</b></td><td class="num">${(vLnd/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Ograniczenie przepisowe lądowania (Vs0 &le; zadana)</td></tr>
+      <tr><td>Prędkość przeciągnięcia w konfiguracji gładkiej</td><td><b>V_s1</b></td><td class="num"><b>${vClean.toFixed(1)}</b></td><td class="num">${(vClean/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Baza do wyznaczenia prędkości oderwania i manewrowej</td></tr>
+      <tr><td>Prędkość oderwania przy starcie (1.12 &bull; Vs_TO)</td><td><b>V_LOF</b></td><td class="num"><b>${(sp.v_lof_kmh ?? 0).toFixed(1)}</b></td><td class="num">${((sp.v_lof_kmh ?? 0)/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Bezpieczny margines prędkości przy oderwaniu kół</td></tr>
+      <tr><td>Prędkość podejścia do lądowania (1.3 &bull; Vs0)</td><td><b>V_app</b></td><td class="num"><b>${(sp.v_app_kmh ?? 0).toFixed(1)}</b></td><td class="num">${((sp.v_app_kmh ?? 0)/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Podejście po ścieżce schodzenia (H = 15 m)</td></tr>
       <tr><td>Prędkość przelotowa obliczeniowa</td><td><b>V_cr</b></td><td class="num"><b>${vCr.toFixed(1)}</b></td><td class="num">${(vCr/3.6).toFixed(1)}</td><td class="num"><b>M ${machCr.toFixed(3)}</b></td><td>Standardowa prędkość marszowa w fazie przelotu</td></tr>
       <tr><td>Maksymalna prędkość lotu poziomego przy ziemi</td><td><b>V_max</b></td><td class="num"><b>${vMax.toFixed(1)}</b></td><td class="num">${(vMax/3.6).toFixed(1)}</td><td class="num"><b>M ${(vMax/1225).toFixed(3)}</b></td><td>Punkt zrównania mocy rozporządzalnej i niezbędnej (wy = 0)</td></tr>
     `;
@@ -1416,7 +1467,7 @@ function populateP5Tables(res) {
   if (p5Ceil) {
     const c = res.performance?.ceiling || {};
     const hServ = Number(c.service_ceiling_m ?? 5000);
-    const hAbs = Number(c.absolute_ceiling_m ?? (hServ * 1.08));
+    const hAbs = Number(c.absolute_ceiling_m);
     p5Ceil.innerHTML = `
       <tr><td><b>Pułap praktyczny</b> (Service Ceiling)</td><td class="num"><b>${hServ.toFixed(0)}</b></td><td class="num">${(hServ / 0.3048).toFixed(0)}</td><td>w_y = 0.5 m/s (100 ft/min)</td><td>Maksymalna wysokość użytkowa dla regularnych przelotów</td></tr>
       <tr><td><b>Pułap teoretyczny</b> (Absolute Ceiling)</td><td class="num"><b>${hAbs.toFixed(0)}</b></td><td class="num">${(hAbs / 0.3048).toFixed(0)}</td><td>w_y = 0.0 m/s (brak nadmiaru mocy)</td><td>Wysokość graniczna – brak możliwości dalszego wznoszenia</td></tr>
@@ -1643,6 +1694,7 @@ function setupTabs() {
       if (activeTab && currentResults) {
         renderTabVisuals(activeTab.id);
       }
+      if (currentPortalMode === 'projects' && currentResults) renderSemesterProjectCharts(currentSemesterProject, currentResults);
     }, 150);
   });
 }
@@ -1795,7 +1847,10 @@ function saveProject(project) {
 
 function loadProjectIntoForm(project) {
   if (!project || !project.params) return;
-  const params = project.params;
+  const params = { ...project.params };
+  params.m_pax = (params.m_pax || 0) + (params.m_bag || 0);
+  params.m_bag = 0;
+  formBaseParams = { ...params };
 
   for (const [key, val] of Object.entries(params)) {
     const el = document.getElementById(key);
@@ -1807,10 +1862,12 @@ function loadProjectIntoForm(project) {
   const pnd = document.getElementById('projectNameDisplay');
   if (pnd) pnd.textContent = project.name;
 
+  syncAircraftClassAndEASAUI(false);
   syncFormPropulsionUI(false);
   renderWingConfigDidacticCard();
   renderFlapDidacticCard(false);
   updateAccordionPills();
+  restoreProjectChecklist(project);
 
   const reportBtn = document.getElementById('openReportBtn');
   if (reportBtn) {
@@ -1868,7 +1925,7 @@ function flashSaveStatus(msg) {
 function autoSaveActiveProject(res) {
   const active = getActiveProject();
   if (!active) return;
-  active.params = collectFormData();
+  active.params = res ? res.params : collectFormData();
   active.updatedAt = new Date().toISOString();
   if (res) {
     active.summary = {
@@ -2072,7 +2129,7 @@ function renderProjectManagerModal() {
           <div class="project-card-specs">
             <span class="spec-tag" title="Masa startowa MTOW">MTOW: ${mtowStr}</span>
             <span class="spec-tag" title="Rozpiętość skrzydła">b: ${spanStr}</span>
-            <span class="spec-tag" title="Prędkość przeciążenia z klapami">Vs0: ${vStallStr}</span>
+            <span class="spec-tag" title="Prędkość przeciągnięcia z klapami">Vs0: ${vStallStr}</span>
             <span class="spec-tag" title="Prędkość wznoszenia wy_max">wy: ${wyStr}</span>
           </div>
         </div>
@@ -2131,7 +2188,8 @@ function initProjectSystem() {
 
   // Jeśli brak projektów (pierwsze uruchomienie), stwórz projekt domyślny z PZL-Kos
   if (list.length === 0) {
-    const defaultParams = collectFormData();
+    const reference = presetsData.pzl_kos || {};
+    const defaultParams = { ...reference, m_pax: (reference.m_pax || 80) + (reference.m_bag || 0), m_bag: 0, flap_type: 'split', slat_type: 'none' };
     const initProj = {
       id: 'proj_pzl_kos',
       name: 'PZL-102B Kos (Klasyk MEiL PW - Projekt Referencyjny)',
@@ -2140,13 +2198,7 @@ function initProjectSystem() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       params: defaultParams,
-      summary: {
-        mtow: 1484.1,
-        wingspan: 9.87,
-        wingArea: 13.28,
-        vStall: 84.0,
-        wyMax: 4.1
-      }
+      summary: {}
     };
     list = [initProj];
     saveProjectsList(list);
@@ -2156,6 +2208,11 @@ function initProjectSystem() {
   // Wczytaj aktywny projekt do formularza
   const activeProj = getActiveProject();
   if (activeProj) {
+    if (!activeProj.semesterChecklist) {
+      try { activeProj.semesterChecklist = JSON.parse(localStorage.getItem(SEMESTER_CHECKLIST_KEY) || '{}'); }
+      catch (_) { activeProj.semesterChecklist = {}; }
+      saveProject(activeProj);
+    }
     loadProjectIntoForm(activeProj);
   }
   renderProjectSwitcher();
@@ -2348,11 +2405,11 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
     const curVal = parseFloat(sfcEl.value);
     if (eng === 'jet') {
       if (labelWizSfc) {
-        labelWizSfc.innerHTML = 'Jednostkowe zużycie paliwa TSFC c_j [1/h (kg/daN&bull;h)]:';
+        labelWizSfc.innerHTML = 'Jednostkowe zużycie paliwa TSFC c_j [1/h]:';
       }
       sfcEl.min = '0.25';
       sfcEl.max = '1.80';
-      sfcEl.step = '0.02';
+      sfcEl.step = 'any';
       if (triggerAutoSfc || isNaN(curVal) || curVal > 4.0) {
         sfcEl.value = (acType === 'jet_transport') ? '0.58' : '0.62';
       }
@@ -2362,7 +2419,7 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
       }
       sfcEl.min = '140';
       sfcEl.max = '500';
-      sfcEl.step = '5';
+      sfcEl.step = 'any';
       if (triggerAutoSfc || isNaN(curVal) || curVal < 50.0) {
         if (!triggerAutoSfc && curVal >= 0.15 && curVal <= 1.5) {
           sfcEl.value = String(Math.round(curVal * 1000));
@@ -2385,8 +2442,8 @@ function initWizardSystem() {
   const finishBtn = document.getElementById('wizFinishBtn');
   const suggestBtn = document.getElementById('wizSuggestSpeedsBtn');
 
-  if (openBtnNav) openBtnNav.addEventListener('click', openWizard);
-  if (openBtnSidebar) openBtnSidebar.addEventListener('click', openWizard);
+  if (openBtnNav) openBtnNav.addEventListener('click', () => openWizard('create'));
+  if (openBtnSidebar) openBtnSidebar.addEventListener('click', () => openWizard('create'));
   if (closeBtn) closeBtn.addEventListener('click', closeWizard);
   if (cancelBtn) cancelBtn.addEventListener('click', closeWizard);
 
@@ -2405,6 +2462,8 @@ function initWizardSystem() {
   // Przełączanie kroków przyciskami
   if (nextBtn) {
     nextBtn.addEventListener('click', () => {
+      try { validateNumericFields(document.getElementById(`wizardPane${currentWizardStep}`)); }
+      catch (err) { showWizardError(err.message); return; }
       if (currentWizardStep < 5) goToWizardStep(currentWizardStep + 1);
     });
   }
@@ -2468,14 +2527,14 @@ function initWizardSystem() {
           if (wizSweep) wizSweep.value = (ac === 'turboprop_regional') ? 2 : 0;
         }
       }
-      syncAircraftClassAndEASAUI(true);
+      syncAircraftClassAndEASAUI(true, 'aircraft');
       suggestStepDefaults(2);
       syncWizardPropulsionUI(true);
     });
   }
   if (wizCatSel) {
     wizCatSel.addEventListener('change', () => {
-      syncAircraftClassAndEASAUI(true);
+      syncAircraftClassAndEASAUI(true, 'category');
     });
   }
 
@@ -2568,7 +2627,6 @@ function syncFormToWizard() {
     }
   });
 
-  syncAircraftClassAndEASAUI(true);
   syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
@@ -2800,11 +2858,11 @@ function renderWizardStep5Summary() {
     cs_vla: 'EASA CS-VLA (MTOM ≤ 750 kg, max 2 os.)',
     cs_lsa: 'EASA CS-LSA (MTOM ≤ 600 kg, max 2 os.)',
     cs22_motoglider: 'EASA CS-22 (TMG Motoszybowiec)',
-    cs25_transport: 'EASA CS-25 (Large Aeroplane > 5700 kg)',
+    cs25_transport: 'EASA CS-25 (Large Aeroplanes)',
     easa_optout_ul: 'EASA Annex I Opt-out / UL-A (600 kg)',
     easa_optout_ul115: 'EASA Annex I / UL-115 (≤ 115 kg)',
-    easa_uas_specific: 'EASA UAS Specific (CS-LUAS ≤ 600 kg)',
-    easa_uas_certified: 'EASA UAS Certified (CS-UAS > 600 kg)'
+    easa_uas_specific: 'EASA UAS Specific (ocena ryzyka operacji)',
+    easa_uas_certified: 'EASA UAS Certified (ocena ryzyka operacji)'
   };
   const catLabel = catNames[cat] || `EASA (${cat.toUpperCase()})`;
   const isUasSummary = (acType === 'uav' || cat.startsWith('easa_uas_'));
@@ -2813,7 +2871,7 @@ function renderWizardStep5Summary() {
     : `${nCrew} pilot(ów), ${nPax} pasażer(ów), ${mCargo} kg cargo`;
 
   tbody.innerHTML = `
-    <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${name}</b></td><td><span class="badge badge-info">${acType.toUpperCase()}</span></td></tr>
+    <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${escapeHtml(name)}</b></td><td><span class="badge badge-info">${acType.toUpperCase()}</span></td></tr>
     <tr><td><b>Przepisy EASA</b></td><td>Kategoria certyfikacyjna</td><td class="num"><b>${catLabel}</b></td><td>Wymóg przepisowy EASA</td></tr>
     <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Ładunek</td><td class="num"><b>${occSummaryText}</b></td><td>Ładunek płatny</td></tr>
     <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
@@ -2833,7 +2891,7 @@ function renderWizardStep5Summary() {
     issues.push(`🛑 Błąd przepisów EASA: ${catLabel} dopuszcza maksymalnie 2 osoby na pokładzie (załoga + pasażerowie = ${nCrew + nPax}).`);
   }
   if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'easa_optout_ul') && Vs0 > 83.3) {
-    issues.push(`⚠️ Przekroczony limit EASA: Prędkość lądowania Vs0 (${Vs0} km/h) przekracza maksymalne dopuszczalne 45 kt (83.3 km/h). Zwiększ powierzchnię nośną lub zastosuj bardziej efektywne klapy.`);
+    issues.push(`⚠️ Przekroczony limit EASA: Prędkość przeciągnięcia VS0 (${Vs0} km/h) przekracza maksymalne dopuszczalne 45 kt (83.3 km/h). Zwiększ powierzchnię nośną lub zastosuj bardziej efektywne klapy.`);
   }
   if (cat === 'cs23_level1' && nPax > 1) {
     issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 1 dopuszcza maksymalnie 1 pasażera (obecnie: ${nPax}). Wybierz Level 2.`);
@@ -2848,7 +2906,7 @@ function renderWizardStep5Summary() {
     issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 4 / Commuter dopuszcza maksymalnie 19 pasażerów (obecnie: ${nPax}). Dla większej liczby pasażerów wymagana jest certyfikacja CS-25.`);
   }
   if (Vs0 >= Vcr) {
-    issues.push('🛑 Błąd krytyczny: Prędkość lądowania Vs0 nie może być większa lub równa prędkości przelotowej Vcr!');
+    issues.push('🛑 Błąd krytyczny: Prędkość przeciągnięcia VS0 nie może być większa lub równa prędkości przelotowej Vcr!');
   }
   if (engType === 'jet' && Vcr < 400) {
     issues.push(`⚠️ Nieoptymalny napęd: Napęd odrzutowy przy niskiej prędkości przelotowej (${Vcr} km/h) cechuje się bardzo niską sprawnością propulsywną i ogromnym zużyciem paliwa.`);
@@ -2884,7 +2942,17 @@ function renderWizardStep5Summary() {
   }
 }
 
+function showWizardError(message) {
+  const el = document.getElementById('wizardValidationStatus');
+  if (el) el.textContent = message;
+}
+
 function commitWizardToForm() {
+  for (let step = 1; step <= 4; step++) {
+    try { validateNumericFields(document.getElementById(`wizardPane${step}`)); }
+    catch (err) { goToWizardStep(step); showWizardError(err.message); return; }
+  }
+  showWizardError('');
   syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
@@ -2929,10 +2997,11 @@ function commitWizardToForm() {
     projNameEl.textContent = projName;
   }
 
+  delete formBaseParams.cz_max_to;
   // Zaktualizuj karty dydaktyczne i pola napędowe w głównym formularzu
   syncFormPropulsionUI(false);
   renderWingConfigDidacticCard();
-  renderFlapDidacticCard(false);
+  renderFlapDidacticCard(true);
   updateAccordionPills();
 
   // Zamknij wizard
@@ -2948,7 +3017,7 @@ function commitWizardToForm() {
       category: document.getElementById('category')?.value || 'normal',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      params: collectFormData(),
+      params: { ...collectFormData(), name: projName },
       summary: {}
     };
     saveProject(newProject);
@@ -2961,7 +3030,7 @@ function commitWizardToForm() {
       active.name = projName;
       active.aircraft_type = document.getElementById('aircraft_type')?.value || 'piston_ga';
       active.category = document.getElementById('category')?.value || 'normal';
-      active.params = collectFormData();
+      active.params = res ? res.params : collectFormData();
       saveProject(active);
       renderProjectSwitcher();
       flashSaveStatus(`Zaktualizowano projekt: ${projName}`);
@@ -3099,7 +3168,7 @@ function selectSemesterProject(pId) {
 
   // 1. Zaktualizuj aktywną pigułkę P1–P6
   document.querySelectorAll('.semester-project-pill').forEach(pill => {
-    pill.classList.toggle('active', pill.getAttribute('data-project') === pId);
+    pill.classList.toggle('active', pill.id === `pill-${pId}`);
   });
 
   // 2. Przełącz widoczny panel roboczy projektu
@@ -3186,6 +3255,15 @@ function renderSemesterProjectCharts(pId, res) {
   }, 50);
 }
 
+function restoreProjectChecklist(project) {
+  const state = project.semesterChecklist || {};
+  Object.values(SEMESTER_RUBRIC).flat().forEach(item => {
+    const input = document.getElementById(item.id);
+    if (input) input.checked = state[item.id] === true;
+  });
+  updateSemesterScores(false);
+}
+
 function updateSemesterScores(persist = true) {
   let totalObow = 0;
   let totalOpcj = 0;
@@ -3195,7 +3273,7 @@ function updateSemesterScores(persist = true) {
     let projScore = 0;
     items.forEach(item => {
       const el = document.getElementById(item.id);
-      const checked = el ? el.checked : true;
+      const checked = el ? el.checked : false;
       stateMap[item.id] = checked;
       if (checked) {
         projScore += item.pts;
@@ -3205,33 +3283,39 @@ function updateSemesterScores(persist = true) {
     });
     const projDisplay = document.getElementById(`score_${pKey}_display`);
     if (projDisplay) projDisplay.textContent = projScore;
+    const badge = document.getElementById(`pts-badge-${pKey}`);
+    if (badge) badge.textContent = `${projScore} / ${items.reduce((sum, item) => sum + item.pts, 0)} pkt`;
   });
 
   const totalScore = totalObow + totalOpcj;
 
   const elTotal = document.getElementById('semTotalPointsDisplay');
-  if (elTotal) elTotal.textContent = `${totalScore} / 100 pkt`;
+  if (elTotal) elTotal.textContent = totalScore;
 
   const elObow = document.getElementById('semObligatoryPointsDisplay');
-  if (elObow) elObow.textContent = `${totalObow} / 60 pkt`;
+  if (elObow) elObow.textContent = totalObow;
 
   const elOpcj = document.getElementById('semOptionalPointsDisplay');
-  if (elOpcj) elOpcj.textContent = `${totalOpcj} / 40 pkt`;
+  if (elOpcj) elOpcj.textContent = totalOpcj;
 
   const elStatus = document.getElementById('semStatusBadge');
   if (elStatus) {
     if (totalScore >= 50) {
       elStatus.className = 'score-badge success';
-      elStatus.innerHTML = `✅ Zaliczenie: <strong>Spełnione (${totalScore} &ge; 50 pkt)</strong>`;
+      elStatus.innerHTML = `Realizacja checklisty: <strong>${totalScore}/100 pkt</strong> (ocenia prowadzący)`;
     } else {
       elStatus.className = 'score-badge warn';
-      elStatus.innerHTML = `⚠️ Brakuje do zaliczenia: <strong>${50 - totalScore} pkt</strong>`;
+      elStatus.innerHTML = `Do progu 50 pkt w checkliście: <strong>${50 - totalScore} pkt</strong>`;
     }
   }
 
   if (persist) {
     try {
-      localStorage.setItem(SEMESTER_CHECKLIST_KEY, JSON.stringify(stateMap));
+      const active = getActiveProject();
+      if (active) {
+        active.semesterChecklist = stateMap;
+        saveProject(active);
+      }
     } catch (e) {}
   }
 }
@@ -3630,7 +3714,7 @@ function hydrateSemesterProjectsData(res) {
       const t0Kn = res?.sizing?.design_point?.thrust_kn ?? pp5.pr0_total_kn ?? '';
       if (p4PropTitle) p4PropTitle.textContent = '4.4. Charakterystyka Zespołu Napędowego (Silnik Odrzutowy — Tabela 5-3 Z. Paturskiego)';
       if (p4PropDesc) {
-        p4PropDesc.innerHTML = `Zależność ciągu rozporządzalnego wg wzorów (5.18)–(5.20) Z. Paturskiego: <b>P_r*(h) = P_r0 · (ρ/ρ₀)^0.85</b>, <b>P_r(Ma, h) = P_r*(h) · (1 − K_P · Ma)</b> (ciąg statyczny <b>P_r0 = ${t0Kn} kN</b>, <b>K_P = ${pp5.kp_bypass_factor ?? 0.45}</b>) oraz jednostkowe zużycie paliwa <b>q_e (TSFC) = <span id="p4_sfc_val">${tsfcDisp} kg/(daN·h) [1/h]</span></b>.`;
+        p4PropDesc.innerHTML = `Zależność ciągu rozporządzalnego wg wzorów (5.18)–(5.20) Z. Paturskiego: <b>P_r*(h) = P_r0 · (ρ/ρ₀)^0.85</b>, <b>P_r(Ma, h) = P_r*(h) · (1 − K_P · Ma)</b> (ciąg statyczny <b>P_r0 = ${t0Kn} kN</b>, <b>K_P = ${pp5.kp_bypass_factor ?? 0.45}</b>) oraz jednostkowe zużycie paliwa <b>q_e (TSFC) = <span id="p4_sfc_val">${tsfcDisp} 1/h</span></b>.`;
       }
       if (p4PropBox && Array.isArray(pp5.table_5_3_jet)) {
         p4PropBox.innerHTML = `
@@ -3959,7 +4043,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function openIndividualProjectReport(pId) {
   const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
-  const currentParams = collectFormData();
+  const currentParams = res.params;
   try {
     localStorage.setItem('bipol_custom_report_data', JSON.stringify({
       res: currentResults,
@@ -3994,3 +4078,46 @@ window.openIndividualProjectReport = openIndividualProjectReport;
 window.openFolderCoverReport = openFolderCoverReport;
 window.syncStudentDesignerFields = syncStudentDesignerFields;
 
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('designForm');
+  const markChanged = () => {
+    showCalculationStatus('Parametry zostały zmienione. Oblicz projekt, aby zapisać je i odświeżyć wyniki.');
+    document.getElementById('openReportBtn')?.setAttribute('aria-disabled', 'true');
+    const status = document.getElementById('projectAutoSaveStatus');
+    if (status) { status.textContent = 'Zmiany oczekują na obliczenie i zapis'; status.style.color = '#92400e'; }
+  };
+  form?.addEventListener('input', markChanged, true);
+  form?.addEventListener('change', markChanged, true);
+  form?.addEventListener('submit', event => { event.preventDefault(); performCalculation(); });
+  document.getElementById('openReportBtn')?.addEventListener('click', event => {
+    if (event.currentTarget.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  });
+  document.querySelectorAll('.semester-project-pill, .wizard-step-tab, .module-header').forEach(el => {
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); el.click(); }
+    });
+  });
+  document.querySelectorAll('.project-modal-backdrop, .wizard-backdrop').forEach(dialog => {
+    const heading = dialog.querySelector('h3');
+    if (heading) { heading.id ||= `${dialog.id}-title`; dialog.setAttribute('aria-labelledby', heading.id); }
+    let previousFocus = null;
+    new MutationObserver(() => {
+      if (dialog.classList.contains('active')) {
+        previousFocus = document.activeElement;
+        dialog.querySelector('button, input, select')?.focus();
+      } else if (previousFocus?.isConnected) previousFocus.focus();
+    }).observe(dialog, { attributes: true, attributeFilter: ['aria-hidden'] });
+    dialog.addEventListener('keydown', event => {
+      if (event.key !== 'Tab') return;
+      const controls = [...dialog.querySelectorAll('button, input, select, a[href], [tabindex="0"]')]
+        .filter(el => !el.disabled && el.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
+  });
+});

@@ -5,13 +5,34 @@ Zakład Samolotów i Śmigłowców (ZSiS)
 """
 import os
 import json
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, abort
+from werkzeug.exceptions import BadRequest
 from calculations import run_bipol_project, AIRCRAFT_PRESETS
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
+
+
+def report_parameters():
+    if request.method == 'POST':
+        return request.get_json(force=True)
+    if request.args.get('params_json'):
+        try:
+            return json.loads(request.args['params_json'])
+        except (TypeError, ValueError):
+            raise ValueError('Nieprawidłowy JSON parametrów raportu.') from None
+    preset_id = request.args.get('preset', 'pzl_kos')
+    if preset_id not in AIRCRAFT_PRESETS:
+        raise ValueError('Nieznany preset raportu.')
+    return dict(AIRCRAFT_PRESETS[preset_id])
+
+
+@app.errorhandler(ValueError)
+@app.errorhandler(BadRequest)
+def invalid_parameters(error):
+    return jsonify(status='error', message=str(error)), 400
 
 @app.route('/')
 def index():
@@ -47,6 +68,7 @@ def list_scraped_files():
     
     def scan_dir(d, folder_key):
         items = []
+        d = os.path.join(app.root_path, d)
         if os.path.exists(d):
             for f in sorted(os.listdir(d)):
                 if f.lower().endswith('.pdf'):
@@ -79,41 +101,22 @@ def download_scraped(folder, filename):
         "zpk_cad": "zpk_cad",
         "danilecki": "danilecki"
     }
-    safe_folder = allowed.get(folder, "bipol")
-    directory = os.path.join(os.getcwd(), "scraped_materials", safe_folder)
+    if folder not in allowed:
+        abort(404)
+    safe_folder = allowed[folder]
+    directory = os.path.join(app.root_path, "scraped_materials", safe_folder)
     return send_from_directory(directory, filename, as_attachment=False)
 
 @app.route('/api/calculate', methods=['POST'])
 def calculate():
-    try:
-        data = request.get_json(force=True)
-        results = run_bipol_project(data)
-        return jsonify(results)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 400
+    data = request.get_json(force=True)
+    return jsonify(run_bipol_project(data))
 
 @app.route('/report', methods=['GET', 'POST'])
 def report():
-    # Pobieramy parametry z query stringa (params_json lub preset) albo POST body
-    preset_id = request.args.get('preset', 'pzl_kos')
-    params_json = request.args.get('params_json')
-    
-    if request.method == 'POST':
-        try:
-            params = request.get_json(force=True)
-        except Exception:
-            params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-    elif params_json:
-        try:
-            params = json.loads(params_json)
-        except Exception:
-            params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-    else:
-        params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-        
+    params = report_parameters()
     results = run_bipol_project(params)
+    params = results["params"]
     
     student_name = request.args.get('student') or params.get('student_name') or 'Jan Kowalski'
     album_no = request.args.get('album') or params.get('album_no') or 'Nr Albumu'
@@ -155,23 +158,9 @@ def projects_portal():
 
 @app.route('/report/project/<p_id>', methods=['GET', 'POST'])
 def project_report(p_id):
-    preset_id = request.args.get('preset', 'pzl_kos')
-    params_json = request.args.get('params_json')
-    
-    if request.method == 'POST':
-        try:
-            params = request.get_json(force=True)
-        except Exception:
-            params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-    elif params_json:
-        try:
-            params = json.loads(params_json)
-        except Exception:
-            params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-    else:
-        params = dict(AIRCRAFT_PRESETS.get(preset_id, AIRCRAFT_PRESETS['pzl_kos']))
-        
+    params = report_parameters()
     results = run_bipol_project(params)
+    params = results["params"]
     bipol_projects = results.get("bipol_projects", {})
     
     # Dokładne 2-wierszowe nazwy projektów wg Rys. 2 i Rozdz. 2 w BIPOL1_Opis_Projektow.pdf (dr inż. M. Figat)
@@ -185,6 +174,8 @@ def project_report(p_id):
         "folder_cover": ("Informacja na teczkę", "Budowa i Projektowanie Obiektów Latających I", "Informacja na teczkę projektową wg Rys. 1 MEiL PW")
     }
     
+    if p_id not in project_titles:
+        abort(404)
     p_meta = project_titles.get(p_id, ("Projekt 1", "Projekt Koncepcyjny", "Sprawozdanie projektowe"))
     p_data = bipol_projects.get(p_id, {})
     

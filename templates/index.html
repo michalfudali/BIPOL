@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ctext y=%2726%27 font-size=%2727%27%3E✈%3C/text%3E%3C/svg%3E">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIPOL Studio - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=10">
+  <link rel="stylesheet" href="/static/css/style.css?v=12">
 </head>
 <body>
 
   <!-- Top Navbar -->
   <header class="bipol-navbar">
-    <div style="display:flex; justify-content:space-between; align-items:center; max-width:1680px; margin:0 auto; width:100%;">
+    <div class="navbar-inner">
       <div class="brand">
         <div class="brand-logo">✈️</div>
         <div>
-          <div class="brand-title">BIPOL Studio &bull; Dydaktyczny System Projektowania Samolotów MEiL PW</div>
+          <div class="brand-title">BIPOL Studio</div>
           <div class="brand-subtitle">BIPOL I (ZSiS) &bull; Mechanika Lotu I (ZM) &bull; Zapis Konstrukcji CAD I (ZPK PN-EN ISO) &bull; Monografia prof. C. Galińskiego</div>
         </div>
       </div>
-      <div style="display:flex; gap:0.65rem; align-items:center; flex-wrap:wrap;">
+      <div class="navbar-actions">
         <button type="button" id="launchWizardBtnNav" class="btn" style="background:#f59e0b; color:#0f172a; font-weight:800; border:1px solid #d97706; font-size:0.82rem;" title="Uruchom interaktywny kreator założeń projektowych krok po kroku">
           🪄 Nowy Projekt (Kreator)
         </button>
@@ -42,10 +43,10 @@
         TRYB PORTALU:
       </span>
       <button type="button" class="portal-mode-btn active" id="btnModeHolistic" onclick="setPortalMode('holistic')" title="Kompleksowe projektowanie całego samolotu w jednym potoku inżynierskim">
-        🌐 Wersja 1: Całościowe Projektowanie Samolotu (CAD / CAE Studio)
+        ✈ Projektowanie samolotu
       </button>
       <button type="button" class="portal-mode-btn" id="btnModeProjects" onclick="setPortalMode('projects')" title="Tryb realizacji 6 projektów semestralnych wg regulaminu i punktacji MEiL PW">
-        🎓 Wersja 2: Projekty Semestralne BIPOL I (P1–P6 MEiL PW)
+        🎓 Projekty semestralne P1–P6
       </button>
     </div>
   </div>
@@ -65,10 +66,10 @@
         </div>
         <div class="semester-score-badges">
           <div class="score-badge primary">
-            Zdobyte punkty: <strong id="semTotalPointsDisplay">0</strong> / 100 pkt
+            Realizacja checklisty: <strong id="semTotalPointsDisplay">0</strong> / 100 pkt
           </div>
           <div class="score-badge success" id="semStatusBadge">
-            Próg zaliczenia: 50 pkt (W toku)
+            Checklista nie zastępuje oceny prowadzącego
           </div>
           <div class="score-badge">
             Obowiązkowe: <strong id="semObligatoryPointsDisplay">0</strong> / 60 pkt
@@ -175,7 +176,7 @@
         <div class="kpi-sub">Poziom morza (MSL) P5</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label"><span>Prędkość Lądowania Vs0</span> <span class="info-circle-icon" data-param="kpi_vs0" tabindex="0">i</span></div>
+        <div class="kpi-label"><span>Prędkość przeciągnięcia VS0</span> <span class="info-circle-icon" data-param="kpi_vs0" tabindex="0">i</span></div>
         <div class="kpi-value" id="kpi_vs0">--- km/h</div>
         <div class="kpi-sub">Z mechanizacją lądowania P5</div>
       </div>
@@ -227,8 +228,8 @@
                 <button type="button" class="quick-preset-chip" data-preset="twin_turboprop" onclick="selectQuickPreset('twin_turboprop')">🛫 Twin Turboprop</button>
                 <button type="button" class="quick-preset-chip" data-preset="vlj_jet" onclick="selectQuickPreset('vlj_jet')">⚡ BizJet VLJ</button>
                 <button type="button" class="quick-preset-chip" data-preset="regional_turboprop" onclick="selectQuickPreset('regional_turboprop')">🏢 ATR Commuter</button>
-                <button type="button" class="quick-preset-chip" data-preset="uav_tactical" onclick="selectQuickPreset('uav_tactical')">🛰️ UAV Specific (FlyEye)</button>
-                <button type="button" class="quick-preset-chip" data-preset="uav_male" onclick="selectQuickPreset('uav_male')">🤖 UAV Certified (Bayraktar)</button>
+                <button type="button" class="quick-preset-chip" data-preset="uav_tactical" onclick="selectQuickPreset('uav_tactical')">🛰️ UAV taktyczny</button>
+                <button type="button" class="quick-preset-chip" data-preset="uav_male" onclick="selectQuickPreset('uav_male')">🤖 UAV MALE</button>
               </div>
 
               <!-- Collapsible Faculty Topics Drawer (Category & Topic Selects) -->
@@ -355,15 +356,15 @@
                           <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
                         </optgroup>
                         <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
-                          <option value="cs25_transport">EASA CS-25 (Komunikacyjny duży • MTOM > 5700 kg, n = +2.5 / -1.0)</option>
+                          <option value="cs25_transport">EASA CS-25 (Large Aeroplanes • podstawa certyfikacji)</option>
                         </optgroup>
                         <optgroup label="EASA Załącznik I (Opt-out krajowy / Ultralekkie 600 kg wg art. 2 ust. 8)">
                           <option value="easa_optout_ul">EASA Annex I Opt-Out / UL-A (Ultralekki • MTOM ≤ 600/650 kg, max 2 os.)</option>
                           <option value="easa_optout_ul115">EASA Annex I / UL-115 (Jednoosobowy mikrolot • masa własna ≤ 115 kg)</option>
                         </optgroup>
                         <optgroup label="EASA Bezzałogowe Statki Powietrzne UAS (UE 2019/947 & 2019/945 • 0 osób na pokładzie)">
-                          <option value="easa_uas_specific">EASA UAS Specific (CS-LUAS • Lekki bezzałogowiec MTOM ≤ 600 kg)</option>
-                          <option value="easa_uas_certified">EASA UAS Certified (CS-UAS / STANAG 4671 • Ciężki UAV MTOM > 600 kg)</option>
+                          <option value="easa_uas_specific">EASA UAS Specific (kategoria operacji wg ryzyka)</option>
+                          <option value="easa_uas_certified">EASA UAS Certified (kategoria operacji wg ryzyka)</option>
                         </optgroup>
                       </select>
                       <div class="param-didactic-hint" id="hint_category"></div>
@@ -372,7 +373,7 @@
 
                   <!-- Alert bezzałogowca EASA UAS -->
                   <div id="uav_easa_banner" style="display:none; background:#eff6ff; border:1px solid #93c5fd; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:0.75rem; color:#1e40af;">
-                    🤖 <strong>EASA UAS (UE 2019/947):</strong> Bezzałogowy statek powietrzny – <strong>0 osób na pokładzie</strong>. Sterowanie ze stacji naziemnej (GCS). Wymagana masa wyposażenia zadaniowego (sensory/głowica).
+                    🤖 <strong>EASA UAS (UE 2019/947):</strong> Model bezzałogowy – <strong>0 osób na pokładzie</strong>. Kategoria operacji wymaga oceny ryzyka; nie wynika z masy 600 kg. Sterowanie ze stacji naziemnej (GCS). Masa wyposażenia zadaniowego (sensory/głowica).
                   </div>
 
                   <div class="input-row" id="row_main_occupants">
@@ -387,7 +388,7 @@
                       <label for="m_cargo">
                         <span class="label-text" id="label_m_cargo_text">Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="m_cargo" min="0" max="50000" step="25" value="0">
+                      <input step="any" required type="number" id="m_cargo" min="0" max="50000" value="0">
                       <div class="param-didactic-hint" id="hint_m_cargo"></div>
                     </div>
                   </div>
@@ -397,14 +398,14 @@
                       <label for="range_km">
                         <span class="label-text">Zasięg obliczeniowy R [km] <span class="info-circle-icon" data-param="range_km" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="range_km" min="100" max="15000" step="25" value="640">
+                      <input step="any" required type="number" id="range_km" min="100" max="15000" value="640">
                       <div class="param-didactic-hint" id="hint_range_km"></div>
                     </div>
                     <div class="input-group" data-param="cruise_speed_kmh">
                       <label for="cruise_speed_kmh">
                         <span class="label-text">Prędkość przelotowa Vcr [km/h] <span class="info-circle-icon" data-param="cruise_speed_kmh" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="cruise_speed_kmh" min="80" max="950" step="5" value="174">
+                      <input step="any" required type="number" id="cruise_speed_kmh" min="80" max="950" value="174">
                       <div class="param-didactic-hint" id="hint_cruise_speed_kmh"></div>
                     </div>
                   </div>
@@ -412,16 +413,16 @@
                   <div class="input-row">
                     <div class="input-group" data-param="v_stall_kmh">
                       <label for="v_stall_kmh">
-                        <span class="label-text">Prędkość lądowania Vs0 [km/h] <span class="info-circle-icon" data-param="v_stall_kmh" tabindex="0">i</span></span>
+                        <span class="label-text">Prędkość przeciągnięcia VS0 [km/h] <span class="info-circle-icon" data-param="v_stall_kmh" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="v_stall_kmh" min="45" max="250" step="2" value="84">
+                      <input step="any" required type="number" id="v_stall_kmh" min="45" max="250" value="84">
                       <div class="param-didactic-hint" id="hint_v_stall_kmh"></div>
                     </div>
                     <div class="input-group" data-param="cruise_altitude_m">
                       <label for="cruise_altitude_m">
                         <span class="label-text">Wysokość przelotu H [m] <span class="info-circle-icon" data-param="cruise_altitude_m" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="cruise_altitude_m" min="100" max="15000" step="100" value="2000">
+                      <input step="any" required type="number" id="cruise_altitude_m" min="100" max="15000" value="2000">
                       <div class="param-didactic-hint" id="hint_cruise_altitude_m"></div>
                     </div>
                   </div>
@@ -440,7 +441,7 @@
                         <label for="m_pax">
                           <span class="label-text">Masa 1 os. z bagażem [kg] <span class="info-circle-icon" data-param="m_pax" tabindex="0">i</span></span>
                         </label>
-                        <input type="number" id="m_pax" min="0" max="150" step="5" value="100">
+                        <input step="any" required type="number" id="m_pax" min="0" max="150" value="100">
                         <div class="param-didactic-hint" id="hint_m_pax"></div>
                       </div>
                     </div>
@@ -449,14 +450,14 @@
                         <label for="takeoff_run_m">
                           <span class="label-text">Droga rozbiegu Sto [m] <span class="info-circle-icon" data-param="takeoff_run_m" tabindex="0">i</span></span>
                         </label>
-                        <input type="number" id="takeoff_run_m" min="60" max="3500" step="10" value="210">
+                        <input step="any" required type="number" id="takeoff_run_m" min="60" max="3500" value="210">
                         <div class="param-didactic-hint" id="hint_takeoff_run_m"></div>
                       </div>
                       <div class="input-group" data-param="climb_rate_ms">
                         <label for="climb_rate_ms">
                           <span class="label-text">Wznoszenie przy ziemi wy [m/s] <span class="info-circle-icon" data-param="climb_rate_ms" tabindex="0">i</span></span>
                         </label>
-                        <input type="number" id="climb_rate_ms" min="1.5" max="35" step="0.5" value="4.1">
+                        <input step="any" required type="number" id="climb_rate_ms" min="1.5" max="35" value="4.1">
                         <div class="param-didactic-hint" id="hint_climb_rate_ms"></div>
                       </div>
                     </div>
@@ -495,7 +496,7 @@
                       <label for="wingspan_m">
                         <span class="label-text">Rozpiętość b [m] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="wingspan_m" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="wingspan_m" min="0" max="80" step="0.1" value="0" placeholder="0 = wylicz z S·Λ">
+                      <input step="any" required type="number" id="wingspan_m" min="0" max="80" value="0" placeholder="0 = wylicz z S·Λ">
                       <div class="param-didactic-hint" id="hint_wingspan_m"></div>
                     </div>
                   </div>
@@ -508,14 +509,14 @@
                       <label for="aspect_ratio">
                         <span class="label-text">Wydłużenie skrzydła Λ (AR) [-] <span class="info-circle-icon" data-param="aspect_ratio" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="aspect_ratio" min="3" max="32" step="0.1" value="7.33">
+                      <input step="any" required type="number" id="aspect_ratio" min="3" max="32" value="7.33">
                       <div class="param-didactic-hint" id="hint_aspect_ratio"></div>
                     </div>
                     <div class="input-group" data-param="taper_ratio">
                       <label for="taper_ratio">
                         <span class="label-text">Zbieżność skrzydła η = ct/cr [-] <span class="info-circle-icon" data-param="taper_ratio" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="taper_ratio" min="0.2" max="1.0" step="0.05" value="0.60">
+                      <input step="any" required type="number" id="taper_ratio" min="0.2" max="1.0" value="0.60">
                       <div class="param-didactic-hint" id="hint_taper_ratio"></div>
                     </div>
                   </div>
@@ -525,14 +526,14 @@
                       <label for="sweep_quarter_deg">
                         <span class="label-text">Skos skrzydła χ25% [°] <span class="info-circle-icon" data-param="sweep_quarter_deg" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="sweep_quarter_deg" min="0" max="45" step="1" value="0">
+                      <input step="any" required type="number" id="sweep_quarter_deg" min="0" max="45" value="0">
                       <div class="param-didactic-hint" id="hint_sweep_quarter_deg"></div>
                     </div>
                     <div class="input-group" data-param="dihedral_deg">
                       <label for="dihedral_deg">
                         <span class="label-text">Wznios skrzydła Γ [°] <span class="info-circle-icon" data-param="dihedral_deg" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="dihedral_deg" min="-3" max="10" step="0.5" value="4.0">
+                      <input step="any" required type="number" id="dihedral_deg" min="-3" max="10" value="4.0">
                       <div class="param-didactic-hint" id="hint_dihedral_deg"></div>
                     </div>
                   </div>
@@ -591,14 +592,14 @@
                       <label for="cx0">
                         <span class="label-text">Opór szkodliwy Cx0 [-] <span class="info-circle-icon" data-param="cx0" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="cx0" min="0.010" max="0.060" step="0.001" value="0.028">
+                      <input step="any" required type="number" id="cx0" min="0.010" max="0.060" value="0.028">
                       <div class="param-didactic-hint" id="hint_cx0"></div>
                     </div>
                     <div class="input-group" data-param="oswald_e">
                       <label for="oswald_e">
                         <span class="label-text">Współczynnik Oswalda e [-] <span class="info-circle-icon" data-param="oswald_e" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="oswald_e" min="0.6" max="0.95" step="0.01" value="0.78">
+                      <input step="any" required type="number" id="oswald_e" min="0.6" max="0.95" value="0.78">
                       <div class="param-didactic-hint" id="hint_oswald_e"></div>
                     </div>
                   </div>
@@ -608,14 +609,14 @@
                       <label for="cz_max_clean">
                         <span class="label-text">Cz_max (gładka) [-] <span class="info-circle-icon" data-param="cz_max_clean" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="cz_max_clean" min="1.0" max="2.0" step="0.05" value="1.40">
+                      <input step="any" required type="number" id="cz_max_clean" min="1.0" max="2.0" value="1.40">
                       <div class="param-didactic-hint" id="hint_cz_max_clean"></div>
                     </div>
                     <div class="input-group" data-param="cz_max_lnd">
                       <label for="cz_max_lnd">
                         <span class="label-text">Cz_max,lnd (klapa) [-] <span class="info-circle-icon" data-param="cz_max_lnd" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="cz_max_lnd" min="1.4" max="3.6" step="0.05" value="2.05">
+                      <input step="any" required type="number" id="cz_max_lnd" min="1.4" max="3.6" value="2.05">
                       <div class="param-didactic-hint" id="hint_cz_max_lnd"></div>
                     </div>
                   </div>
@@ -666,14 +667,14 @@
                       <label for="sfc">
                         <span class="label-text"><span id="label_sfc_text">Zużycie SFC c_p [g/(kW&bull;h)]</span> <span class="info-circle-icon" data-param="sfc" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="sfc" min="0.2" max="600" step="1" value="265">
+                      <input step="any" required type="number" id="sfc" min="0.2" max="600" value="265">
                       <div class="param-didactic-hint" id="hint_sfc"></div>
                     </div>
                     <div class="input-group" data-param="prop_efficiency" id="group_prop_efficiency">
                       <label for="prop_efficiency">
                         <span class="label-text">Sprawność śmigła &eta;_p [-] <span class="info-circle-icon" data-param="prop_efficiency" tabindex="0">i</span></span>
                       </label>
-                      <input type="number" id="prop_efficiency" min="0.5" max="0.92" step="0.01" value="0.80">
+                      <input step="any" required type="number" id="prop_efficiency" min="0.5" max="0.92" value="0.80">
                       <div class="param-didactic-hint" id="hint_prop_efficiency"></div>
                     </div>
                   </div>
@@ -682,9 +683,10 @@
 
               <!-- Action Calculate Button -->
               <div style="margin-top:1rem;">
-                <button type="button" id="calcBtn" class="btn btn-primary btn-block" style="font-size:0.96rem; padding:0.8rem; font-weight:800; border-radius:8px; box-shadow:0 3px 8px rgba(0,86,145,0.25);">
+                <button type="button" id="calcBtn" aria-describedby="calculationStatus" class="btn btn-primary btn-block" style="font-size:0.96rem; padding:0.8rem; font-weight:800; border-radius:8px; box-shadow:0 3px 8px rgba(0,86,145,0.25);">
                   ⚙️ Wykonaj Obliczenia BIPOL (P1–P6) i Odśwież Rysunek Techniczny CAD
                 </button>
+                <div id="calculationStatus" class="calculation-status" role="status" aria-live="polite"></div>
               </div>
 
             </form>
@@ -1337,6 +1339,7 @@
 
         <!-- TAB 4: COMPLIANCE CHECKS & DIDACTIC ADVISOR -->
         <div id="tab-compliance" class="tab-content">
+          <p class="calculation-status">Sprawdzane są wybrane warunki modelu dydaktycznego. Kategoria operacji UAS wymaga odrębnej oceny ryzyka, a certyfikacja — ustalonej podstawy zdatności.</p>
           <div class="b-card">
             <div class="b-card-header">
               <h3>🎓 Asystent Dydaktyczny Projektanta (Weryfikacja Konfiguracji wg Galińskiego)</h3>
@@ -1665,11 +1668,11 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p1_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p1_1" onchange="updateSemesterScores()">
                 <span>1.1 Wybór konfiguracji i rysunek samolotu (3 pkt - obowiązkowe)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p1_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p1_2" onchange="updateSemesterScores()">
                 <span>1.2 Analiza trendów Jane's (2 pkt - opcjonalne)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 1: <strong id="score_p1_display">5</strong> / 5 pkt</span>
@@ -1731,23 +1734,23 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p2_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p2_1" onchange="updateSemesterScores()">
                 <span>2.1 Profil misji i MTOW (5 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p2_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p2_2" onchange="updateSemesterScores()">
                 <span>2.2 Dobór profilu (3 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p2_3" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p2_3" onchange="updateSemesterScores()">
                 <span>2.3 Analiza wrażliwości (2 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p2_4" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p2_4" onchange="updateSemesterScores()">
                 <span>2.4 Wykres Matching Chart T/W=f(W/S) (5 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p2_5" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p2_5" onchange="updateSemesterScores()">
                 <span>2.5 Analiza kosztów Corke (3 pkt obow.)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 2: <strong id="score_p2_display">18</strong> / 18 pkt</span>
@@ -1861,19 +1864,19 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p3_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p3_1" onchange="updateSemesterScores()">
                 <span>3.1 Rysunek samolotu w 3 rzutach + profil 200 mm (15 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p3_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p3_2" onchange="updateSemesterScores()">
                 <span>3.2 Analiza masowa i wyważenie (5 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p3_3" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p3_3" onchange="updateSemesterScores()">
                 <span>3.3 Aerodynamika płata izolowanego (2 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p3_4" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p3_4" onchange="updateSemesterScores()">
                 <span>3.4 Rozkład obciążenia Schrenka (5 pkt opcj.)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 3: <strong id="score_p3_display">27</strong> / 27 pkt</span>
@@ -1995,19 +1998,19 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p4_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p4_1" onchange="updateSemesterScores()">
                 <span>4.1 Charakterystyki aero całego samolotu (5 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p4_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p4_2" onchange="updateSemesterScores()">
                 <span>4.2 Biegunowa prędkości w(V) (3 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p4_3" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p4_3" onchange="updateSemesterScores()">
                 <span>4.3 Mechanizacja płata (5 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p4_4" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p4_4" onchange="updateSemesterScores()">
                 <span>4.4 Charakterystyki napędu (2 pkt opcj.)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 4: <strong id="score_p4_display">15</strong> / 15 pkt</span>
@@ -2178,19 +2181,19 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p5_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p5_1" onchange="updateSemesterScores()">
                 <span>5.1 Wykres ofertowy samolotu (5 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p5_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p5_2" onchange="updateSemesterScores()">
                 <span>5.2 Zasięg i długotrwałość 3 metodami (4 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p5_3" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p5_3" onchange="updateSemesterScores()">
                 <span>5.3 Start i lądowanie na 15 m (4 pkt opcj.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p5_4" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p5_4" onchange="updateSemesterScores()">
                 <span>5.4 Krytyczna ocena osiągów (2 pkt obow.)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 5: <strong id="score_p5_display">15</strong> / 15 pkt</span>
@@ -2307,11 +2310,11 @@
             <div class="project-checklist-box">
               <span style="font-weight:800; color:#005691;">Karta Oceny i Lista Kontrolna:</span>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p6_1" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p6_1" onchange="updateSemesterScores()">
                 <span>6.1 Obwiednia manewrowa i podmuchowa V-n (15 pkt obow.)</span>
               </label>
               <label class="project-checklist-item">
-                <input type="checkbox" id="chk_p6_2" checked onchange="updateSemesterScores()">
+                <input type="checkbox" id="chk_p6_2" onchange="updateSemesterScores()">
                 <span>6.2 Obwiednia obciążeń od mechanizacji (5 pkt opcj.)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 6: <strong id="score_p6_display">20</strong> / 20 pkt</span>
@@ -2592,15 +2595,15 @@
                   <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
                 </optgroup>
                 <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
-                  <option value="cs25_transport">EASA CS-25 (Komunikacyjny duży • MTOM > 5700 kg, n = +2.5 / -1.0)</option>
+                  <option value="cs25_transport">EASA CS-25 (Large Aeroplanes • podstawa certyfikacji)</option>
                 </optgroup>
                 <optgroup label="EASA Załącznik I (Opt-out krajowy / Ultralekkie 600 kg wg art. 2 ust. 8)">
                   <option value="easa_optout_ul">EASA Annex I Opt-Out / UL-A (Ultralekki • MTOM ≤ 600/650 kg, max 2 os.)</option>
                   <option value="easa_optout_ul115">EASA Annex I / UL-115 (Jednoosobowy mikrolot • masa własna ≤ 115 kg)</option>
                 </optgroup>
                 <optgroup label="EASA Bezzałogowe Statki Powietrzne UAS (UE 2019/947 & 2019/945 • 0 osób na pokładzie)">
-                  <option value="easa_uas_specific">EASA UAS Specific (CS-LUAS • Lekki bezzałogowiec MTOM ≤ 600 kg)</option>
-                  <option value="easa_uas_certified">EASA UAS Certified (CS-UAS / STANAG 4671 • Ciężki UAV MTOM > 600 kg)</option>
+                  <option value="easa_uas_specific">EASA UAS Specific (kategoria operacji wg ryzyka)</option>
+                  <option value="easa_uas_certified">EASA UAS Certified (kategoria operacji wg ryzyka)</option>
                 </optgroup>
               </select>
             </div>
@@ -2608,7 +2611,7 @@
 
           <!-- Alert bezzałogowca EASA UAS w kreatorze -->
           <div id="wiz_uav_easa_banner" style="display:none; background:#eff6ff; border:1px solid #93c5fd; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:0.75rem; color:#1e40af;">
-            🤖 <strong>EASA UAS (UE 2019/947 & 2019/945):</strong> Bezzałogowy statek powietrzny – <strong>0 osób na pokładzie</strong>. Sterowanie ze stacji naziemnej (GCS). Wymagana masa wyposażenia zadaniowego (sensory, głowica optoelektroniczna, łącze C2).
+            🤖 <strong>EASA UAS (UE 2019/947 & 2019/945):</strong> Model bezzałogowy – <strong>0 osób na pokładzie</strong>. Kategoria operacji wymaga oceny ryzyka; nie wynika z masy 600 kg. Sterowanie ze stacji naziemnej (GCS). Masa wyposażenia zadaniowego (sensory, głowica optoelektroniczna, łącze C2).
           </div>
 
           <div class="input-row" id="wiz_row_occupants_1">
@@ -2625,11 +2628,11 @@
           <div class="input-row" id="wiz_row_occupants_2">
             <div class="input-group" id="wiz_group_m_pax">
               <label for="wiz_m_pax">Masa 1 osoby z bagażem [kg]:</label>
-              <input type="number" id="wiz_m_pax" min="0" max="150" value="100">
+              <input step="any" required type="number" id="wiz_m_pax" min="0" max="150" value="100">
             </div>
             <div class="input-group" id="wiz_group_m_cargo">
               <label for="wiz_m_cargo" id="label_wiz_m_cargo">Dodatkowy ładunek handlowy cargo [kg]:</label>
-              <input type="number" id="wiz_m_cargo" min="0" max="50000" value="0">
+              <input step="any" required type="number" id="wiz_m_cargo" min="0" max="50000" value="0">
             </div>
           </div>
 
@@ -2657,33 +2660,33 @@
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_range_km">Zasięg obliczeniowy R [km]:</label>
-              <input type="number" id="wiz_range_km" min="100" max="12000" step="50" value="640">
+              <input step="any" required type="number" id="wiz_range_km" min="100" max="12000" value="640">
             </div>
             <div class="input-group">
               <label for="wiz_cruise_altitude_m">Wysokość przelotowa H [m]:</label>
-              <input type="number" id="wiz_cruise_altitude_m" min="500" max="15000" step="100" value="2000">
+              <input step="any" required type="number" id="wiz_cruise_altitude_m" min="500" max="15000" value="2000">
             </div>
           </div>
 
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_cruise_speed_kmh">Prędkość przelotowa Vcr [km/h]:</label>
-              <input type="number" id="wiz_cruise_speed_kmh" min="80" max="950" step="5" value="174">
+              <input step="any" required type="number" id="wiz_cruise_speed_kmh" min="80" max="950" value="174">
             </div>
             <div class="input-group">
-              <label for="wiz_v_stall_kmh">Maks. prędkość lądowania Vs0 [km/h]:</label>
-              <input type="number" id="wiz_v_stall_kmh" min="45" max="250" step="2" value="84">
+              <label for="wiz_v_stall_kmh">Maks. prędkość przeciągnięcia VS0 [km/h]:</label>
+              <input step="any" required type="number" id="wiz_v_stall_kmh" min="45" max="250" value="84">
             </div>
           </div>
 
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_takeoff_run_m">Wymagana droga rozbiegu Sto [m]:</label>
-              <input type="number" id="wiz_takeoff_run_m" min="60" max="3000" step="10" value="210">
+              <input step="any" required type="number" id="wiz_takeoff_run_m" min="60" max="3000" value="210">
             </div>
             <div class="input-group">
               <label for="wiz_climb_rate_ms">Min. wznoszenie przy ziemi wy [m/s]:</label>
-              <input type="number" id="wiz_climb_rate_ms" min="1.5" max="30" step="0.5" value="4.1">
+              <input step="any" required type="number" id="wiz_climb_rate_ms" min="1.5" max="30" value="4.1">
             </div>
           </div>
 
@@ -2722,11 +2725,11 @@
           <div class="input-row">
             <div class="input-group" id="wiz_group_sfc">
               <label for="wiz_sfc" id="label_wiz_sfc">Jednostkowe zużycie paliwa SFC c_p [g/(kW&bull;h)]:</label>
-              <input type="number" id="wiz_sfc" min="150" max="450" step="5" value="265">
+              <input step="any" required type="number" id="wiz_sfc" min="150" max="450" value="265">
             </div>
             <div class="input-group" id="wiz_group_prop_efficiency">
               <label for="wiz_prop_efficiency">Sprawność śmigła w przelocie &eta;_p [-]:</label>
-              <input type="number" id="wiz_prop_efficiency" min="0.65" max="0.90" step="0.01" value="0.80">
+              <input step="any" required type="number" id="wiz_prop_efficiency" min="0.65" max="0.90" value="0.80">
             </div>
           </div>
 
@@ -2761,18 +2764,18 @@
             </div>
             <div class="input-group">
               <label for="wiz_aspect_ratio">Wydłużenie skrzydła &Lambda; (AR) [-]:</label>
-              <input type="number" id="wiz_aspect_ratio" min="4" max="30" step="0.1" value="7.33">
+              <input step="any" required type="number" id="wiz_aspect_ratio" min="4" max="30" value="7.33">
             </div>
           </div>
 
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_taper_ratio">Zbieżność skrzydła &eta; = c_t/c_r [-]:</label>
-              <input type="number" id="wiz_taper_ratio" min="0.2" max="1.0" step="0.05" value="0.60">
+              <input step="any" required type="number" id="wiz_taper_ratio" min="0.2" max="1.0" value="0.60">
             </div>
             <div class="input-group">
               <label for="wiz_sweep_quarter_deg">Skos skrzydła &chi;₂₅% [&deg;]:</label>
-              <input type="number" id="wiz_sweep_quarter_deg" min="0" max="45" step="1" value="0">
+              <input step="any" required type="number" id="wiz_sweep_quarter_deg" min="0" max="45" value="0">
             </div>
           </div>
 
@@ -2823,6 +2826,7 @@
       </div>
 
       <!-- Wizard Footer Controls -->
+      <div id="wizardValidationStatus" class="wizard-validation-status" role="alert"></div>
       <div class="wizard-footer">
         <button type="button" class="btn btn-outline" id="wizBackBtn" style="visibility:hidden;">
           ⬅️ Wstecz
@@ -2866,8 +2870,8 @@
   <script>
     window.INITIAL_PORTAL_MODE = "{{ initial_portal_mode or '' }}";
   </script>
-  <script src="/static/js/didactic_data.js?v=11"></script>
-  <script src="/static/js/charts.js?v=11"></script>
-  <script src="/static/js/app.js?v=11"></script>
+  <script src="/static/js/didactic_data.js?v=12"></script>
+  <script src="/static/js/charts.js?v=12"></script>
+  <script src="/static/js/app.js?v=12"></script>
 </body>
 </html>

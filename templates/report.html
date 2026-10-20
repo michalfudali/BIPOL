@@ -209,7 +209,7 @@
       </p>
       <table class="b-table">
         <tr><th>Zasięg obliczeniowy R</th><td><b>{{ params.range_km }} km</b></td><th>Wysokość przelotowa H</th><td><b>{{ params.cruise_altitude_m }} m</b></td></tr>
-        <tr><th>Prędkość przelotowa Vcr</th><td><b>{{ params.cruise_speed_kmh }} km/h</b></td><th>Maks. prędkość lądowania Vs0</th><td><b>{{ params.v_stall_kmh }} km/h</b></td></tr>
+        <tr><th>Prędkość przelotowa Vcr</th><td><b>{{ params.cruise_speed_kmh }} km/h</b></td><th>Maks. prędkość przeciągnięcia VS0</th><td><b>{{ params.v_stall_kmh }} km/h</b></td></tr>
         <tr><th>Wymagana droga rozbiegu Sto</th><td><b>{{ params.takeoff_run_m }} m</b></td><th>Min. prędkość wznoszenia wy</th><td><b>{{ params.climb_rate_ms }} m/s</b></td></tr>
         {% if res.mass.unmanned or params.aircraft_type == 'uav' %}
         <tr><th>Status załogi na pokładzie</th><td><b style="color:#0284c7;">Bezzałogowiec (UAS) – 0 os. na pokładzie</b></td><th>Wyposażenie zadaniowe (sensory)</th><td><b>{{ params.m_cargo }} kg</b></td></tr>
@@ -243,7 +243,7 @@
 
       <h3 style="margin-top:1.5rem;">Dobór obciążenia powierzchni skrzydła i napędu (Matching Chart)</h3>
       <p>
-        Wyznaczono ograniczenia z warunków: prędkości przeciążenia, rozbiegu, wznoszenia oraz prędkości przelotowej. Wybrany punkt projektowy:
+        Wyznaczono ograniczenia z warunków: prędkości przeciągnięcia, rozbiegu, wznoszenia oraz prędkości przelotowej. Wybrany punkt projektowy:
         <strong>W/S = {{ res.sizing.design_point.ws }} N/m²</strong>, 
         {% if res.sizing.design_point.tw %}
         <strong>T/W = {{ res.sizing.design_point.tw }} [-]</strong> (ciąg startowy <strong>\(T_0 = {{ res.sizing.design_point.thrust_kn }}\text{ kN}\)</strong>).
@@ -377,7 +377,7 @@
             <td>{{ c.parameter }}</td>
             <td>{{ c.required }}</td>
             <td><b>{{ c.actual }}</b></td>
-            <td><span class="badge {{ 'badge-success' if c.passed else 'badge-danger' }}">{{ 'ZGODNE' if c.passed else 'PRZEKROCZONE' }}</span></td>
+            <td><span class="badge {{ 'badge-success' if c.passed else ('badge-warning' if c.severity == 'warning' else 'badge-danger') }}">{{ 'ZGODNE' if c.passed else ('DO OCENY' if c.severity == 'warning' else 'NIESPEŁNIONE') }}</span></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -423,16 +423,6 @@
       let resData = {{ res|tojson }};
       let paramsData = {{ params|tojson }};
 
-      const saved = localStorage.getItem('bipol_custom_report_data');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.res && parsed.params) {
-            resData = parsed.res;
-            paramsData = parsed.params;
-          }
-        } catch(e) { console.error(e); }
-      }
       applyHydratedData(resData, paramsData);
 
       drawMatchingChart('repChartMatching', resData.sizing);
