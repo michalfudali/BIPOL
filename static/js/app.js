@@ -147,10 +147,112 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   }
 }
 
+function syncAircraftClassAndEASAUI(isWizard = false) {
+  const pfx = isWizard ? 'wiz_' : '';
+  const acEl = document.getElementById(pfx + 'aircraft_type');
+  const catEl = document.getElementById(pfx + 'category');
+  const crewEl = document.getElementById(pfx + 'n_crew');
+  const paxEl = document.getElementById(pfx + 'n_pax');
+  const mpaxEl = document.getElementById(pfx + 'm_pax');
+  const cargoEl = document.getElementById(pfx + 'm_cargo');
+
+  const ac = acEl ? acEl.value : 'piston_ga';
+  const cat = catEl ? catEl.value : 'cs23_level2';
+
+  const isUas = (ac === 'uav' || cat === 'easa_uas_specific' || cat === 'easa_uas_certified' || cat === 'uav' || cat === 'um_light' || cat === 'um_heavy');
+
+  // 1. Spójność dropdownów klasy i przepisów
+  if (isUas) {
+    if (acEl && acEl.value !== 'uav') acEl.value = 'uav';
+    if (catEl && !catEl.value.startsWith('easa_uas_')) {
+      catEl.value = 'easa_uas_specific';
+    }
+  } else {
+    if (catEl && catEl.value.startsWith('easa_uas_')) {
+      catEl.value = (ac === 'jet_transport') ? 'cs25_transport' : (ac === 'turboprop_regional' ? 'cs23_commuter' : 'cs23_level2');
+    }
+  }
+
+  // 2. Banner EASA UAS
+  const banner = document.getElementById(isWizard ? 'wiz_uav_easa_banner' : 'uav_easa_banner');
+  if (banner) banner.style.display = isUas ? 'block' : 'none';
+
+  // 3. Widoczność pól ludzi na pokładzie dla UAV vs Manned
+  if (isWizard) {
+    const rowOcc1 = document.getElementById('wiz_row_occupants_1');
+    const groupMpax = document.getElementById('wiz_group_m_pax');
+    const labelCargo = document.getElementById('label_wiz_m_cargo');
+    if (rowOcc1) rowOcc1.style.display = isUas ? 'none' : 'flex';
+    if (groupMpax) groupMpax.style.display = isUas ? 'none' : 'block';
+    if (labelCargo) {
+      labelCargo.textContent = isUas
+        ? 'Masa wyposażenia zadaniowego / sensorów UAV [kg]:'
+        : 'Dodatkowy ładunek handlowy cargo [kg]:';
+    }
+  } else {
+    const groupPax = document.getElementById('group_n_pax');
+    const rowCrew = document.getElementById('row_main_crew');
+    const labelCargoText = document.getElementById('label_m_cargo_text');
+    if (groupPax) groupPax.style.display = isUas ? 'none' : 'block';
+    if (rowCrew) rowCrew.style.display = isUas ? 'none' : 'flex';
+    if (labelCargoText) {
+      labelCargoText.innerHTML = isUas
+        ? 'Wyposażenie zadaniowe / sensory UAV [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span>'
+        : 'Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span>';
+    }
+  }
+
+  // 4. Ustawienie wartości numerycznych dla UAV vs Manned
+  if (isUas) {
+    if (crewEl) crewEl.value = '0';
+    if (paxEl) paxEl.value = '0';
+    if (mpaxEl) mpaxEl.value = '0';
+    if (cargoEl && (!parseFloat(cargoEl.value) || parseFloat(cargoEl.value) <= 0)) {
+      cargoEl.value = '80';
+    }
+  } else {
+    if (crewEl && (parseFloat(crewEl.value) === 0 || isNaN(parseFloat(crewEl.value)))) {
+      crewEl.value = (cat === 'cs25_transport') ? '2' : '1';
+    }
+    if (mpaxEl && (parseFloat(mpaxEl.value) === 0 || isNaN(parseFloat(mpaxEl.value)))) {
+      mpaxEl.value = '100';
+    }
+    if (paxEl) {
+      const curPax = parseInt(paxEl.value, 10) || 0;
+      if (cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'easa_optout_ul') {
+        paxEl.max = '1';
+        if (curPax > 1) paxEl.value = '1';
+      } else if (cat === 'easa_optout_ul115') {
+        paxEl.max = '0';
+        paxEl.value = '0';
+      } else if (cat === 'cs23_level1') {
+        paxEl.max = '1';
+        if (curPax > 1) paxEl.value = '1';
+      } else if (cat === 'cs23_level2') {
+        paxEl.max = '6';
+        if (curPax > 6) paxEl.value = '6';
+      } else if (cat === 'cs23_level3') {
+        paxEl.max = '9';
+        if (curPax > 9) paxEl.value = '9';
+      } else if (cat === 'cs23_commuter') {
+        paxEl.max = '19';
+        if (curPax > 19) paxEl.value = '19';
+      } else {
+        paxEl.max = '300';
+      }
+    }
+    if (crewEl && cat === 'cs25_transport') {
+      crewEl.min = '2';
+      if (parseInt(crewEl.value, 10) < 2) crewEl.value = '2';
+    }
+  }
+}
+
 function initSidebarModularity() {
   const form = document.getElementById('designForm');
   const engEl = document.getElementById('engine_type');
   const acEl = document.getElementById('aircraft_type');
+  const catEl = document.getElementById('category');
 
   if (engEl) {
     engEl.addEventListener('change', () => {
@@ -168,13 +270,22 @@ function initSidebarModularity() {
           engEl.value = 'jet';
           const locEl = document.getElementById('engine_location');
           if (locEl) locEl.value = (ac === 'jet_transport') ? 'wing' : 'rear';
-        } else if (ac === 'piston_ga' || ac === 'turboprop_regional') {
+        } else if (ac === 'piston_ga' || ac === 'turboprop_regional' || ac === 'uav') {
           engEl.value = 'prop';
           const locEl = document.getElementById('engine_location');
-          if (locEl) locEl.value = (ac === 'turboprop_regional') ? 'wing' : 'nose';
+          if (locEl) locEl.value = (ac === 'turboprop_regional') ? 'wing' : (ac === 'uav' ? 'rear' : 'nose');
         }
       }
+      syncAircraftClassAndEASAUI(false);
       syncFormPropulsionUI(true);
+      updateAccordionPills();
+      performCalculation();
+    });
+  }
+
+  if (catEl) {
+    catEl.addEventListener('change', () => {
+      syncAircraftClassAndEASAUI(false);
       updateAccordionPills();
       performCalculation();
     });
@@ -184,6 +295,7 @@ function initSidebarModularity() {
     form.addEventListener('input', updateAccordionPills);
     form.addEventListener('change', updateAccordionPills);
   }
+  syncAircraftClassAndEASAUI(false);
   syncFormPropulsionUI(false);
   updateAccordionPills();
 }
@@ -271,11 +383,17 @@ function toggleAllAccordions(expand) {
 
 function updateAccordionPills() {
   // Moduł 1: Pasażerowie & Zasięg & Prędkość
+  const ac = document.getElementById('aircraft_type')?.value || 'piston_ga';
   const nPax = document.getElementById('n_pax')?.value || '1';
+  const mCargo = document.getElementById('m_cargo')?.value || '0';
   const rKm = document.getElementById('range_km')?.value || '640';
   const vCr = document.getElementById('cruise_speed_kmh')?.value || '174';
   const pill1 = document.getElementById('pill_mod1');
-  if (pill1) pill1.textContent = `${nPax} pas. • ${rKm} km • ${vCr} km/h`;
+  if (pill1) {
+    pill1.textContent = (ac === 'uav')
+      ? `UAV (0 os.) • ${mCargo} kg sensory • ${rKm} km • ${vCr} km/h`
+      : `${nPax} pas. • ${rKm} km • ${vCr} km/h`;
+  }
 
   // Moduł 2: Układ skrzydła & Wydłużenie & Zbieżność
   const wingCfg = document.getElementById('wing_config')?.value || 'low';
@@ -724,6 +842,9 @@ function loadPreset(presetKey) {
   } else if (presetKey === 'regional_turboprop' || presetKey === 'twin_turboprop' || presetKey === 'vlj_jet') {
     setFieldValue('flap_type', 'fowler');
     setFieldValue('slat_type', 'none');
+  } else if (presetKey === 'uav_male' || presetKey === 'uav_tactical') {
+    setFieldValue('flap_type', 'plain');
+    setFieldValue('slat_type', 'none');
   }
 
   document.querySelectorAll('.quick-preset-chip').forEach(chip => {
@@ -731,6 +852,7 @@ function loadPreset(presetKey) {
   });
 
   syncFormPropulsionUI(false);
+  syncAircraftClassAndEASAUI(false);
   renderWingConfigDidacticCard();
   renderFlapDidacticCard(false);
   updateAccordionPills();
@@ -982,7 +1104,10 @@ function populateCadTables(res) {
 // 4. Tabele Modułu P1/P2
 function populateP1P2Tables(res) {
   const p1Cat = document.getElementById('p1CategoryBadge');
-  if (p1Cat) p1Cat.textContent = `Kategoria: ${(res.envelope?.limits?.category || 'normal').toUpperCase()}`;
+  if (p1Cat) {
+    const easaCode = res.easa_compliance?.easa_code || res.envelope?.limits?.category_code || (res.envelope?.limits?.category || 'cs-23');
+    p1Cat.textContent = `EASA: ${easaCode.toUpperCase()}`;
+  }
   const p1M0 = document.getElementById('p1KpiM0');
   if (p1M0) p1M0.textContent = (res.mass?.m0 ?? 0).toFixed(1) + ' kg';
   const p1Me = document.getElementById('p1KpiMe');
@@ -995,12 +1120,20 @@ function populateP1P2Tables(res) {
   const p1Req = document.getElementById('p1MissionReqBody');
   if (p1Req) {
     const fd = collectFormData();
-    p1Req.innerHTML = `
-      <tr><td>Zasięg obliczeniowy</td><td><b>R</b></td><td class="num"><b>${fd.range_km}</b></td><td>km</td><td>Zasięg przelotowy z uwzględnieniem rezerw przepisowych</td></tr>
-      <tr><td>Wysokość przelotu</td><td><b>H</b></td><td class="num"><b>${fd.cruise_altitude_m}</b></td><td>m</td><td>Optymalna wysokość ekonomiczna w atmosferze ISA</td></tr>
+    const isUas = res.mass?.unmanned || fd.aircraft_type === 'uav';
+    const occRows = isUas ? `
+      <tr><td>Załoga na pokładzie</td><td><b>n_crew</b></td><td class="num"><b>0</b></td><td>os.</td><td>EASA UAS: sterowanie ze stacji naziemnej (GCS)</td></tr>
+      <tr><td>Pasażerowie</td><td><b>n_pax</b></td><td class="num"><b>0</b></td><td>os.</td><td>Statek bezzałogowy – brak kabiny pasażerskiej</td></tr>
+      <tr><td>Ładunek zadaniowy (Payload)</td><td><b>m_cargo</b></td><td class="num"><b>${fd.m_cargo}</b></td><td>kg</td><td>Sensory, głowica optoelektroniczna, łącze C2</td></tr>
+    ` : `
       <tr><td>Liczba pasażerów</td><td><b>n_pax</b></td><td class="num"><b>${fd.n_pax}</b></td><td>os.</td><td>Pasażerowie kabiny z bagażem podręcznym i rejestrowanym</td></tr>
       <tr><td>Ładunek cargo / chemikalia</td><td><b>m_cargo</b></td><td class="num"><b>${fd.m_cargo}</b></td><td>kg</td><td>Dodatkowy ładunek handlowy w luku bagażowym</td></tr>
       <tr><td>Załoga lotnicza</td><td><b>n_crew</b></td><td class="num"><b>${fd.n_crew}</b></td><td>os.</td><td>Liczba pilotów obsługujących statek powietrzny</td></tr>
+    `;
+    p1Req.innerHTML = `
+      <tr><td>Zasięg obliczeniowy</td><td><b>R</b></td><td class="num"><b>${fd.range_km}</b></td><td>km</td><td>Zasięg przelotowy z uwzględnieniem rezerw przepisowych</td></tr>
+      <tr><td>Wysokość przelotu</td><td><b>H</b></td><td class="num"><b>${fd.cruise_altitude_m}</b></td><td>m</td><td>Optymalna wysokość ekonomiczna w atmosferze ISA</td></tr>
+      ${occRows}
       <tr><td>Prędkość przelotowa</td><td><b>V_cr</b></td><td class="num"><b>${fd.cruise_speed_kmh}</b></td><td>km/h</td><td>Prędkość marszowa w konfiguracji gładkiej</td></tr>
       <tr><td>Maks. prędkość lądowania</td><td><b>V_s0</b></td><td class="num"><b>${fd.v_stall_kmh}</b></td><td>km/h</td><td>Prędkość przeciążenia z pełnymi klapami lądowania</td></tr>
       <tr><td>Dopuszczalny rozbieg</td><td><b>S_to</b></td><td class="num"><b>${fd.takeoff_run_m}</b></td><td>m</td><td>Maksymalna długość rozbiegu z nawierzchni trawiastej/utwardzonej</td></tr>
@@ -1011,9 +1144,16 @@ function populateP1P2Tables(res) {
   const p2Mass = document.getElementById('p2MassTableBody');
   if (p2Mass) {
     const m0 = res.mass?.m0 || 1;
+    const isUas = res.mass?.unmanned;
+    const payloadLabel = isUas
+      ? 'Wyposażenie zadaniowe UAV (sensory / głowica optoelektroniczna)'
+      : 'Masa płatna (Payload: pasażerowie + bagaż + cargo)';
+    const crewLabel = isUas
+      ? 'Załoga na pokładzie (0 os. – pilot w stacji naziemnej GCS)'
+      : 'Załoga (Crew)';
     p2Mass.innerHTML = `
-      <tr><td>Masa płatna (Payload: pasażerowie + bagaż + cargo)</td><td><b>m_pl</b></td><td class="num"><b>${(res.mass?.m_payload ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.payload_fraction ?? 0) * 100).toFixed(1)}%</td><td>Zadanie projektowe (założenia P1)</td></tr>
-      <tr><td>Załoga (Crew)</td><td><b>m_crew</b></td><td class="num"><b>${(res.mass?.m_crew ?? 0).toFixed(1)}</b></td><td class="num">${(((res.mass?.m_crew ?? 0) / m0) * 100).toFixed(1)}%</td><td>Liczba pilotów &times; masa 1 osoby</td></tr>
+      <tr><td>${payloadLabel}</td><td><b>m_pl</b></td><td class="num"><b>${(res.mass?.m_payload ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.payload_fraction ?? 0) * 100).toFixed(1)}%</td><td>Zadanie projektowe (założenia P1)</td></tr>
+      <tr><td>${crewLabel}</td><td><b>m_crew</b></td><td class="num"><b>${(res.mass?.m_crew ?? 0).toFixed(1)}</b></td><td class="num">${(((res.mass?.m_crew ?? 0) / m0) * 100).toFixed(1)}%</td><td>Liczba pilotów &times; masa 1 osoby</td></tr>
       <tr><td>Paliwo całkowite (Fuel wg Bregueta)</td><td><b>m_f</b></td><td class="num"><b>${(res.mass?.m_fuel ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.fuel_fraction ?? 0) * 100).toFixed(1)}%</td><td>Równanie Bregueta + 45 min rezerwy</td></tr>
       <tr><td>Masa pusta wyposażona (OEW)</td><td><b>m_e</b></td><td class="num"><b>${(res.mass?.m_empty ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.empty_fraction ?? 0) * 100).toFixed(1)}%</td><td>Korelacja statystyczna Torenbeeka</td></tr>
       <tr style="background:#f1f5f9; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td><b>m₀</b></td><td class="num"><b>${(res.mass?.m0 ?? 0).toFixed(1)}</b></td><td class="num">100.0%</td><td>Wynik zbieżności iteracyjnej bilansu</td></tr>
@@ -1516,7 +1656,7 @@ const WIZARD_TEMPLATES = {
   trainer_ga: {
     name: "Szkolno-Treningowy GA (PZL-102 / C152)",
     aircraft_type: "piston_ga",
-    category: "normal",
+    category: "cs23_level1",
     n_crew: 1, n_pax: 1, m_pax: 90, m_cargo: 20,
     range_km: 640, cruise_altitude_m: 2000, cruise_speed_kmh: 174,
     v_stall_kmh: 84, takeoff_run_m: 210, climb_rate_ms: 4.1,
@@ -1527,7 +1667,7 @@ const WIZARD_TEMPLATES = {
   touring_pax: {
     name: "Turystyczny 4-miejscowy (Cirrus SR22 / Socata)",
     aircraft_type: "piston_ga",
-    category: "normal",
+    category: "cs23_level2",
     n_crew: 1, n_pax: 3, m_pax: 100, m_cargo: 60,
     range_km: 1250, cruise_altitude_m: 2500, cruise_speed_kmh: 245,
     v_stall_kmh: 92, takeoff_run_m: 320, climb_rate_ms: 5.4,
@@ -1538,7 +1678,7 @@ const WIZARD_TEMPLATES = {
   stol_agri: {
     name: "Rolniczy / Krótkiego Startu STOL (PZL Kruk / Wilga)",
     aircraft_type: "piston_ga",
-    category: "utility",
+    category: "cs23_level2",
     n_crew: 1, n_pax: 0, m_pax: 90, m_cargo: 850,
     range_km: 550, cruise_altitude_m: 1000, cruise_speed_kmh: 165,
     v_stall_kmh: 72, takeoff_run_m: 160, climb_rate_ms: 5.6,
@@ -1549,7 +1689,7 @@ const WIZARD_TEMPLATES = {
   turboprop_commuter: {
     name: "Dyspozycyjny Turboprop (King Air / ATR 42)",
     aircraft_type: "turboprop_regional",
-    category: "commuter",
+    category: "cs23_commuter",
     n_crew: 2, n_pax: 8, m_pax: 100, m_cargo: 200,
     range_km: 2200, cruise_altitude_m: 6500, cruise_speed_kmh: 460,
     v_stall_kmh: 135, takeoff_run_m: 680, climb_rate_ms: 9.2,
@@ -1560,7 +1700,7 @@ const WIZARD_TEMPLATES = {
   vlj_bizjet: {
     name: "Lekki Odrzutowiec Biznesowy VLJ (HondaJet / Citation)",
     aircraft_type: "jet_business",
-    category: "normal",
+    category: "cs23_level2",
     n_crew: 1, n_pax: 5, m_pax: 95, m_cargo: 100,
     range_km: 2400, cruise_altitude_m: 11000, cruise_speed_kmh: 680,
     v_stall_kmh: 165, takeoff_run_m: 950, climb_rate_ms: 14.0,
@@ -1569,9 +1709,9 @@ const WIZARD_TEMPLATES = {
     flap_type: "fowler", slat_type: "slats_auto"
   },
   motoglider_uav: {
-    name: "Motoszybowiec / Bezzałogowiec UAV MALE",
+    name: "Bezzałogowiec EASA UAS (Klasa MALE / Bayraktar)",
     aircraft_type: "uav",
-    category: "utility",
+    category: "easa_uas_specific",
     n_crew: 0, n_pax: 0, m_pax: 0, m_cargo: 80,
     range_km: 1800, cruise_altitude_m: 5000, cruise_speed_kmh: 130,
     v_stall_kmh: 68, takeoff_run_m: 180, climb_rate_ms: 3.8,
@@ -2302,6 +2442,7 @@ function initWizardSystem() {
   // Live change listeners dla rodzaju napędu i klasy statku w Kreatorze
   const wizEngSel = document.getElementById('wiz_engine_type');
   const wizAcSel = document.getElementById('wiz_aircraft_type');
+  const wizCatSel = document.getElementById('wiz_category');
   if (wizEngSel) {
     wizEngSel.addEventListener('change', () => {
       syncWizardPropulsionUI(true);
@@ -2322,13 +2463,19 @@ function initWizardSystem() {
         } else if (ac === 'piston_ga' || ac === 'turboprop_regional' || ac === 'uav') {
           wizEngSel.value = 'prop';
           const wizLoc = document.getElementById('wiz_engine_location');
-          if (wizLoc) wizLoc.value = (ac === 'turboprop_regional') ? 'wing' : 'nose';
+          if (wizLoc) wizLoc.value = (ac === 'turboprop_regional') ? 'wing' : (ac === 'uav' ? 'rear' : 'nose');
           const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
           if (wizSweep) wizSweep.value = (ac === 'turboprop_regional') ? 2 : 0;
         }
       }
+      syncAircraftClassAndEASAUI(true);
       suggestStepDefaults(2);
       syncWizardPropulsionUI(true);
+    });
+  }
+  if (wizCatSel) {
+    wizCatSel.addEventListener('change', () => {
+      syncAircraftClassAndEASAUI(true);
     });
   }
 
@@ -2421,6 +2568,8 @@ function syncFormToWizard() {
     }
   });
 
+  syncAircraftClassAndEASAUI(true);
+  syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
   const projNameEl = document.getElementById('projectNameDisplay');
@@ -2435,6 +2584,7 @@ function goToWizardStep(step) {
   if (step > 5) step = 5;
   currentWizardStep = step;
 
+  syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
   // 1. Zaktualizuj stepper tabs
@@ -2508,6 +2658,7 @@ function applyWizardTemplate(key) {
     if (el) el.value = v;
   }
 
+  syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
   if (currentWizardStep === 4) {
@@ -2640,10 +2791,31 @@ function renderWizardStep5Summary() {
     ? `Odrzutowy (Turbofan) &bull; ${locNames[engLoc] || engLoc} &bull; TSFC = ${sfcVal} 1/h`
     : `Śmigłowy &bull; ${locNames[engLoc] || engLoc} &bull; SFC = ${sfcVal} g/(kW&bull;h), &eta;_p = ${etaP}`;
 
+  const catNames = {
+    cs23_level1: 'EASA CS-23 Level 1 (0–1 pax)',
+    cs23_level2: 'EASA CS-23 Level 2 (2–6 pax)',
+    cs23_level3: 'EASA CS-23 Level 3 (7–9 pax)',
+    cs23_commuter: 'EASA CS-23 Level 4 / Commuter (10–19 pax)',
+    cs23_aerobatic: 'EASA CS-23 Certified for Aerobatics',
+    cs_vla: 'EASA CS-VLA (MTOM ≤ 750 kg, max 2 os.)',
+    cs_lsa: 'EASA CS-LSA (MTOM ≤ 600 kg, max 2 os.)',
+    cs22_motoglider: 'EASA CS-22 (TMG Motoszybowiec)',
+    cs25_transport: 'EASA CS-25 (Large Aeroplane > 5700 kg)',
+    easa_optout_ul: 'EASA Annex I Opt-out / UL-A (600 kg)',
+    easa_optout_ul115: 'EASA Annex I / UL-115 (≤ 115 kg)',
+    easa_uas_specific: 'EASA UAS Specific (CS-LUAS ≤ 600 kg)',
+    easa_uas_certified: 'EASA UAS Certified (CS-UAS > 600 kg)'
+  };
+  const catLabel = catNames[cat] || `EASA (${cat.toUpperCase()})`;
+  const isUasSummary = (acType === 'uav' || cat.startsWith('easa_uas_'));
+  const occSummaryText = isUasSummary
+    ? `0 osób na pokładzie (sterowanie z GCS) &bull; ${mCargo} kg wyposażenie zadaniowe / sensory`
+    : `${nCrew} pilot(ów), ${nPax} pasażer(ów), ${mCargo} kg cargo`;
+
   tbody.innerHTML = `
     <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${name}</b></td><td><span class="badge badge-info">${acType.toUpperCase()}</span></td></tr>
-    <tr><td><b>Przepisy</b></td><td>Kategoria certyfikacyjna</td><td class="num"><b>CS-23 / CS-25 (${cat.toUpperCase()})</b></td><td>Wymóg przepisowy zdatności</td></tr>
-    <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Cargo</td><td class="num"><b>${nCrew} pilot(ów), ${nPax} pasażer(ów), ${mCargo} kg cargo</b></td><td>Ładunek płatny</td></tr>
+    <tr><td><b>Przepisy EASA</b></td><td>Kategoria certyfikacyjna</td><td class="num"><b>${catLabel}</b></td><td>Wymóg przepisowy EASA</td></tr>
+    <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Ładunek</td><td class="num"><b>${occSummaryText}</b></td><td>Ładunek płatny</td></tr>
     <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
     <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
     <tr><td><b>Osiągi lotniskowe</b></td><td>Rozbieg Sto / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
@@ -2654,6 +2826,27 @@ function renderWizardStep5Summary() {
 
   // Audyt spójności
   const issues = [];
+  if (isUasSummary && (nCrew > 0 || nPax > 0)) {
+    issues.push('🛑 Błąd przepisów EASA: Bezzałogowy statek powietrzny (UAS) nie może mieć pilotów ani pasażerów na pokładzie!');
+  }
+  if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'easa_optout_ul') && (nCrew + nPax > 2)) {
+    issues.push(`🛑 Błąd przepisów EASA: ${catLabel} dopuszcza maksymalnie 2 osoby na pokładzie (załoga + pasażerowie = ${nCrew + nPax}).`);
+  }
+  if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'easa_optout_ul') && Vs0 > 83.3) {
+    issues.push(`⚠️ Przekroczony limit EASA: Prędkość lądowania Vs0 (${Vs0} km/h) przekracza maksymalne dopuszczalne 45 kt (83.3 km/h). Zwiększ powierzchnię nośną lub zastosuj bardziej efektywne klapy.`);
+  }
+  if (cat === 'cs23_level1' && nPax > 1) {
+    issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 1 dopuszcza maksymalnie 1 pasażera (obecnie: ${nPax}). Wybierz Level 2.`);
+  }
+  if (cat === 'cs23_level2' && nPax > 6) {
+    issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 2 dopuszcza maksymalnie 6 pasażerów (obecnie: ${nPax}). Wybierz Level 3.`);
+  }
+  if (cat === 'cs23_level3' && nPax > 9) {
+    issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 3 dopuszcza maksymalnie 9 pasażerów (obecnie: ${nPax}). Wybierz Level 4.`);
+  }
+  if (cat === 'cs23_commuter' && nPax > 19) {
+    issues.push(`⚠️ Niezgodność z EASA CS 23.2005: Poziom Level 4 / Commuter dopuszcza maksymalnie 19 pasażerów (obecnie: ${nPax}). Dla większej liczby pasażerów wymagana jest certyfikacja CS-25.`);
+  }
   if (Vs0 >= Vcr) {
     issues.push('🛑 Błąd krytyczny: Prędkość lądowania Vs0 nie może być większa lub równa prędkości przelotowej Vcr!');
   }
@@ -2692,6 +2885,7 @@ function renderWizardStep5Summary() {
 }
 
 function commitWizardToForm() {
+  syncAircraftClassAndEASAUI(true);
   syncWizardPropulsionUI(false);
 
   const mappings = [

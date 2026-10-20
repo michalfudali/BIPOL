@@ -127,8 +127,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     law_sub = SUBCATEGORIES[resolve_category(category)]
     unmanned_ac = law_sub["unmanned"] or ac_type == "uav"
     k_cat = str(params.get("airworthiness_k") or law_sub["k_allowed"][0]).upper()
-    cat_pl = (f"klasie {law_sub['class_name']}, podkategorii {law_sub['name']}, kategorii {K_CATEGORIES.get(k_cat, k_cat)} "
-              f"wg Dz. U. 2025 poz. 1137 (podstawa projektowa: {law_sub['design_code']})")
+    cat_pl = (f"specyfikacji {law_sub['easa_spec']} ({law_sub['class_name']}, kategoria zdatności: {law_sub['design_code']}, "
+              f"krajowy wpis: {law_sub['polish_code']} / {K_CATEGORIES.get(k_cat, k_cat)} wg Dz. U. 2025 poz. 1137)")
     if engine_type == "jet":
         eng_pl = "turboodrzutowy dwuprzepływowy (Turbofan)"
     elif ac_type == "turboprop_regional":

@@ -402,24 +402,24 @@ const DIDACTIC_DATABASE = {
  */
 const PARAMETER_ENCYCLOPEDIA = {
   aircraft_type: {
-    symbol: "Klasa statku powietrznego",
-    title: "Klasa konstrukcyjno-eksploatacyjna samolotu",
-    short_desc: "Określa przeznaczenie samolotu, współczynniki statystyczne masy pustej Torenbeeka/Roskama (m_e / m_0 = A · m_0^C) oraz charakterystyki napędu.",
-    full_definition: "Klasa samolotu narzuca bazowe proporcje masowe w pierwszym i drugim przybliżeniu (projekt P2 BIPOL). Samoloty lekkie GA mają udział masy pustej rzędu 56–63%, regionalne turbośmigłowe 58–64%, a bezzałogowce kompozytowe MALE nawet 48–54%.",
-    formula: "m₀ = (m_zał + m_płatna) / (1 − m̄_paliwa − m̄_pustego),   gdzie  m̄_pustego = A · m₀^C",
-    effect_increase: "Przejście do wyższej klasy (np. komunikacyjnej) podnosi wymagania niezawodnościowe, masę wyposażenia i awioniki, ale pozwala osiągać wyższe obciążenia powierzchni W/S.",
-    typical_ranges: "Tłokowy GA: m₀ = 600–3000 kg | Turbośmigłowy: 4000–25000 kg | Odrzutowy: 4500–80000 kg | UAV MALE: 500–5000 kg.",
-    galinski_note: "Dobór klasy determinuje technologię wykonania: od kratownic i konstrukcji półskorupowych duralowych w GA, po konstrukcje skorupowe z pokryciem integralnym w samolotach komunikacyjnych (Rozdz. 12 i 13)."
+    symbol: "Klasa statku (EASA)",
+    title: "Klasa konstrukcyjno-certyfikacyjna statku powietrznego",
+    short_desc: "Określa przeznaczenie statku, współczynniki statystyczne masy pustej Torenbeeka/Roskama (m_e / m_0 = A · m_0^C), charakterystykę napędu oraz wymogi załogowe/bezzałogowe.",
+    full_definition: "Klasa statku narzuca bazowe proporcje masowe w bilansie P2 BIPOL oraz właściwe przepisy EASA i polskiego prawa lotniczego (Dz. U. 2025 poz. 1137). Dostępne klasy: 1) Tłokowy GA (EASA CS-23 L1-L2, CS-VLA, CS-LSA, Annex I Opt-out ULM); 2) Turbośmigłowy Commuter (EASA CS-23 L3-L4 / Commuter); 3) Odrzutowy Dyspozycyjny (CS-23 High Speed / VLJ / CS-25); 4) Odrzutowy Komunikacyjny (EASA CS-25 Large Aeroplanes); 5) Bezzałogowy Statek Powietrzny EASA UAS (UE 2019/947, CS-LUAS / CS-UAS, bezwzględnie 0 osób na pokładzie, załoga w stacji kontroli naziemnej GCS).",
+    formula: "m₀ = (m_zał + m_płatna) / (1 − m̄_paliwa − m̄_pustego),   gdzie  m̄_pustego = A · m₀^C  (dla UAV: m_zał = 0, m_pax = 0)",
+    effect_increase: "Przejście do wyższej klasy podnosi wymagania niezawodnościowe i masę awioniki. Wybór UAV całkowicie eliminuje masę kabiny pasażerskiej i instalacji podtrzymywania życia, a ładunek płatny stanowi wyposażenie zadaniowe (sensory, kamery EO/IR, łącza C2).",
+    typical_ranges: "Tłokowy GA: m₀ = 600–3000 kg | Turbośmigłowy Commuter: 4000–12000 kg | Odrzutowy: 4500–80000 kg | UAV Specific: ≤600 kg | UAV Certified: 600–5000 kg.",
+    galinski_note: "Dobór klasy determinuje technologię wykonania: od konstrukcji duralowych i kompozytowych w lekkim GA, przez kratownice ze zdejmowanym pokryciem w rolniczych (Dromader), po struktury skorupowe z integralnymi zbiornikami kesonowymi i kabiną hermetyczną w maszynach komunikacyjnych (Rozdz. 12 i 13)."
   },
 
   category: {
-    symbol: "Przepisy (CS-23 / CS-25)",
-    title: "Kategoria przepisów budowy i zdatności do lotu (EASA CS) i współczynnik obciążeń n_max",
-    short_desc: "Określa dopuszczalne przeciążenia manewrowe n_max / n_min na obwiedni V-n (Projekt P6) oraz współczynnik bezpieczeństwa (k = 1.5).",
-    full_definition: "Przepisy EASA (CS-23 / CS-25) definiują wytrzymałość płatowca. Im wyższy dopuszczalny współczynnik obciążeń n_max, tym mocniejsze i cięższe muszą być pasy dźwigara oraz okucia główne skrzydła.",
-    formula: "n_max = 2.1 + 24000 / (m₀ [lbs] + 10000)   (dla CS-23 Normal: 2.5 ≤ n_max ≤ 3.8,  n_min = −0.4 · n_max)",
-    effect_increase: "Wybór kategorii Użytkowej (+4.4g) lub Akrobacyjnej (+6.0g / -3.0g) zwiększa przekrój pasów dźwigara i masę skrzydła, ale pozwala na bezpieczną akrobację i lot w silnej turbulencji.",
-    typical_ranges: "CS-23 Normalna: +3.8g / -1.52g | CS-23 Użytkowa (Utility): +4.4g / -1.76g | CS-23 Akrobacyjna: +6.0g / -3.0g | CS-25 Transportowa: +2.5g / -1.0g.",
+    symbol: "Certyfikacja EASA / Prawo Lotnicze",
+    title: "Specyfikacja certyfikacyjna EASA CS i polskie prawo lotnicze (Dz. U. 2025 poz. 1137)",
+    short_desc: "Określa formalną specyfikację EASA, dopuszczalne przeciążenia manewrowe n_max / n_min na obwiedni V-n (Projekt P6), limity pasażerów oraz wymogi minimalnej załogi.",
+    full_definition: "Aplikacja w pełni implementuje współczesne europejskie normy certyfikacyjne EASA oraz zharmonizowane polskie prawo lotnicze (Dz. U. 2025 poz. 1137):\n• EASA CS-23 Amendment 5 (CS 23.2005) - architektura zorientowana na cele (objective-based), podzielona na Poziomy Certyfikacji (Certification Levels):\n  - Level 1: 0–1 pasażer (max 2 osoby łącznie, szkolne i rekreacyjne, n = +3.8g / -1.52g)\n  - Level 2: 2–6 pasażerów (standardowe maszyny turystyczne GA)\n  - Level 3: 7–9 pasażerów (lekkie dyspozycyjne wielosilnikowe)\n  - Level 4 / Commuter: 10–19 pasażerów, MTOM ≤ 8618 kg (19000 lb)\n  - Certified for Aerobatics: zatwierdzenie akrobacyjne (n = +6.0g / -3.0g)\n  - Performance Levels: Low Speed (V_NO ≤ 250 kt CAS) oraz High Speed (V_NO > 250 kt CAS)\n• EASA CS-VLA (Very Light Aeroplanes): MTOM ≤ 750 kg, max 2 osoby, 1 silnik nieturbinowy, Vs0 ≤ 45 kt CAS (83.3 km/h), n = +3.8g / -1.5g\n• EASA CS-LSA (Light Sport Aeroplanes / ASTM F2245): MTOM ≤ 600 kg (650 kg wodnosamolot), max 2 osoby, Vs0 ≤ 45 kt, n = +4.0g / -2.0g\n• EASA CS-22 (Sailplanes & Powered Sailplanes): Motoszybowce turystyczne TMG, MTOM ≤ 850 kg, max 2 osoby, n = +5.3g / -2.65g\n• EASA CS-25 (Large Aeroplanes): MTOM > 5700 kg, min. 2 pilotów, n = max(2.5; 2.1 + 24000/(W+10000)) ≤ 3.8, n_min = -1.0g\n• EASA Annex I Opt-Out (Art. 2(8) UE 2018/1139 & LTF-UL): Ultralekkie UL-A MTOM ≤ 600 kg (Vs0 ≤ 45 kt) oraz mikroloty jednoosobowe UL-115 (masa własna ≤ 115 kg, paliwo ≤ 20 l, Vmax ≤ 102 km/h)\n• EASA UAS (Rozp. UE 2019/947 & UE 2019/945): Bezzałogowe statki powietrzne bez załogi na pokładzie (0 osób). Kategoria Specific (CS-LUAS, MTOM ≤ 600 kg, polskie UML) oraz Certified (CS-UAS / STANAG 4671, MTOM > 600 kg, polskie UMW).",
+    formula: "n_max(CS-23/STANAG) = min(3.8; 2.1 + 24000 / (m₀ [lbs] + 10000)),  n_max(CS-25) = max(2.5; min(3.8; formula)),  n_max(Akro) = +6.0,  n_max(CS-22) = +5.3",
+    effect_increase: "Wyższa kategoria przeciążeń (np. Akrobacyjna +6.0g lub CS-22 +5.3g) wymaga grubszych pasów dźwigara i cięższego węzła skrzydło-kadłub, lecz zapewnia bezpieczeństwo manewrowe. Certyfikacja CS-25 wymusza redundancję systemów i min. 2 pilotów.",
+    typical_ranges: "CS-23 Normal (L1-L4): +3.8g / -1.52g | Akrobacyjny: +6.0g / -3.0g | CS-22: +5.3g / -2.65g | CS-LSA / ULM: +4.0g / -2.0g | CS-25: +2.5g do +3.8g / -1.0g | UAS: +3.8g / -1.52g.",
     galinski_note: "Pamiętaj (Rozdz. 12.2, str. 32): dodatnie przeciążenia n > 0 ściskają górny pas dźwigara, a ujemne n < 0 ściskają pas dolny. Ponieważ |n_max| > |n_min| oraz pas ściskany podlega wyboczeniu, górny pas dźwigara ma zawsze większy przekrój od dolnego!"
   },
 

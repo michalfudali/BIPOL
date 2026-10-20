@@ -227,6 +227,8 @@
                 <button type="button" class="quick-preset-chip" data-preset="twin_turboprop" onclick="selectQuickPreset('twin_turboprop')">🛫 Twin Turboprop</button>
                 <button type="button" class="quick-preset-chip" data-preset="vlj_jet" onclick="selectQuickPreset('vlj_jet')">⚡ BizJet VLJ</button>
                 <button type="button" class="quick-preset-chip" data-preset="regional_turboprop" onclick="selectQuickPreset('regional_turboprop')">🏢 ATR Commuter</button>
+                <button type="button" class="quick-preset-chip" data-preset="uav_tactical" onclick="selectQuickPreset('uav_tactical')">🛰️ UAV Specific (FlyEye)</button>
+                <button type="button" class="quick-preset-chip" data-preset="uav_male" onclick="selectQuickPreset('uav_male')">🤖 UAV Certified (Bayraktar)</button>
               </div>
 
               <!-- Collapsible Faculty Topics Drawer (Category & Topic Selects) -->
@@ -324,42 +326,66 @@
                   <div class="input-row">
                     <div class="input-group" data-param="aircraft_type">
                       <label for="aircraft_type">
-                        <span class="label-text">Klasa samolotu <span class="info-circle-icon" data-param="aircraft_type" tabindex="0">i</span></span>
+                        <span class="label-text">Klasa konstrukcyjna samolotu <span class="info-circle-icon" data-param="aircraft_type" tabindex="0">i</span></span>
                       </label>
                       <select id="aircraft_type">
-                        <option value="piston_ga">Tłokowy GA / Treningowy / ULM</option>
-                        <option value="turboprop_regional">Turbośmigłowy / Commuter</option>
-                        <option value="jet_business">Odrzutowy Biznesowy (VLJ)</option>
-                        <option value="jet_transport">Odrzutowy Komunikacyjny</option>
-                        <option value="uav">Bezzałogowiec (UAV MALE)</option>
+                        <option value="piston_ga" selected>Tłokowy GA (EASA CS-23 L1-L2 / CS-VLA / CS-LSA / ULM)</option>
+                        <option value="turboprop_regional">Turbośmigłowy Commuter (EASA CS-23 L3-L4 / Commuter)</option>
+                        <option value="jet_business">Odrzutowy Dyspozycyjny (EASA CS-23 High Speed / VLJ / CS-25)</option>
+                        <option value="jet_transport">Odrzutowy Komunikacyjny (EASA CS-25 Large Aeroplane)</option>
+                        <option value="uav">Bezzałogowy Statek Powietrzny EASA UAS (Specific / Certified • 0 osób)</option>
                       </select>
                       <div class="param-didactic-hint" id="hint_aircraft_type"></div>
                     </div>
                     <div class="input-group" data-param="category">
                       <label for="category">
-                        <span class="label-text">Przepisy zdatności <span class="info-circle-icon" data-param="category" tabindex="0">i</span></span>
+                        <span class="label-text">Przepisy zdatności EASA <span class="info-circle-icon" data-param="category" tabindex="0">i</span></span>
                       </label>
                       <select id="category">
-                        <option value="normal">CS-23 Normalny (n=+3.8 / -1.5)</option>
-                        <option value="utility">CS-23 Użytkowy (n=+4.4 / -1.8)</option>
-                        <option value="aerobatic">CS-23 Akrobacyjny (n=+6.0 / -3.0)</option>
-                        <option value="transport">CS-25 Komunikacyjny (n=+2.5 / -1.0)</option>
+                        <optgroup label="EASA CS-23 Amdt 5 (Normal Category ≤ 19 pax / 8618 kg)">
+                          <option value="cs23_level1">EASA CS-23 Level 1 (Normal • 0–1 pasażer • Szkolny / Treningowy)</option>
+                          <option value="cs23_level2" selected>EASA CS-23 Level 2 (Normal • 2–6 pasażerów • Turystyczny / GA)</option>
+                          <option value="cs23_level3">EASA CS-23 Level 3 (Normal • 7–9 pasażerów • Użytkowy / Dyspozycyjny)</option>
+                          <option value="cs23_commuter">EASA CS-23 Level 4 / Commuter (10–19 pasażerów • MTOM ≤ 8618 kg)</option>
+                          <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
+                        </optgroup>
+                        <optgroup label="EASA Lekkie i Motoszybowce (Light & Sport Aeroplanes)">
+                          <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                          <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                          <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
+                        </optgroup>
+                        <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
+                          <option value="cs25_transport">EASA CS-25 (Komunikacyjny duży • MTOM > 5700 kg, n = +2.5 / -1.0)</option>
+                        </optgroup>
+                        <optgroup label="EASA Załącznik I (Opt-out krajowy / Ultralekkie 600 kg wg art. 2 ust. 8)">
+                          <option value="easa_optout_ul">EASA Annex I Opt-Out / UL-A (Ultralekki • MTOM ≤ 600/650 kg, max 2 os.)</option>
+                          <option value="easa_optout_ul115">EASA Annex I / UL-115 (Jednoosobowy mikrolot • masa własna ≤ 115 kg)</option>
+                        </optgroup>
+                        <optgroup label="EASA Bezzałogowe Statki Powietrzne UAS (UE 2019/947 & 2019/945 • 0 osób na pokładzie)">
+                          <option value="easa_uas_specific">EASA UAS Specific (CS-LUAS • Lekki bezzałogowiec MTOM ≤ 600 kg)</option>
+                          <option value="easa_uas_certified">EASA UAS Certified (CS-UAS / STANAG 4671 • Ciężki UAV MTOM > 600 kg)</option>
+                        </optgroup>
                       </select>
                       <div class="param-didactic-hint" id="hint_category"></div>
                     </div>
                   </div>
 
-                  <div class="input-row">
-                    <div class="input-group" data-param="n_pax">
+                  <!-- Alert bezzałogowca EASA UAS -->
+                  <div id="uav_easa_banner" style="display:none; background:#eff6ff; border:1px solid #93c5fd; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:0.75rem; color:#1e40af;">
+                    🤖 <strong>EASA UAS (UE 2019/947):</strong> Bezzałogowy statek powietrzny – <strong>0 osób na pokładzie</strong>. Sterowanie ze stacji naziemnej (GCS). Wymagana masa wyposażenia zadaniowego (sensory/głowica).
+                  </div>
+
+                  <div class="input-row" id="row_main_occupants">
+                    <div class="input-group" data-param="n_pax" id="group_n_pax">
                       <label for="n_pax">
                         <span class="label-text">Liczba pasażerów [os.] <span class="info-circle-icon" data-param="n_pax" tabindex="0">i</span></span>
                       </label>
                       <input type="number" id="n_pax" min="0" max="300" step="1" value="1">
                       <div class="param-didactic-hint" id="hint_n_pax"></div>
                     </div>
-                    <div class="input-group" data-param="m_cargo">
+                    <div class="input-group" data-param="m_cargo" id="group_m_cargo">
                       <label for="m_cargo">
-                        <span class="label-text">Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span></span>
+                        <span class="label-text" id="label_m_cargo_text">Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span></span>
                       </label>
                       <input type="number" id="m_cargo" min="0" max="50000" step="25" value="0">
                       <div class="param-didactic-hint" id="hint_m_cargo"></div>
@@ -402,19 +428,19 @@
 
                   <!-- Parametry uzupełniające misji (widoczne w trybie zaawansowanym) -->
                   <div class="advanced-only">
-                    <div class="input-row">
-                      <div class="input-group" data-param="n_crew">
+                    <div class="input-row" id="row_main_crew">
+                      <div class="input-group" data-param="n_crew" id="group_n_crew">
                         <label for="n_crew">
                           <span class="label-text">Liczba załogi (pilotów) [os.] <span class="info-circle-icon" data-param="n_crew" tabindex="0">i</span></span>
                         </label>
                         <input type="number" id="n_crew" min="0" max="6" step="1" value="1">
                         <div class="param-didactic-hint" id="hint_n_crew"></div>
                       </div>
-                      <div class="input-group" data-param="m_pax">
+                      <div class="input-group" data-param="m_pax" id="group_m_pax">
                         <label for="m_pax">
                           <span class="label-text">Masa 1 os. z bagażem [kg] <span class="info-circle-icon" data-param="m_pax" tabindex="0">i</span></span>
                         </label>
-                        <input type="number" id="m_pax" min="50" max="150" step="5" value="100">
+                        <input type="number" id="m_pax" min="0" max="150" step="5" value="100">
                         <div class="param-didactic-hint" id="hint_m_pax"></div>
                       </div>
                     </div>
@@ -2543,50 +2569,73 @@
             <div class="input-group">
               <label for="wiz_aircraft_type">Klasa konstrukcyjna samolotu:</label>
               <select id="wiz_aircraft_type">
-                <option value="piston_ga">Tłokowy GA / Treningowy / ULM</option>
-                <option value="turboprop_regional">Turbośmigłowy / Commuter</option>
-                <option value="jet_business">Odrzutowy Biznesowy (VLJ)</option>
-                <option value="jet_transport">Odrzutowy Komunikacyjny</option>
-                <option value="uav">Bezzałogowiec (UAV MALE)</option>
+                <option value="piston_ga" selected>Tłokowy GA (EASA CS-23 L1-L2 / CS-VLA / CS-LSA / ULM)</option>
+                <option value="turboprop_regional">Turbośmigłowy Commuter (EASA CS-23 L3-L4 / Commuter)</option>
+                <option value="jet_business">Odrzutowy Dyspozycyjny (EASA CS-23 High Speed / VLJ / CS-25)</option>
+                <option value="jet_transport">Odrzutowy Komunikacyjny (EASA CS-25 Large Aeroplane)</option>
+                <option value="uav">Bezzałogowy Statek Powietrzny EASA UAS (Specific / Certified • 0 osób)</option>
               </select>
             </div>
             <div class="input-group">
-              <label for="wiz_category">Przepisy zdatności i obciążeń:</label>
+              <label for="wiz_category">Przepisy zdatności EASA:</label>
               <select id="wiz_category">
-                <option value="normal">CS-23 Normalna (n = +3.8 / -1.52)</option>
-                <option value="utility">CS-23 Użytkowa (n = +4.4 / -1.76)</option>
-                <option value="aerobatic">CS-23 Akrobacyjna (n = +6.0 / -3.00)</option>
-                <option value="commuter">CS-23 Commuter (n = +3.0 / -1.2)</option>
-                <option value="transport">CS-25 Komunikacyjna (n = +2.5 / -1.0)</option>
+                <optgroup label="EASA CS-23 Amdt 5 (Normal Category ≤ 19 pax / 8618 kg)">
+                  <option value="cs23_level1">EASA CS-23 Level 1 (Normal • 0–1 pasażer • Szkolny / Treningowy)</option>
+                  <option value="cs23_level2" selected>EASA CS-23 Level 2 (Normal • 2–6 pasażerów • Turystyczny / GA)</option>
+                  <option value="cs23_level3">EASA CS-23 Level 3 (Normal • 7–9 pasażerów • Użytkowy / Dyspozycyjny)</option>
+                  <option value="cs23_commuter">EASA CS-23 Level 4 / Commuter (10–19 pasażerów • MTOM ≤ 8618 kg)</option>
+                  <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
+                </optgroup>
+                <optgroup label="EASA Lekkie i Motoszybowce (Light & Sport Aeroplanes)">
+                  <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                  <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                  <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
+                </optgroup>
+                <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
+                  <option value="cs25_transport">EASA CS-25 (Komunikacyjny duży • MTOM > 5700 kg, n = +2.5 / -1.0)</option>
+                </optgroup>
+                <optgroup label="EASA Załącznik I (Opt-out krajowy / Ultralekkie 600 kg wg art. 2 ust. 8)">
+                  <option value="easa_optout_ul">EASA Annex I Opt-Out / UL-A (Ultralekki • MTOM ≤ 600/650 kg, max 2 os.)</option>
+                  <option value="easa_optout_ul115">EASA Annex I / UL-115 (Jednoosobowy mikrolot • masa własna ≤ 115 kg)</option>
+                </optgroup>
+                <optgroup label="EASA Bezzałogowe Statki Powietrzne UAS (UE 2019/947 & 2019/945 • 0 osób na pokładzie)">
+                  <option value="easa_uas_specific">EASA UAS Specific (CS-LUAS • Lekki bezzałogowiec MTOM ≤ 600 kg)</option>
+                  <option value="easa_uas_certified">EASA UAS Certified (CS-UAS / STANAG 4671 • Ciężki UAV MTOM > 600 kg)</option>
+                </optgroup>
               </select>
             </div>
           </div>
 
-          <div class="input-row">
-            <div class="input-group">
+          <!-- Alert bezzałogowca EASA UAS w kreatorze -->
+          <div id="wiz_uav_easa_banner" style="display:none; background:#eff6ff; border:1px solid #93c5fd; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:0.75rem; color:#1e40af;">
+            🤖 <strong>EASA UAS (UE 2019/947 & 2019/945):</strong> Bezzałogowy statek powietrzny – <strong>0 osób na pokładzie</strong>. Sterowanie ze stacji naziemnej (GCS). Wymagana masa wyposażenia zadaniowego (sensory, głowica optoelektroniczna, łącze C2).
+          </div>
+
+          <div class="input-row" id="wiz_row_occupants_1">
+            <div class="input-group" id="wiz_group_n_crew">
               <label for="wiz_n_crew">Liczba załogi (pilotów) [os.]:</label>
-              <input type="number" id="wiz_n_crew" min="1" max="4" value="1">
+              <input type="number" id="wiz_n_crew" min="0" max="6" value="1">
             </div>
-            <div class="input-group">
+            <div class="input-group" id="wiz_group_n_pax">
               <label for="wiz_n_pax">Liczba pasażerów [os.]:</label>
-              <input type="number" id="wiz_n_pax" min="0" max="100" value="1">
+              <input type="number" id="wiz_n_pax" min="0" max="300" value="1">
             </div>
           </div>
 
-          <div class="input-row">
-            <div class="input-group">
+          <div class="input-row" id="wiz_row_occupants_2">
+            <div class="input-group" id="wiz_group_m_pax">
               <label for="wiz_m_pax">Masa 1 osoby z bagażem [kg]:</label>
-              <input type="number" id="wiz_m_pax" min="60" max="150" value="100">
+              <input type="number" id="wiz_m_pax" min="0" max="150" value="100">
             </div>
-            <div class="input-group">
-              <label for="wiz_m_cargo">Dodatkowy ładunek handlowy cargo [kg]:</label>
-              <input type="number" id="wiz_m_cargo" min="0" max="20000" value="0">
+            <div class="input-group" id="wiz_group_m_cargo">
+              <label for="wiz_m_cargo" id="label_wiz_m_cargo">Dodatkowy ładunek handlowy cargo [kg]:</label>
+              <input type="number" id="wiz_m_cargo" min="0" max="50000" value="0">
             </div>
           </div>
 
           <div class="formula-box" style="margin-top:0.75rem;">
             <div class="formula-legend">
-              <strong>💡 Wytyczne MEiL PW (prof. C. Galiński):</strong> Kategoria normalna jest optymalna dla samolotów turystycznych i transportowych (minimalna masa struktury skrzydła przy n = +3.8). Do szkolenia podstawowego w korkociągach wybierz kategorię <em>Użytkową (Utility)</em> lub <em>Akrobacyjną</em>.
+              <strong>💡 Wytyczne EASA (CS-23 Amdt 5 & CS-25):</strong> EASA dzieli samoloty normalne na poziomy certyfikacji (Level 1–4) zależne od liczby pasażerów (Level 1: 0–1 pax, Level 2: 2–6 pax, Level 3: 7–9 pax, Level 4: 10–19 pax). Dla małych samolotów sportowych obowiązuje CS-LSA (MTOM ≤ 600 kg) lub CS-VLA (MTOM ≤ 750 kg) z limitem prędkości lądowania \(V_{S0} \le 45\text{ kt}\).
             </div>
           </div>
         </div>

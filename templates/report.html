@@ -200,13 +200,22 @@
     <div class="report-section">
       <h2>1. Założenia taktyczno-techniczne i definicja misji (P1)</h2>
       <p>
-        Celem projektu jest wstępne wymiarowanie i analiza osiągów samolotu spełniającego wymagania zdatności do lotu kategorii <strong>{{ params.get('category', 'normal').upper() }}</strong>.
+        Celem projektu jest wstępne wymiarowanie i analiza osiągów statku powietrznego spełniającego wymagania zdatności do lotu 
+        {% if res.easa_compliance %}
+          specyfikacji <strong>{{ res.easa_compliance.easa_spec }}</strong> (klasa: <strong>{{ res.easa_compliance.easa_code }}</strong>, podstawa projektowa: <em>{{ res.easa_compliance.design_code }}</em>, wpis krajowy: {{ res.easa_compliance.polish_code }} wg Dz. U. 2025 poz. 1137).
+        {% else %}
+          kategorii <strong>{{ params.get('category', 'normal').upper() }}</strong>.
+        {% endif %}
       </p>
       <table class="b-table">
         <tr><th>Zasięg obliczeniowy R</th><td><b>{{ params.range_km }} km</b></td><th>Wysokość przelotowa H</th><td><b>{{ params.cruise_altitude_m }} m</b></td></tr>
         <tr><th>Prędkość przelotowa Vcr</th><td><b>{{ params.cruise_speed_kmh }} km/h</b></td><th>Maks. prędkość lądowania Vs0</th><td><b>{{ params.v_stall_kmh }} km/h</b></td></tr>
         <tr><th>Wymagana droga rozbiegu Sto</th><td><b>{{ params.takeoff_run_m }} m</b></td><th>Min. prędkość wznoszenia wy</th><td><b>{{ params.climb_rate_ms }} m/s</b></td></tr>
+        {% if res.mass.unmanned or params.aircraft_type == 'uav' %}
+        <tr><th>Status załogi na pokładzie</th><td><b style="color:#0284c7;">Bezzałogowiec (UAS) – 0 os. na pokładzie</b></td><th>Wyposażenie zadaniowe (sensory)</th><td><b>{{ params.m_cargo }} kg</b></td></tr>
+        {% else %}
         <tr><th>Liczba pasażerów</th><td><b>{{ params.n_pax }} os.</b></td><th>Liczba członków załogi</th><td><b>{{ params.n_crew }} os.</b></td></tr>
+        {% endif %}
       </table>
 
       <h2>2. Wstępny bilans mas samolotu (P2)</h2>
@@ -219,8 +228,13 @@
           <tr><th>Komponent bilansu</th><th>Oznaczenie</th><th>Masa [kg]</th><th>Udział w masie startowej [%]</th></tr>
         </thead>
         <tbody>
+          {% if res.mass.unmanned or params.aircraft_type == 'uav' %}
+          <tr><td>Wyposażenie zadaniowe UAV (sensory / głowica)</td><td>\(m_{pl}\)</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Załoga pokładowa (0 os. – pilot w stacji GCS)</td><td>\(m_{crew}\)</td><td><b>0.0</b></td><td>0.0%</td></tr>
+          {% else %}
           <tr><td>Masa płatna (Payload)</td><td>\(m_{pl}\)</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
           <tr><td>Załoga (Crew)</td><td>\(m_{crew}\)</td><td><b>{{ res.mass.m_crew }}</b></td><td>{{ ((res.mass.m_crew / res.mass.m0) * 100)|round(1) }}%</td></tr>
+          {% endif %}
           <tr><td>Paliwo całkowite (Fuel)</td><td>\(m_{f}\)</td><td><b>{{ res.mass.m_fuel }}</b></td><td>{{ (res.mass.fuel_fraction * 100)|round(1) }}%</td></tr>
           <tr><td>Masa pusta wyposażona (OEW)</td><td>\(m_{e}\)</td><td><b>{{ res.mass.m_empty }}</b></td><td>{{ (res.mass.empty_fraction * 100)|round(1) }}%</td></tr>
           <tr style="background:#f8fafc; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td>\(m_0\)</td><td><b>{{ res.mass.m0 }}</b></td><td>100.0%</td></tr>

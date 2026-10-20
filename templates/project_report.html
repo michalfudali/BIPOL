@@ -291,7 +291,7 @@
       <table class="rep-table">
         <tr><th style="width:50%;">Cecha konstrukcyjna</th><th>Wartość projektowa</th></tr>
         <tr><td>Temat projektu BIPOL I</td><td><b>#{{ p_data.topic.id }}: {{ p_data.topic.title }}</b></td></tr>
-        <tr><td>Kategoria samolotu</td><td>{{ params.category }}</td></tr>
+        <tr><td>Kategoria i specyfikacja EASA</td><td><b>{{ res.easa_compliance.easa_spec if res.easa_compliance else params.category }}</b> ({{ res.easa_compliance.design_code if res.easa_compliance else '' }})</td></tr>
         <tr><td>Układ płata</td><td>{{ params.wing_config }}</td></tr>
         <tr><td>Zespół napędowy</td><td>{{ params.engine_type }} (lokalizacja: {{ params.engine_location }})</td></tr>
         <tr><td>Powierzchnia omywana szacunkowa Swet / S</td><td>{{ p_data.swet_over_s }} (Swet = {{ p_data.s_wet_m2 }} m²)</td></tr>

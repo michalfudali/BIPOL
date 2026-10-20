@@ -32,13 +32,13 @@ def run_bipol_project(params: dict):
     mass_res = calculate_mass_sizing(params)
     m0 = mass_res["m0"]
 
-    # Automatyczny dobór podkategorii UM (UMW > 600 kg / UML ≤ 600 kg), gdy klasę UM wymuszono z klasy UAV
+    # Automatyczny dobór podkategorii EASA UAS (Certified > 600 kg / Specific ≤ 600 kg), gdy kategoria została dobrana automatycznie
     if params.get("_um_auto") and mass_res.get("unmanned"):
-        auto_cat = "um_heavy" if m0 > 600.0 else "um_light"
+        auto_cat = "easa_uas_certified" if m0 > 600.0 else "easa_uas_specific"
         if auto_cat != params.get("category"):
             params["category"] = auto_cat
-            law_corrections.append(f"Na podstawie MTOM = {m0:.0f} kg przyjęto podkategorię "
-                                   f"{'UMW (MTOM > 600 kg)' if auto_cat == 'um_heavy' else 'UML (MTOM ≤ 600 kg)'}.")
+            law_corrections.append(f"Na podstawie obliczonego MTOM = {m0:.0f} kg zaklasyfikowano statek bezzałogowy do kategorii EASA "
+                                   f"{'UAS Certified (CS-UAS / STANAG 4671 • MTOM > 600 kg)' if auto_cat == 'easa_uas_certified' else 'UAS Specific (CS-LUAS • MTOM ≤ 600 kg)'}.")
     
     # Etap P2: Dobór obciążenia powierzchni skrzydła i ciągu/mocy (Matching Chart)
     sizing_res = calculate_matching_chart(params, m0=m0)
@@ -131,6 +131,7 @@ def run_bipol_project(params: dict):
         "envelope": envelope_res,
         "balance": balance_res,
         "compliance_checks": checks,
+        "easa_compliance": law_res,
         "polish_law": law_res,
         "bipol_projects": bipol_projects_res
     }
