@@ -8,7 +8,6 @@
  */
 
 let currentResults = null;
-let presetsData = {};
 let topicsData = [];
 let categoriesData = {};
 let formBaseParams = {};
@@ -30,15 +29,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Błąd pobierania tematów:', err);
   }
 
-  // 2. Pobierz presety klasyczne
-  try {
-    const res = await fetch('/api/presets');
-    presetsData = await res.json();
-    populatePresetsSelect();
-  } catch (err) {
-    console.error('Błąd pobierania presetów:', err);
-  }
-
   // 3. Pobierz listę materiałów z wydziału (BIPOL, Mechanika Lotu, ZPK CAD1)
   loadScrapedFiles();
 
@@ -54,13 +44,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (topicSelect) {
     topicSelect.addEventListener('change', (e) => {
       loadTopic(e.target.value);
-    });
-  }
-
-  const presetSelect = document.getElementById('presetSelect');
-  if (presetSelect) {
-    presetSelect.addEventListener('change', (e) => {
-      loadPreset(e.target.value);
     });
   }
 
@@ -158,8 +141,37 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
 
 
   const categoryIsUas = () => catEl?.value.startsWith('easa_uas_');
-  if (source === 'aircraft' && acEl?.value !== 'uav' && categoryIsUas()) {
-    catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
+  if (source === 'aircraft') {
+    if (acEl?.value === 'glider') {
+      if (catEl) catEl.value = 'cs22_glider';
+      const engEl = document.getElementById(pfx + 'engine_type');
+      if (engEl) engEl.value = 'none';
+      if (isWizard) syncWizardPropulsionUI(true);
+      else syncFormPropulsionUI(true);
+    } else if (acEl?.value === 'motoglider') {
+      if (catEl) catEl.value = 'cs22_motoglider';
+      const engEl = document.getElementById(pfx + 'engine_type');
+      if (engEl && engEl.value === 'none') engEl.value = 'prop';
+      if (isWizard) syncWizardPropulsionUI(true);
+      else syncFormPropulsionUI(true);
+    } else if (acEl?.value !== 'uav' && categoryIsUas()) {
+      catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
+    }
+  }
+  if (source === 'category') {
+    if (catEl?.value === 'cs22_glider') {
+      if (acEl) acEl.value = 'glider';
+      const engEl = document.getElementById(pfx + 'engine_type');
+      if (engEl) engEl.value = 'none';
+      if (isWizard) syncWizardPropulsionUI(true);
+      else syncFormPropulsionUI(true);
+    } else if (catEl?.value === 'cs22_motoglider') {
+      if (acEl && acEl.value !== 'motoglider') acEl.value = 'motoglider';
+      const engEl = document.getElementById(pfx + 'engine_type');
+      if (engEl && engEl.value === 'none') engEl.value = 'prop';
+      if (isWizard) syncWizardPropulsionUI(true);
+      else syncFormPropulsionUI(true);
+    }
   }
   if (source === 'category' && !categoryIsUas() && acEl?.value === 'uav') {
     acEl.value = catEl.value === 'cs25_transport' ? 'jet_transport' : 'piston_ga';
@@ -231,7 +243,7 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
       mpaxEl.value = '100';
     }
     if (paxEl) {
-      if (cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'easa_optout_ul') {
+      if (cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'cs22_glider' || cat === 'easa_optout_ul') {
         paxEl.max = '1';
       } else if (cat === 'easa_optout_ul115') {
         paxEl.max = '0';
@@ -340,15 +352,6 @@ function toggleFacultyDrawer() {
       ? '🏛️ Ukryj bazę tematów ▴'
       : '🏛️ Baza 110 tematów MEiL ▾';
   }
-}
-
-function selectQuickPreset(presetKey) {
-  document.querySelectorAll('.quick-preset-chip').forEach(chip => {
-    chip.classList.toggle('active', chip.getAttribute('data-preset') === presetKey);
-  });
-  const sel = document.getElementById('presetSelect');
-  if (sel) sel.value = presetKey;
-  loadPreset(presetKey);
 }
 
 function toggleAccordion(modKey) {
@@ -812,71 +815,6 @@ function setFieldValue(id, val) {
   }
 }
 
-function populatePresetsSelect() {
-  const sel = document.getElementById('presetSelect');
-  if (!sel) return;
-  sel.innerHTML = '';
-  for (const [key, p] of Object.entries(presetsData)) {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
-  }
-}
-
-function loadPreset(presetKey) {
-  const p = presetsData[presetKey];
-  if (!p) return;
-  formBaseParams = { ...p, m_bag: 0 };
-
-  const pnd = document.getElementById('projectNameDisplay');
-  if (pnd) pnd.textContent = p.name;
-
-  const fields = [
-    'aircraft_type', 'category', 'engine_type', 'engine_location',
-    'wing_config', 'n_pax', 'm_cargo', 'n_crew', 'm_crew_person',
-    'range_km', 'cruise_altitude_m', 'cruise_speed_kmh', 'v_stall_kmh',
-    'takeoff_run_m', 'climb_rate_ms', 'aspect_ratio', 'taper_ratio',
-    'sweep_quarter_deg', 'dihedral_deg', 'cx0', 'oswald_e',
-    'cz_max_clean', 'cz_max_to', 'cz_max_lnd', 'ld_cruise', 'sfc',
-    'prop_efficiency', 'prop_eff_to', 'loiter_time_min', 'v_h', 'v_v'
-  ];
-
-  fields.forEach(field => {
-    setFieldValue(field, p[field]);
-  });
-  // Pole m_pax w formularzu oznacza "Masa 1 osoby z bagażem [kg]"
-  const totalPaxPerson = (typeof p.m_pax === 'number' ? p.m_pax : 80) + (typeof p.m_bag === 'number' ? p.m_bag : 20);
-  setFieldValue('m_pax', totalPaxPerson > 0 ? totalPaxPerson : 100);
-  setFieldValue('wingspan_m', 0);
-
-  // Dobierz typ klapy dla presetu
-  if (presetKey === 'pzl_kos') {
-    setFieldValue('flap_type', 'split');
-    setFieldValue('slat_type', 'none');
-  } else if (presetKey === 'ga_trainer') {
-    setFieldValue('flap_type', 'single_slotted');
-    setFieldValue('slat_type', 'none');
-  } else if (presetKey === 'regional_turboprop' || presetKey === 'twin_turboprop' || presetKey === 'vlj_jet') {
-    setFieldValue('flap_type', 'fowler');
-    setFieldValue('slat_type', 'none');
-  } else if (presetKey === 'uav_male' || presetKey === 'uav_tactical') {
-    setFieldValue('flap_type', 'plain');
-    setFieldValue('slat_type', 'none');
-  }
-
-  document.querySelectorAll('.quick-preset-chip').forEach(chip => {
-    chip.classList.toggle('active', chip.getAttribute('data-preset') === presetKey);
-  });
-
-  syncFormPropulsionUI(false);
-  syncAircraftClassAndEASAUI(false);
-  renderWingConfigDidacticCard();
-  renderFlapDidacticCard(false);
-  updateAccordionPills();
-  performCalculation();
-}
-
 function collectFormData() {
   const data = { ...formBaseParams };
   const inputs = document.querySelectorAll('#designForm input, #designForm select');
@@ -1054,9 +992,8 @@ function updateUI(res) {
   try {
     const reportBtn = document.getElementById('openReportBtn');
     if (reportBtn) {
-      const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
       const currentParams = res.params;
-      reportBtn.href = `/report?preset=${encodeURIComponent(presetKey)}&params_json=${encodeURIComponent(JSON.stringify(currentParams))}`;
+      reportBtn.href = `/report?params_json=${encodeURIComponent(JSON.stringify(currentParams))}`;
       reportBtn.onclick = () => {
         localStorage.setItem('bipol_custom_report_data', JSON.stringify({
           res: currentResults,
@@ -1704,74 +1641,6 @@ function setupTabs() {
    ======================================================== */
 let currentWizardStep = 1;
 
-const WIZARD_TEMPLATES = {
-  trainer_ga: {
-    name: "Szkolno-Treningowy GA (PZL-102 / C152)",
-    aircraft_type: "piston_ga",
-    category: "cs23_level1",
-    n_crew: 1, n_pax: 1, m_pax: 90, m_cargo: 20,
-    range_km: 640, cruise_altitude_m: 2000, cruise_speed_kmh: 174,
-    v_stall_kmh: 84, takeoff_run_m: 210, climb_rate_ms: 4.1,
-    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.80, sfc: 265,
-    wing_config: "low", aspect_ratio: 7.33, taper_ratio: 0.60, sweep_quarter_deg: 0,
-    flap_type: "split", slat_type: "none"
-  },
-  touring_pax: {
-    name: "Turystyczny 4-miejscowy (Cirrus SR22 / Socata)",
-    aircraft_type: "piston_ga",
-    category: "cs23_level2",
-    n_crew: 1, n_pax: 3, m_pax: 100, m_cargo: 60,
-    range_km: 1250, cruise_altitude_m: 2500, cruise_speed_kmh: 245,
-    v_stall_kmh: 92, takeoff_run_m: 320, climb_rate_ms: 5.4,
-    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.82, sfc: 250,
-    wing_config: "low", aspect_ratio: 7.8, taper_ratio: 0.65, sweep_quarter_deg: 0,
-    flap_type: "single_slotted", slat_type: "none"
-  },
-  stol_agri: {
-    name: "Rolniczy / Krótkiego Startu STOL (PZL Kruk / Wilga)",
-    aircraft_type: "piston_ga",
-    category: "cs23_level2",
-    n_crew: 1, n_pax: 0, m_pax: 90, m_cargo: 850,
-    range_km: 550, cruise_altitude_m: 1000, cruise_speed_kmh: 165,
-    v_stall_kmh: 72, takeoff_run_m: 160, climb_rate_ms: 5.6,
-    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.78, sfc: 285,
-    wing_config: "high", aspect_ratio: 6.6, taper_ratio: 0.80, sweep_quarter_deg: 0,
-    flap_type: "junkers", slat_type: "fixed_slot"
-  },
-  turboprop_commuter: {
-    name: "Dyspozycyjny Turboprop (King Air / ATR 42)",
-    aircraft_type: "turboprop_regional",
-    category: "cs23_commuter",
-    n_crew: 2, n_pax: 8, m_pax: 100, m_cargo: 200,
-    range_km: 2200, cruise_altitude_m: 6500, cruise_speed_kmh: 460,
-    v_stall_kmh: 135, takeoff_run_m: 680, climb_rate_ms: 9.2,
-    engine_type: "prop", engine_location: "wing", prop_efficiency: 0.84, sfc: 280,
-    wing_config: "low", aspect_ratio: 10.5, taper_ratio: 0.55, sweep_quarter_deg: 2,
-    flap_type: "fowler", slat_type: "none"
-  },
-  vlj_bizjet: {
-    name: "Lekki Odrzutowiec Biznesowy VLJ (HondaJet / Citation)",
-    aircraft_type: "jet_business",
-    category: "cs23_level2",
-    n_crew: 1, n_pax: 5, m_pax: 95, m_cargo: 100,
-    range_km: 2400, cruise_altitude_m: 11000, cruise_speed_kmh: 680,
-    v_stall_kmh: 165, takeoff_run_m: 950, climb_rate_ms: 14.0,
-    engine_type: "jet", engine_location: "rear", prop_efficiency: 0.80, sfc: 0.62,
-    wing_config: "low", aspect_ratio: 8.2, taper_ratio: 0.40, sweep_quarter_deg: 18,
-    flap_type: "fowler", slat_type: "slats_auto"
-  },
-  motoglider_uav: {
-    name: "Bezzałogowiec EASA UAS (Klasa MALE / Bayraktar)",
-    aircraft_type: "uav",
-    category: "easa_uas_specific",
-    n_crew: 0, n_pax: 0, m_pax: 0, m_cargo: 80,
-    range_km: 1800, cruise_altitude_m: 5000, cruise_speed_kmh: 130,
-    v_stall_kmh: 68, takeoff_run_m: 180, climb_rate_ms: 3.8,
-    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.82, sfc: 255,
-    wing_config: "mid", aspect_ratio: 17.5, taper_ratio: 0.50, sweep_quarter_deg: 0,
-    flap_type: "flaperon", slat_type: "none"
-  }
-};
 // ==========================================
 // BIPOL STUDIO - SYSTEM ZARZĄDZANIA PROJEKTAMI (PROJECT SYSTEM)
 // ==========================================
@@ -2186,18 +2055,22 @@ function closeSessionStarterModal() {
 function initProjectSystem() {
   let list = getProjectsList();
 
-  // Jeśli brak projektów (pierwsze uruchomienie), stwórz projekt domyślny z PZL-Kos
+  // Usuń dawny przykładowy projekt wzorcowy (PZL-102B Kos) z listy projektów
+  const sampleIds = ['proj_pzl_kos'];
+  if (list.some(p => sampleIds.includes(p.id))) {
+    list = list.filter(p => !sampleIds.includes(p.id));
+    saveProjectsList(list);
+    if (sampleIds.includes(getActiveProjectId())) localStorage.removeItem(STORAGE_ACTIVE_PROJ_KEY);
+  }
+
+  // Jeśli brak projektów (pierwsze uruchomienie), utwórz pusty projekt roboczy
   if (list.length === 0) {
-    const reference = presetsData.pzl_kos || {};
-    const defaultParams = { ...reference, m_pax: (reference.m_pax || 80) + (reference.m_bag || 0), m_bag: 0, flap_type: 'split', slat_type: 'none' };
     const initProj = {
-      id: 'proj_pzl_kos',
-      name: 'PZL-102B Kos (Klasyk MEiL PW - Projekt Referencyjny)',
-      aircraft_type: 'piston_ga',
-      category: 'normal',
+      id: 'proj_' + Date.now(),
+      name: 'Mój projekt samolotu',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      params: defaultParams,
+      params: {},
       summary: {}
     };
     list = [initProj];
@@ -2350,14 +2223,6 @@ function setupProjectEventListeners() {
   };
   if (starterExistBtn) starterExistBtn.addEventListener('click', handleStarterExist);
   if (starterExistCard) starterExistCard.addEventListener('click', handleStarterExist);
-
-  const starterQuickKos = document.getElementById('starterQuickKosBtn');
-  if (starterQuickKos) {
-    starterQuickKos.addEventListener('click', () => {
-      closeSessionStarterModal();
-      selectQuickPreset('pzl_kos');
-    });
-  }
 }
 
 // Udostępnienie metod globalnie dla onclick w wygenerowanych kartach HTML
@@ -2486,13 +2351,7 @@ function initWizardSystem() {
     });
   });
 
-  // Szablony gotowe (Quick Templates)
-  document.querySelectorAll('.wizard-template-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const templateKey = chip.getAttribute('data-template');
-      applyWizardTemplate(templateKey);
-    });
-  });
+
 
   if (suggestBtn) {
     suggestBtn.addEventListener('click', () => suggestStepDefaults(2));
@@ -2703,29 +2562,6 @@ function goToWizardStep(step) {
   if (body) body.scrollTop = 0;
 }
 
-function applyWizardTemplate(key) {
-  const t = WIZARD_TEMPLATES[key];
-  if (!t) return;
-
-  document.querySelectorAll('.wizard-template-chip').forEach(c => {
-    c.classList.toggle('active', c.getAttribute('data-template') === key);
-  });
-
-  for (const [k, v] of Object.entries(t)) {
-    const el = document.getElementById(`wiz_${k}`);
-    if (el) el.value = v;
-  }
-
-  syncAircraftClassAndEASAUI(true);
-  syncWizardPropulsionUI(false);
-
-  if (currentWizardStep === 4) {
-    renderWizardStep4Mechanics();
-  } else if (currentWizardStep === 5) {
-    renderWizardStep5Summary();
-  }
-}
-
 function suggestStepDefaults(step) {
   const acType = document.getElementById('wiz_aircraft_type')?.value || 'piston_ga';
 
@@ -2887,7 +2723,7 @@ function renderWizardStep5Summary() {
   if (isUasSummary && (nCrew > 0 || nPax > 0)) {
     issues.push('🛑 Błąd przepisów EASA: Bezzałogowy statek powietrzny (UAS) nie może mieć pilotów ani pasażerów na pokładzie!');
   }
-  if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'easa_optout_ul') && (nCrew + nPax > 2)) {
+  if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'cs22_motoglider' || cat === 'cs22_glider' || cat === 'easa_optout_ul') && (nCrew + nPax > 2)) {
     issues.push(`🛑 Błąd przepisów EASA: ${catLabel} dopuszcza maksymalnie 2 osoby na pokładzie (załoga + pasażerowie = ${nCrew + nPax}).`);
   }
   if ((cat === 'cs_vla' || cat === 'cs_lsa' || cat === 'easa_optout_ul') && Vs0 > 83.3) {
@@ -4042,8 +3878,10 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function openIndividualProjectReport(pId) {
-  const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
-  const currentParams = res.params;
+  const presetKey = 'custom';
+  const currentParams = { ...((currentResults && currentResults.params) || collectFormData()) };
+  const activeProj = getActiveProject();
+  if (activeProj && activeProj.name) currentParams.name = activeProj.name;
   try {
     localStorage.setItem('bipol_custom_report_data', JSON.stringify({
       res: currentResults,

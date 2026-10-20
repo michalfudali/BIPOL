@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIPOL Studio - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=12">
+  <link rel="stylesheet" href="/static/css/style.css?v=13">
 </head>
 <body>
 
@@ -16,20 +16,14 @@
         <div class="brand-logo">✈️</div>
         <div>
           <div class="brand-title">BIPOL Studio</div>
-          <div class="brand-subtitle">BIPOL I (ZSiS) &bull; Mechanika Lotu I (ZM) &bull; Zapis Konstrukcji CAD I (ZPK PN-EN ISO) &bull; Monografia prof. C. Galińskiego</div>
+          <div class="brand-subtitle">Wstępne projektowanie samolotów &bull; BIPOL I &bull; MEiL PW</div>
         </div>
       </div>
       <div class="navbar-actions">
-        <button type="button" id="launchWizardBtnNav" class="btn" style="background:#f59e0b; color:#0f172a; font-weight:800; border:1px solid #d97706; font-size:0.82rem;" title="Uruchom interaktywny kreator założeń projektowych krok po kroku">
-          🪄 Nowy Projekt (Kreator)
-        </button>
-        <button type="button" id="btnOpenProjectManagerNav" class="btn" style="background:#1e3a8a; color:#fff; border:1px solid #60a5fa; font-size:0.82rem; font-weight:700;" title="Otwórz Menedżer Wszystkich Projektów">
-          📁 Moje Projekty (<span id="navProjectCount">1</span>)
-        </button>
-        <button type="button" id="toggleDidacticHintsBtn" class="btn" style="background:#1e40af; color:#fff; border:1px solid #60a5fa; font-size:0.8rem;" title="Przełącz stałe wyświetlanie skróconych podpowiedzi pod polami">
+        <button type="button" id="toggleDidacticHintsBtn" class="btn btn-nav-ghost" title="Pokaż / ukryj podpowiedzi pod polami">
           ℹ️ Wskazówki: (i)
         </button>
-        <a id="openReportBtn" href="/report?preset=pzl_kos" target="_blank" class="btn btn-success">
+        <a id="openReportBtn" href="/report" target="_blank" class="btn btn-success">
           📄 Generuj Raport BIPOL
         </a>
       </div>
@@ -153,37 +147,84 @@
       </div>
     </div>
 
-    <!-- KPI Summary Cards with Circular Info Icons -->
+    <!-- KPI Summary Cards with Telemetry Layout & Stage Indicators -->
     <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label"><span>Masa Startowa MTOW (m₀)</span> <span class="info-circle-icon" data-param="kpi_m0" tabindex="0">i</span></div>
+      <div class="kpi-card" data-stage="p2">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">⚖️</div>
+          <span class="kpi-stage-tag">PROJEKT 2</span>
+        </div>
+        <div class="kpi-label">
+          <span>Masa startowa MTOM (m₀)</span>
+          <span class="info-circle-icon" data-param="kpi_m0" tabindex="0" title="Szczegóły masy startowej">i</span>
+        </div>
         <div class="kpi-value" id="kpi_m0">--- kg</div>
-        <div class="kpi-sub">Iteracyjny bilans masowy P2</div>
+        <div class="kpi-sub">Iteracyjny bilans masowy misji</div>
       </div>
-      <div class="kpi-card accent">
-        <div class="kpi-label"><span>Powierzchnia Nośna S</span> <span class="info-circle-icon" data-param="kpi_wing_s" tabindex="0">i</span></div>
+
+      <div class="kpi-card accent" data-stage="p2">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">📐</div>
+          <span class="kpi-stage-tag">PROJEKT 2</span>
+        </div>
+        <div class="kpi-label">
+          <span>Powierzchnia nośna S</span>
+          <span class="info-circle-icon" data-param="kpi_wing_s" tabindex="0" title="Szczegóły powierzchni skrzydła">i</span>
+        </div>
         <div class="kpi-value" id="kpi_wing_s">--- m²</div>
-        <div class="kpi-sub">Obciążenie W/S z Matching Chart</div>
+        <div class="kpi-sub">Wykres dopasowania W/S (Matching)</div>
       </div>
-      <div class="kpi-card success">
-        <div class="kpi-label"><span>Rozpiętość Skrzydła b</span> <span class="info-circle-icon" data-param="kpi_wingspan" tabindex="0">i</span></div>
+
+      <div class="kpi-card success" data-stage="p3">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">↔️</div>
+          <span class="kpi-stage-tag">PROJEKT 3</span>
+        </div>
+        <div class="kpi-label">
+          <span>Rozpiętość skrzydła b</span>
+          <span class="info-circle-icon" data-param="kpi_wingspan" tabindex="0" title="Szczegóły geometrii płata">i</span>
+        </div>
         <div class="kpi-value" id="kpi_wingspan">--- m</div>
-        <div class="kpi-sub">Wydłużenie i geometria P3</div>
+        <div class="kpi-sub">Wydłużenie λ i geometria płata</div>
       </div>
-      <div class="kpi-card purple">
-        <div class="kpi-label"><span>Wznoszenie wy_max</span> <span class="info-circle-icon" data-param="kpi_wy_max" tabindex="0">i</span></div>
+
+      <div class="kpi-card purple" data-stage="p5">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">🚀</div>
+          <span class="kpi-stage-tag">PROJEKT 5</span>
+        </div>
+        <div class="kpi-label">
+          <span>Wznoszenie w_y max</span>
+          <span class="info-circle-icon" data-param="kpi_wy_max" tabindex="0" title="Szczegóły wznoszenia">i</span>
+        </div>
         <div class="kpi-value" id="kpi_wy_max">--- m/s</div>
-        <div class="kpi-sub">Poziom morza (MSL) P5</div>
+        <div class="kpi-sub">Maksymalne wznoszenie MSL</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label"><span>Prędkość przeciągnięcia VS0</span> <span class="info-circle-icon" data-param="kpi_vs0" tabindex="0">i</span></div>
+
+      <div class="kpi-card danger-accent" data-stage="p5">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">🛑</div>
+          <span class="kpi-stage-tag">PROJEKT 5</span>
+        </div>
+        <div class="kpi-label">
+          <span>Prędkość przeciągnięcia VS0</span>
+          <span class="info-circle-icon" data-param="kpi_vs0" tabindex="0" title="Szczegóły prędkości przeciągnięcia">i</span>
+        </div>
         <div class="kpi-value" id="kpi_vs0">--- km/h</div>
-        <div class="kpi-sub">Z mechanizacją lądowania P5</div>
+        <div class="kpi-sub">Konfiguracja do lądowania (klapy)</div>
       </div>
-      <div class="kpi-card success">
-        <div class="kpi-label"><span>Zapas Stateczności Kn</span> <span class="info-circle-icon" data-param="kpi_sm" tabindex="0">i</span></div>
+
+      <div class="kpi-card info-teal" data-stage="p6">
+        <div class="kpi-header-row">
+          <div class="kpi-icon-badge">🧭</div>
+          <span class="kpi-stage-tag">PROJEKT 6</span>
+        </div>
+        <div class="kpi-label">
+          <span>Zapas stateczności Kn</span>
+          <span class="info-circle-icon" data-param="kpi_sm" tabindex="0" title="Szczegóły stateczności podłużnej">i</span>
+        </div>
         <div class="kpi-value" id="kpi_sm">--- % ŚDA</div>
-        <div class="kpi-sub">Tylne położenie ŚM P6</div>
+        <div class="kpi-sub">Dla najbardziej tylnego położenia ŚM</div>
       </div>
     </div>
 
@@ -209,45 +250,19 @@
                   🔧 Zaawansowany
                 </button>
               </div>
-              <button type="button" id="launchWizardBtnSidebar" class="btn-wizard-pill" title="Kreator założeń krok po kroku">
-                🪄 Kreator (Wizard)
-              </button>
+              
             </div>
 
-            <!-- Quick Presets & Faculty Database Toggle -->
-            <div class="quick-presets-container">
-              <div class="quick-presets-label">
-                <span>⚡ Szybki wybór samolotu:</span>
-                <button type="button" class="faculty-drawer-btn" id="toggleFacultyTopicsBtn" onclick="toggleFacultyDrawer()">
-                  🏛️ Baza 110 tematów MEiL ▾
-                </button>
-              </div>
-              <div class="quick-presets-chips">
-                <button type="button" class="quick-preset-chip active" data-preset="pzl_kos" onclick="selectQuickPreset('pzl_kos')">✈️ PZL-102 Kos</button>
-                <button type="button" class="quick-preset-chip" data-preset="ga_trainer" onclick="selectQuickPreset('ga_trainer')">🛩️ Trener GA</button>
-                <button type="button" class="quick-preset-chip" data-preset="twin_turboprop" onclick="selectQuickPreset('twin_turboprop')">🛫 Twin Turboprop</button>
-                <button type="button" class="quick-preset-chip" data-preset="vlj_jet" onclick="selectQuickPreset('vlj_jet')">⚡ BizJet VLJ</button>
-                <button type="button" class="quick-preset-chip" data-preset="regional_turboprop" onclick="selectQuickPreset('regional_turboprop')">🏢 ATR Commuter</button>
-                <button type="button" class="quick-preset-chip" data-preset="uav_tactical" onclick="selectQuickPreset('uav_tactical')">🛰️ UAV taktyczny</button>
-                <button type="button" class="quick-preset-chip" data-preset="uav_male" onclick="selectQuickPreset('uav_male')">🤖 UAV MALE</button>
-              </div>
-
-              <!-- Collapsible Faculty Topics Drawer (Category & Topic Selects) -->
+            <!-- Oficjalna lista tematów wydziałowych (opcjonalnie) -->
+            <div class="quick-presets-container topics-only">
+              <button type="button" class="faculty-drawer-btn" id="toggleFacultyTopicsBtn" onclick="toggleFacultyDrawer()">
+                🏛️ Baza 110 tematów MEiL ▾
+              </button>
               <div id="facultyTopicsDrawer" class="faculty-topics-drawer" style="display:none;">
-                <label for="categorySelect" style="font-size:0.75rem; font-weight:700; color:#1e3a8a; display:block; margin-bottom:2px;">
-                  1. Kategoria z ZSiS MEiL PW (13 kategorii):
-                </label>
-                <select id="categorySelect" class="preset-select" style="margin-bottom:0.45rem;"></select>
-
-                <label for="topicSelect" style="font-size:0.75rem; font-weight:700; color:#1e3a8a; display:block; margin-bottom:2px;">
-                  2. Temat z oficjalnej listy wydziałowej (110 tematów):
-                </label>
-                <select id="topicSelect" class="preset-select" style="margin-bottom:0.45rem;"></select>
-
-                <label for="presetSelect" style="font-size:0.75rem; font-weight:700; color:#1e3a8a; display:block; margin-bottom:2px;">
-                  3. Lub profil referencyjny:
-                </label>
-                <select id="presetSelect" class="preset-select"></select>
+                <label for="categorySelect">Kategoria tematu</label>
+                <select id="categorySelect" class="preset-select"></select>
+                <label for="topicSelect">Temat z listy wydziałowej</label>
+                <select id="topicSelect" class="preset-select"></select>
               </div>
             </div>
 
@@ -331,6 +346,8 @@
                       </label>
                       <select id="aircraft_type">
                         <option value="piston_ga" selected>Tłokowy GA (EASA CS-23 L1-L2 / CS-VLA / CS-LSA / ULM)</option>
+                        <option value="motoglider">Motoszybowiec (EASA CS-22 TMG / Klasa MG • silnik pomocniczy/ciągnący)</option>
+                        <option value="glider">Szybowiec (EASA CS-22 / Klasa S • bez napędu / hol / wyciągarka)</option>
                         <option value="turboprop_regional">Turbośmigłowy Commuter (EASA CS-23 L3-L4 / Commuter)</option>
                         <option value="jet_business">Odrzutowy Dyspozycyjny (EASA CS-23 High Speed / VLJ / CS-25)</option>
                         <option value="jet_transport">Odrzutowy Komunikacyjny (EASA CS-25 Large Aeroplane)</option>
@@ -350,10 +367,11 @@
                           <option value="cs23_commuter">EASA CS-23 Level 4 / Commuter (10–19 pasażerów • MTOM ≤ 8618 kg)</option>
                           <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
                         </optgroup>
-                        <optgroup label="EASA Lekkie i Motoszybowce (Light & Sport Aeroplanes)">
+                        <optgroup label="EASA Lekkie, Szybowce i Motoszybowce (CS-22 / VLA / LSA)">
                           <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
                           <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
-                          <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
+                          <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, m/b² ≤ 3.0 kg/m²)</option>
+                          <option value="cs22_glider">EASA CS-22 (Szybowiec czysty • MTOM ≤ 850 kg, max 2 os., bez napędu)</option>
                         </optgroup>
                         <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
                           <option value="cs25_transport">EASA CS-25 (Large Aeroplanes • podstawa certyfikacji)</option>
@@ -682,9 +700,13 @@
               </div>
 
               <!-- Action Calculate Button -->
-              <div style="margin-top:1rem;">
-                <button type="button" id="calcBtn" aria-describedby="calculationStatus" class="btn btn-primary btn-block" style="font-size:0.96rem; padding:0.8rem; font-weight:800; border-radius:8px; box-shadow:0 3px 8px rgba(0,86,145,0.25);">
-                  ⚙️ Wykonaj Obliczenia BIPOL (P1–P6) i Odśwież Rysunek Techniczny CAD
+              <div class="calc-action-wrapper" style="margin-top:1.15rem;">
+                <button type="button" id="calcBtn" aria-describedby="calculationStatus" class="btn btn-calc-hero btn-block">
+                  <span class="btn-calc-icon">🚀</span>
+                  <span class="btn-calc-content">
+                    <span class="btn-calc-title">Przelicz Model Samolotu i Zaktualizuj CAD A3Z</span>
+                    <span class="btn-calc-subtitle">Synchronizacja bilansu mas, aerodynamiki, osiągów i rysunku technicznego</span>
+                  </span>
                 </button>
                 <div id="calculationStatus" class="calculation-status" role="status" aria-live="polite"></div>
               </div>
@@ -2406,7 +2428,7 @@
           </div>
         </div>
 
-        <!-- Dolny pasek narzędzi startowych (Kreator, Menedżer, PZL-102B Kos) -->
+        <!-- Dolny pasek narzędzi startowych (Kreator, Menedżer) -->
         <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem 1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
           <div style="font-size:0.82rem; color:#334155;">
             <strong>Szybkie akcje projektowe:</strong>
@@ -2418,9 +2440,7 @@
             <button type="button" class="btn btn-outline btn-sm" id="starterExistingProjectBtn" style="font-weight:700;">
               📂 Menedżer Zapisanych Projektów
             </button>
-            <button type="button" id="starterQuickKosBtn" class="btn btn-outline-sm" style="color:#0284c7; font-weight:700;">
-              ⚡ Załaduj wzorzec PZL-102B Kos
-            </button>
+            
           </div>
         </div>
       </div>
@@ -2503,33 +2523,6 @@
       <!-- Wizard Body with Step Panes -->
       <div class="wizard-body">
 
-        <!-- Szybkie szablony / sugestie dydaktyczne -->
-        <div class="wizard-quick-templates">
-          <div class="wizard-quick-templates-title">
-            💡 Szybkie Szablony Dydaktyczne (Wstaw spójne, gotowe założenia 1 kliknięciem):
-          </div>
-          <div class="wizard-template-chips">
-            <button type="button" class="wizard-template-chip" data-template="trainer_ga">
-              🎓 Szkolny GA (PZL-102 / C152)
-            </button>
-            <button type="button" class="wizard-template-chip" data-template="touring_pax">
-              ✈️ Turystyczny 4-os. (Cirrus / Socata)
-            </button>
-            <button type="button" class="wizard-template-chip" data-template="stol_agri">
-              🌾 Rolniczy / STOL (PZL Kruk / Wilga)
-            </button>
-            <button type="button" class="wizard-template-chip" data-template="turboprop_commuter">
-              👔 Turboprop (King Air / ATR)
-            </button>
-            <button type="button" class="wizard-template-chip" data-template="vlj_bizjet">
-              🚀 Bizjet VLJ (Odrzutowiec)
-            </button>
-            <button type="button" class="wizard-template-chip" data-template="motoglider_uav">
-              🦅 Motoszybowiec / UAV
-            </button>
-          </div>
-        </div>
-
         <!-- KROK 1: Przeznaczenie, Klasa i Kategoria Zdatności -->
         <div class="wizard-pane active" id="wizardPane1">
           <div class="wizard-pane-header">
@@ -2573,6 +2566,8 @@
               <label for="wiz_aircraft_type">Klasa konstrukcyjna samolotu:</label>
               <select id="wiz_aircraft_type">
                 <option value="piston_ga" selected>Tłokowy GA (EASA CS-23 L1-L2 / CS-VLA / CS-LSA / ULM)</option>
+                <option value="motoglider">Motoszybowiec (EASA CS-22 TMG / Klasa MG • silnik pomocniczy/ciągnący)</option>
+                <option value="glider">Szybowiec (EASA CS-22 / Klasa S • bez napędu / hol / wyciągarka)</option>
                 <option value="turboprop_regional">Turbośmigłowy Commuter (EASA CS-23 L3-L4 / Commuter)</option>
                 <option value="jet_business">Odrzutowy Dyspozycyjny (EASA CS-23 High Speed / VLJ / CS-25)</option>
                 <option value="jet_transport">Odrzutowy Komunikacyjny (EASA CS-25 Large Aeroplane)</option>
@@ -2589,10 +2584,11 @@
                   <option value="cs23_commuter">EASA CS-23 Level 4 / Commuter (10–19 pasażerów • MTOM ≤ 8618 kg)</option>
                   <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
                 </optgroup>
-                <optgroup label="EASA Lekkie i Motoszybowce (Light & Sport Aeroplanes)">
+                <optgroup label="EASA Lekkie, Szybowce i Motoszybowce (CS-22 / VLA / LSA)">
                   <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
                   <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
-                  <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)</option>
+                  <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, m/b² ≤ 3.0 kg/m²)</option>
+                  <option value="cs22_glider">EASA CS-22 (Szybowiec czysty • MTOM ≤ 850 kg, max 2 os., bez napędu)</option>
                 </optgroup>
                 <optgroup label="EASA CS-25 (Duże samoloty komunikacyjne)">
                   <option value="cs25_transport">EASA CS-25 (Large Aeroplanes • podstawa certyfikacji)</option>

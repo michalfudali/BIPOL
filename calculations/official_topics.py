@@ -54,7 +54,7 @@ def build_official_topics():
             # 1. Motoszybowce (tematy 1-14)
             if 1 <= num <= 14:
                 cat = "motoszybowce"
-                ac_type = "piston_ga"
+                ac_type = "motoglider"
                 engine_type = "prop"
                 n_pax = 0 if "jednomiejscowy" in t_lower else 1
                 range_km = 600.0

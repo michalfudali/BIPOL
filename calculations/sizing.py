@@ -23,7 +23,8 @@ def calculate_matching_chart(params: dict, m0: float = None):
       - prop_efficiency: sprawność śmigła (np. 0.82)
       - prop_eff_to: sprawność śmigła na rozbiegu (np. 0.65)
     """
-    engine_type = params.get("engine_type", "prop")
+    ac_type = params.get("aircraft_type", "piston_ga")
+    engine_type = "none" if ac_type == "glider" else params.get("engine_type", "prop")
     v_stall_kmh = float(params.get("v_stall_kmh", 100.0))
     v_stall_ms = v_stall_kmh / 3.6
     
@@ -82,11 +83,19 @@ def calculate_matching_chart(params: dict, m0: float = None):
     mu_ground = 0.04
     
     for ws in ws_values:
+        if engine_type == "none":
+            curve_takeoff.append(0.0)
+            curve_climb.append(0.0)
+            curve_cruise.append(0.0)
+            continue
+
         # --- A. Rozbieg (Takeoff) ---
-        # S_to = 1.21 * (W/S) / (g * rho0 * Cz_max_to * (T/W - mu))
-        tw_to = (1.21 * ws) / (G0 * RHO0 * cz_max_to * s_to_req) + mu_ground
+        s_eff = max(30.0, s_to_req)
+        tw_to = (1.21 * ws) / (G0 * RHO0 * cz_max_to * s_eff) + mu_ground
         
-        if engine_type == "jet":
+        if engine_type == "none":
+            curve_takeoff.append(0.0)
+        elif engine_type == "jet":
             curve_takeoff.append(round(tw_to, 4))
         else:
             # Prędkość oderwania V_LOF = 1.12 * V_stall_to
@@ -95,7 +104,9 @@ def calculate_matching_chart(params: dict, m0: float = None):
             curve_takeoff.append(round(pw_to, 2))
             
         # --- B. Wznoszenie przy ziemi (Climb rate wg BIPOL_1_wzory.pdf) ---
-        if engine_type == "jet":
+        if engine_type == "none":
+            curve_climb.append(0.0)
+        elif engine_type == "jet":
             # Dla odrzutowca (T approx const): max(wy) przy Cz_opt = sqrt(Cx0 / k) -> K_max
             cz_climb = math.sqrt(cx0 / k_ind)
             ld_climb = cz_climb / (2.0 * cx0)
@@ -120,7 +131,9 @@ def calculate_matching_chart(params: dict, m0: float = None):
         engine_lapse = math.pow(sigma_cr, 0.80)
         tw_cr_sl = tw_cr_alt / engine_lapse
         
-        if engine_type == "jet":
+        if engine_type == "none":
+            curve_cruise.append(0.0)
+        elif engine_type == "jet":
             curve_cruise.append(round(tw_cr_sl, 4))
         else:
             power_lapse = math.pow(sigma_cr, 0.85)
@@ -132,14 +145,18 @@ def calculate_matching_chart(params: dict, m0: float = None):
     ws_design = round(0.95 * ws_stall_max, 1)
     
     # Obliczamy wartości w punkcie ws_design:
-    tw_to_design = (1.21 * ws_design) / (G0 * RHO0 * cz_max_to * s_to_req) + mu_ground
+    s_eff = max(30.0, s_to_req)
+    tw_to_design = (1.21 * ws_design) / (G0 * RHO0 * cz_max_to * s_eff) + mu_ground
     
     q_cr = 0.5 * rho_cr * (v_cr_ms ** 2)
     cz_cr = ws_design / q_cr
     cx_cr = cx0 + k_ind * (cz_cr ** 2)
     tw_cr_sl_design = (cx_cr / cz_cr) / math.pow(sigma_cr, 0.80)
     
-    if engine_type == "jet":
+    if engine_type == "none":
+        tw_design = None
+        pw_design = None
+    elif engine_type == "jet":
         cz_climb = math.sqrt(cx0 / k_ind)
         ld_climb = cz_climb / (2.0 * cx0)
         v_y = math.sqrt(2.0 * ws_design / (RHO0 * cz_climb))

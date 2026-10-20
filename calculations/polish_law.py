@@ -230,14 +230,36 @@ SUBCATEGORIES = {
     # -------------------------------------------------------------
     # 5. EASA CS-22 (Sailplanes and Powered Sailplanes)
     # -------------------------------------------------------------
+    "cs22_glider": {
+        "code": "CS-22-GLD",
+        "easa_code": "CS-22 Glider",
+        "polish_code": "S",
+        "class": "S",
+        "class_name": "S. Szybowiec (EASA CS-22 Sailplane)",
+        "name": "EASA CS-22 (Szybowiec czysty • MTOM ≤ 850 kg, max 2 os., bez napędu)",
+        "easa_spec": "EASA CS-22 Subpart A (Sailplanes)",
+        "mtom_min": None,
+        "mtom_max": 850.0,
+        "occupants_max": 2,
+        "pax_min": 0,
+        "pax_max": 1,
+        "crew_min": 1,
+        "crew_max": 1,
+        "unmanned": False,
+        "load_basis": "cs22_utility",
+        "design_code": "EASA CS-22 (Sailplanes)",
+        "k_allowed": ["K1", "K2"],
+        "occupant_mass_kg": 80.0,
+        "aerobatic": False,
+    },
     "cs22_motoglider": {
-        "code": "CS-22",
-        "easa_code": "CS-22",
+        "code": "CS-22-TMG",
+        "easa_code": "CS-22 TMG",
         "polish_code": "MG1",
         "class": "MG",
-        "class_name": "MG. Motoszybowiec (EASA CS-22)",
-        "name": "EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, max 2 os.)",
-        "easa_spec": "EASA CS-22 (Sailplanes and Powered Sailplanes)",
+        "class_name": "MG. Motoszybowiec (EASA CS-22 TMG)",
+        "name": "EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, m/b² ≤ 3.0 kg/m²)",
+        "easa_spec": "EASA CS-22 Subpart A (Touring Motor Gliders)",
         "mtom_min": None,
         "mtom_max": 850.0,
         "occupants_max": 2,
@@ -248,7 +270,7 @@ SUBCATEGORIES = {
         "w_b2_max": 3.0,
         "unmanned": False,
         "load_basis": "cs22_utility",
-        "design_code": "EASA CS-22",
+        "design_code": "EASA CS-22 (Touring Motor Gliders)",
         "k_allowed": ["K1", "K2"],
         "occupant_mass_kg": 80.0,
         "aerobatic": False,
@@ -376,6 +398,14 @@ CATEGORY_ALIASES = {
     "a4_vla": "cs_vla",
     "a5_lsa": "cs_lsa",
     "mg_utility": "cs22_motoglider",
+    "glider": "cs22_glider",
+    "szybowiec": "cs22_glider",
+    "sailplane": "cs22_glider",
+    "motoglider": "cs22_motoglider",
+    "motoszybowiec": "cs22_motoglider",
+    "tmg": "cs22_motoglider",
+    "cs22": "cs22_motoglider",
+    "s_glider": "cs22_glider",
     "ul_a": "easa_optout_ul",
     "ul_mg": "cs22_motoglider",
     "ul_115": "easa_optout_ul115",
@@ -418,6 +448,8 @@ def is_unmanned(params: dict) -> bool:
 def default_category_for(aircraft_type: str) -> str:
     """Domyślna kategoria EASA dla wybranego typu statku."""
     return {
+        "glider": "cs22_glider",
+        "motoglider": "cs22_motoglider",
         "uav": "easa_uas_specific",
         "jet_transport": "cs25_transport",
         "turboprop_regional": "cs23_commuter",
@@ -439,7 +471,7 @@ def normalize_occupants(params: dict):
     ac_type = p.get("aircraft_type", "piston_ga")
     cat_key = resolve_category(p.get("category"))
 
-    # Spójność typu płatowca z kategorią bezzałogową
+    # Spójność typu płatowca z kategorią bezzałogową, szybowcową i motoszybowcową
     if ac_type == "uav" and not SUBCATEGORIES[cat_key]["unmanned"]:
         notes.append(f"Typ UAV wymaga kategorii EASA UAS (UE 2019/947) – wybrano 'easa_uas_specific'.")
         cat_key = "easa_uas_specific"
@@ -447,6 +479,17 @@ def normalize_occupants(params: dict):
     elif SUBCATEGORIES[cat_key]["unmanned"] and ac_type != "uav":
         notes.append("Wybrano kategorię bezzałogową EASA UAS – typ statku ustawiono na UAV.")
         ac_type = "uav"
+    elif ac_type == "glider":
+        if cat_key != "cs22_glider":
+            cat_key = "cs22_glider"
+            notes.append("Typ Szybowiec przypisano do kategorii EASA CS-22 (Sailplanes).")
+        p["engine_type"] = "none"
+    elif ac_type == "motoglider":
+        if cat_key not in ("cs22_motoglider", "easa_optout_ul"):
+            cat_key = "cs22_motoglider"
+            notes.append("Typ Motoszybowiec przypisano do kategorii EASA CS-22 (Touring Motor Gliders).")
+        if p.get("engine_type") in ("none", "jet"):
+            p["engine_type"] = "prop"
 
     p["aircraft_type"] = ac_type
     p["category"] = cat_key
@@ -552,10 +595,14 @@ def envelope_speed_family(category) -> str:
     return "normal"
 
 
-def suggest_subcategory(m0: float, n_crew: int, n_pax: int, unmanned: bool, engine_type: str) -> str:
+def suggest_subcategory(m0: float, n_crew: int, n_pax: int, unmanned: bool, engine_type: str, ac_type: str = "piston_ga") -> str:
     """Rekomenduje optymalną kategorię EASA na podstawie obliczonej masy startowej i osób."""
     if unmanned:
-        return "easa_uas_specific"  # tylko wariant roboczy; wymagana ocena operacji
+        return "easa_uas_specific"
+    if ac_type == "glider" or engine_type == "none":
+        return "cs22_glider"
+    if ac_type == "motoglider":
+        return "cs22_motoglider"  # tylko wariant roboczy; wymagana ocena operacji
     if m0 > 8618.0 or n_pax > 19:
         return "cs25_transport"
     if n_pax >= 10:
@@ -735,6 +782,16 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
             f"{engine_type} ({ac_type})",
             ac_type == "piston_ga" and engine_type == "prop",
             sub["easa_spec"]
+        ))
+
+    # 7a. Szybowiec CS-22: brak jednostki napędowej
+    if cat_key == "cs22_glider":
+        checks.append(_chk(
+            "Układ napędowy: brak silnika (szybowiec czysty)",
+            "Bez napędu (lot swobodny)",
+            "Bez napędu" if engine_type == "none" else f"{engine_type}",
+            engine_type == "none",
+            "EASA CS-22 Subpart A (Sailplanes)"
         ))
 
     # 7. Motoszybowiec CS-22: wskaźnik obciążenia rozpiętości m/b² ≤ 3.0 kg/m²

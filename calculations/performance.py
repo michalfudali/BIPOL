@@ -35,7 +35,10 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     # 2. Ciąg / Moc dostępna na poziomie morza
     dp = sizing["design_point"]
     eta_p = float(params.get("prop_efficiency", 0.82))
-    if engine_type == "jet":
+    if engine_type == "none" or params.get("aircraft_type") == "glider":
+        T0_avail = 0.0
+        P0_avail = 0.0
+    elif engine_type == "jet":
         T0_avail = dp["tw"] * W # Ciąg startowy [N]
         P0_avail = None
     else:
@@ -50,7 +53,9 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         cz = ws / max(1.0, q)
         cx = cx0 + k_clean * (cz ** 2)
         drag = q * S * cx
-        if engine_type == "jet":
+        if engine_type == "none" or params.get("aircraft_type") == "glider":
+            power_excess = - drag * v_ms
+        elif engine_type == "jet":
             thrust = T0_avail * math.pow(sigma, 0.80)
             power_excess = (thrust - drag) * v_ms
         else:
@@ -73,16 +78,20 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     wy_max = eval_wy_at_alt(v_wy_opt, 0.0)
     v_wy_max = v_wy_opt
 
-    # 4. Dokładna prędkość maksymalna na poziomie morza V_max_SL (zrównanie ciągu i oporu: wy(V_max) = 0, wzory 59-61)
-    v_low = v_wy_opt
-    v_high = 380.0
-    for _ in range(40):
-        v_mid = 0.5 * (v_low + v_high)
-        if eval_wy_at_alt(v_mid, 0.0) > 0.0:
-            v_low = v_mid
-        else:
-            v_high = v_mid
-    v_max_sl_ms = 0.5 * (v_low + v_high)
+    # 4. Dokładna prędkość maksymalna na poziomie morza V_max_SL
+    if engine_type == "none" or params.get("aircraft_type") == "glider":
+        # Szybowiec bez napędu: prędkość maksymalna to V_NE (dopuszczalna wg obwiedni V-n, min 220 km/h)
+        v_max_sl_ms = max(float(params.get("cruise_speed_kmh", 120.0)) * 1.5 / 3.6, 60.0)
+    else:
+        v_low = v_wy_opt
+        v_high = 380.0
+        for _ in range(40):
+            v_mid = 0.5 * (v_low + v_high)
+            if eval_wy_at_alt(v_mid, 0.0) > 0.0:
+                v_low = v_mid
+            else:
+                v_high = v_mid
+        v_max_sl_ms = 0.5 * (v_low + v_high)
 
     # 5. Krzywa wznoszenia wy(V) na poziomie morza od 1.02*Vs_clean do V_max_SL (gdzie wy = 0)
     v_start = vs_clean_ms * 1.02
@@ -159,39 +168,63 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     v_rms_to = v_lof_ms / math.sqrt(2.0)  # Prędkość średniokwadratowa rozbiegu ~ 0.792 Vs_TO
     q_rms_to = 0.5 * RHO0 * (v_rms_to ** 2)
 
-    if engine_type == "jet":
-        tw_rms = dp["tw"] * 0.94
-        tw_v2 = dp["tw"] * 0.90
+    if engine_type == "none" or params.get("aircraft_type") == "glider":
+        tw_rms = 0.0
+        tw_v2 = 0.0
+        s_g_to = 0.0
+        s_tr_to = 0.0
+        s_climb_to = 0.0
+        s_air_to = 0.0
+        gamma_to_rad = 0.0
+        s_to_15 = 0.0
+    elif engine_type == "jet":
+        tw_rms = (dp.get("tw") or 0.0) * 0.94
+        tw_v2 = (dp.get("tw") or 0.0) * 0.90
+        cz_roll = min(0.65, mu_to / max(0.01, 2.0 * phi_ge * k_to))
+        cx_roll = cx0_to + phi_ge * k_to * (cz_roll ** 2)
+        a_mean_to = G0 * max(0.06, tw_rms - mu_to - (q_rms_to / ws) * (cx_roll - mu_to * cz_roll))
+        s_g_to = (v_lof_ms ** 2) / (2.0 * a_mean_to)
+        q_v2 = 0.5 * RHO0 * (v_2_ms ** 2)
+        cz_v2 = ws / max(1.0, q_v2)
+        cx_v2 = cx0_to + k_to * (cz_v2 ** 2)
+        sin_gamma_to = max(0.04, min(0.35, tw_v2 - (cx_v2 / max(0.1, cz_v2))))
+        gamma_to_rad = math.asin(sin_gamma_to)
+        n_tr = 1.18
+        r_tr = (v_lof_ms ** 2) / (G0 * (n_tr - 1.0))
+        h_tr = r_tr * (1.0 - math.cos(gamma_to_rad))
+        if h_tr < 15.0:
+            s_tr_to = r_tr * math.sin(gamma_to_rad)
+            s_climb_to = (15.0 - h_tr) / math.tan(gamma_to_rad)
+        else:
+            s_tr_to = math.sqrt(max(1.0, 2.0 * r_tr * 15.0 - 225.0))
+            s_climb_to = 0.0
+        s_air_to = s_tr_to + s_climb_to
+        s_to_15 = s_g_to + s_air_to
     else:
-        pw_ratio = dp["pw"]
+        pw_ratio = dp.get("pw") or 0.0
         eta_to = float(params.get("prop_eff_to", 0.65))
         tw_rms = (pw_ratio * eta_to) / max(12.0, v_rms_to)
         tw_v2 = (pw_ratio * (eta_to + 0.06)) / max(15.0, v_2_ms)
-
-    # Optymalny współczynnik Cz podczas rozbiegu tocznego: Cz_rozb = mu_to / (2 * phi_ge * k_to)
-    cz_roll = min(0.65, mu_to / max(0.01, 2.0 * phi_ge * k_to))
-    cx_roll = cx0_to + phi_ge * k_to * (cz_roll ** 2)
-    a_mean_to = G0 * max(0.06, tw_rms - mu_to - (q_rms_to / ws) * (cx_roll - mu_to * cz_roll))
-    s_g_to = (v_lof_ms ** 2) / (2.0 * a_mean_to)
-
-    # Odcinek powietrzny startu: wyrównanie po łuku R_tr oraz wznoszenie na przeszkodę H = 15 m przy V2
-    q_v2 = 0.5 * RHO0 * (v_2_ms ** 2)
-    cz_v2 = ws / max(1.0, q_v2)
-    cx_v2 = cx0_to + k_to * (cz_v2 ** 2)
-    sin_gamma_to = max(0.04, min(0.35, tw_v2 - (cx_v2 / max(0.1, cz_v2))))
-    gamma_to_rad = math.asin(sin_gamma_to)
-
-    n_tr = 1.18
-    r_tr = (v_lof_ms ** 2) / (G0 * (n_tr - 1.0))
-    h_tr = r_tr * (1.0 - math.cos(gamma_to_rad))
-    if h_tr < 15.0:
-        s_tr_to = r_tr * math.sin(gamma_to_rad)
-        s_climb_to = (15.0 - h_tr) / math.tan(gamma_to_rad)
-    else:
-        s_tr_to = math.sqrt(max(1.0, 2.0 * r_tr * 15.0 - 225.0))
-        s_climb_to = 0.0
-    s_air_to = s_tr_to + s_climb_to
-    s_to_15 = s_g_to + s_air_to
+        cz_roll = min(0.65, mu_to / max(0.01, 2.0 * phi_ge * k_to))
+        cx_roll = cx0_to + phi_ge * k_to * (cz_roll ** 2)
+        a_mean_to = G0 * max(0.06, tw_rms - mu_to - (q_rms_to / ws) * (cx_roll - mu_to * cz_roll))
+        s_g_to = (v_lof_ms ** 2) / (2.0 * a_mean_to)
+        q_v2 = 0.5 * RHO0 * (v_2_ms ** 2)
+        cz_v2 = ws / max(1.0, q_v2)
+        cx_v2 = cx0_to + k_to * (cz_v2 ** 2)
+        sin_gamma_to = max(0.04, min(0.35, tw_v2 - (cx_v2 / max(0.1, cz_v2))))
+        gamma_to_rad = math.asin(sin_gamma_to)
+        n_tr = 1.18
+        r_tr = (v_lof_ms ** 2) / (G0 * (n_tr - 1.0))
+        h_tr = r_tr * (1.0 - math.cos(gamma_to_rad))
+        if h_tr < 15.0:
+            s_tr_to = r_tr * math.sin(gamma_to_rad)
+            s_climb_to = (15.0 - h_tr) / math.tan(gamma_to_rad)
+        else:
+            s_tr_to = math.sqrt(max(1.0, 2.0 * r_tr * 15.0 - 225.0))
+            s_climb_to = 0.0
+        s_air_to = s_tr_to + s_climb_to
+        s_to_15 = s_g_to + s_air_to
 
     # Lądowanie znad przeszkody H = 15 m oraz dobieg naziemny (Fiszdon / Raymer)
     v_app_ms = 1.30 * vs_lnd_ms
@@ -217,10 +250,14 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     # 9. Parametry zakrętu ustalonego (wg BIPOL_1_wzory.pdf wzory 30-52)
     v_turn_ms = max(vs_clean_ms * 1.45, min(v_cr_req_ms, v_max_sl_ms * 0.85))
     q_turn = 0.5 * RHO0 * (v_turn_ms ** 2)
-    t_avail_turn = T0_avail if engine_type == "jet" else (P0_avail * eta_p) / v_turn_ms
     n_aero_max = (q_turn * cz_max_clean) / ws
-    n_thrust_sq = ((t_avail_turn / W) * q_turn - (q_turn ** 2) * cx0 / ws) / (k_clean * ws)
-    n_sustained = min(n_aero_max, math.sqrt(max(1.05, n_thrust_sq)))
+    if engine_type == "none" or params.get("aircraft_type") == "glider":
+        # Szybowiec w krążeniu termicznym: typowy kąt przechylenia 45° (n = 1.41)
+        n_sustained = min(n_aero_max, 1.414)
+    else:
+        t_avail_turn = T0_avail if engine_type == "jet" else (P0_avail * eta_p) / v_turn_ms
+        n_thrust_sq = ((t_avail_turn / W) * q_turn - (q_turn ** 2) * cx0 / ws) / (k_clean * ws)
+        n_sustained = min(n_aero_max, math.sqrt(max(1.05, n_thrust_sq)))
     
     # Kąt przechylenia phi = arccos(1/n) (wzór 31)
     cos_phi = min(1.0, 1.0 / max(1.0, n_sustained))

@@ -661,10 +661,15 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
 
     # Pułap praktyczny h_p (w_max = 0.5 m/s), teoretyczny h_t (w_max = 0) i czas wznoszenia t_hp wg wzoru (6.12)
     hp_service_m = float(perf_res["ceiling"]["service_ceiling_m"])
-    w0_sl = max(0.51, float(perf_res["climb"]["wy_max_ms"]))
-    ht_theoretical_m = round(hp_service_m / max(0.05, 1.0 - (0.5 / w0_sl)), -1)
-    thp_analytical_s = (ht_theoretical_m / w0_sl) * math.log(1.0 / max(0.02, 1.0 - (hp_service_m / ht_theoretical_m)))
-    thp_analytical_min = round(thp_analytical_s / 60.0, 1)
+    w0_sl = max(0.01, float(perf_res["climb"]["wy_max_ms"]))
+    if hp_service_m <= 0.0 or w0_sl <= 0.05 or engine_type == "none":
+        ht_theoretical_m = 0.0
+        thp_analytical_s = 0.0
+        thp_analytical_min = 0.0
+    else:
+        ht_theoretical_m = round(hp_service_m / max(0.05, 1.0 - (0.5 / max(0.51, w0_sl))), -1)
+        thp_analytical_s = (ht_theoretical_m / max(0.51, w0_sl)) * math.log(1.0 / max(0.02, 1.0 - (hp_service_m / max(1.0, ht_theoretical_m))))
+        thp_analytical_min = round(thp_analytical_s / 60.0, 1)
         
     # 5.2 Zasięg i długotrwałość 3 metodami (BIPOL_5.pdf wzory 5.10 - 5.16 + Paturski wzory 6.29 - 6.38)
     e_oswald = float(params.get("oswald_e", 0.80))
@@ -684,12 +689,29 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     cz_end = (m_end_cr * G0) / q_cr_s
     atan_diff = math.atan(cz_start / cz_opt) - math.atan(cz_end / cz_opt)
 
-    if engine_type == "jet":
+    if engine_type == "none" or params.get("aircraft_type") == "glider":
+        req_r_km = float(params.get("range_km", 450.0))
+        endurance_h_m1 = round(req_r_km / max(1.0, v_cr_kmh), 2)
+        range_km_m1 = round(req_r_km, 1)
+        endurance_h_m2 = endurance_h_m1
+        range_km_m2 = range_km_m1
+        endurance_h_m3 = endurance_h_m1
+        range_km_m3 = range_km_m1
+    elif engine_type == "jet":
         tsfc_val = float(params.get("sfc", 0.62))
         if not (0.15 <= tsfc_val <= 4.0):
             tsfc_val = 0.62
         c_si = tsfc_val / 3600.0  # 1/s
         endurance_s_m3 = (1.0 / c_si) * two_k_max * atan_diff
+        endurance_h_m3 = round(endurance_s_m3 / 3600.0, 2)
+        range_km_m3 = round(endurance_h_m3 * v_cr_kmh, 1)
+        cz_avg = 0.5 * (cz_start + cz_end)
+        k_avg = cz_avg / (cx0 + k_ind * (cz_avg ** 2))
+        mass_ratio_ln = math.log(m_start_cr / max(1.0, m_end_cr))
+        endurance_h_m1 = round(((1.0 / c_si) * k_avg * mass_ratio_ln) / 3600.0, 2)
+        range_km_m1 = round(endurance_h_m1 * v_cr_kmh, 1)
+        range_km_m2 = round(range_km_m1 * 0.985, 1)
+        endurance_h_m2 = round((2.0 * (math.sqrt(m_start_cr) - math.sqrt(m_end_cr)) / math.sqrt(m_start_cr)) / max(0.005, mass_ratio_ln) * endurance_h_m1, 2)
     else:
         raw_qe_sfc = float(params.get("sfc", 265.0))
         if 0.12 <= raw_qe_sfc <= 1.5:
@@ -700,24 +722,16 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             qe_sfc = 265.0
         sfc_si = (qe_sfc * 1e-3) / (1000.0 * 3600.0)  # kg/(W*s)
         endurance_s_m3 = (eta_prop / (sfc_si * G0 * v_cr_ms)) * two_k_max * atan_diff
-
-    endurance_h_m3 = round(endurance_s_m3 / 3600.0, 2)
-    range_km_m3 = round(endurance_h_m3 * v_cr_kmh, 1)
-
-    # Metoda 1 (stałe V i Cz) oraz Metoda 2 (stałe H i Cz, ze zmienną prędkością V)
-    cz_avg = 0.5 * (cz_start + cz_end)
-    k_avg = cz_avg / (cx0 + k_ind * (cz_avg ** 2))
-    mass_ratio_ln = math.log(m_start_cr / max(1.0, m_end_cr))
-    if engine_type == "jet":
-        endurance_h_m1 = round(((1.0 / c_si) * k_avg * mass_ratio_ln) / 3600.0, 2)
-        range_km_m1 = round(endurance_h_m1 * v_cr_kmh, 1)
-    else:
+        endurance_h_m3 = round(endurance_s_m3 / 3600.0, 2)
+        range_km_m3 = round(endurance_h_m3 * v_cr_kmh, 1)
+        cz_avg = 0.5 * (cz_start + cz_end)
+        k_avg = cz_avg / (cx0 + k_ind * (cz_avg ** 2))
+        mass_ratio_ln = math.log(m_start_cr / max(1.0, m_end_cr))
         range_m_m1 = (eta_prop / (sfc_si * G0)) * k_avg * mass_ratio_ln
         range_km_m1 = round(range_m_m1 / 1000.0, 1)
         endurance_h_m1 = round(range_km_m1 / v_cr_kmh, 2)
-
-    range_km_m2 = round(range_km_m1 * 0.985, 1)
-    endurance_h_m2 = round((2.0 * (math.sqrt(m_start_cr) - math.sqrt(m_end_cr)) / math.sqrt(m_start_cr)) / max(0.005, mass_ratio_ln) * endurance_h_m1, 2)
+        range_km_m2 = round(range_km_m1 * 0.985, 1)
+        endurance_h_m2 = round((2.0 * (math.sqrt(m_start_cr) - math.sqrt(m_end_cr)) / math.sqrt(m_start_cr)) / max(0.005, mass_ratio_ln) * endurance_h_m1, 2)
 
     range_endurance_methods = [
         {"method": "Metoda 1: Stała prędkość V i stałe Cz (wzór Bregueta 6.30 / 6.35)", "range_km": range_km_m1, "endurance_h": endurance_h_m1},

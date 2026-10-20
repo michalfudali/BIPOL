@@ -75,68 +75,78 @@ def calculate_mass_sizing(params: dict):
     if unmanned:
         n_crew = 0
         n_pax = 0
-        if "m_cargo" not in params:
-            m_cargo = 80.0
     m_payload = n_pax * (m_pax + m_bag) + m_cargo
     m_crew = n_crew * m_crew_person
     if m_payload + m_crew <= 0.0:
         raise ValueError("Do wyznaczenia MTOW podaj dodatnią masę załogi lub ładunku.")
     
     # 2. Wyznaczenie ułamka zużycia paliwa (Fuel Fractions)
-    # Etap 1: Rozruch i kołowanie (Warm-up & Taxi)
-    ff_warmup = 0.992 if engine_type == "prop" else 0.975
-    
-    # Etap 2: Start (Takeoff)
-    ff_takeoff = 0.995 if engine_type == "prop" else 0.985
-    
-    # Etap 3: Wznoszenie (Climb)
-    ff_climb = 0.988 if engine_type == "prop" else 0.978
-    
-    # Etap 4: Przelot obliczeniowy (Cruise wg wzoru Bregueta)
-    raw_sfc = float(params.get("sfc", 0.62 if engine_type == "jet" else 265.0))
-    if engine_type == "jet":
-        # Zabezpieczenie na wypadek pozostawienia sfc śmigłowego (np. 265 g/kWh) po zmianie napędu na 'jet'
-        sfc_h = raw_sfc if 0.15 <= raw_sfc <= 4.0 else 0.62
-        c_t_sec = sfc_h / 3600.0
-        ff_cruise = math.exp(- (range_m * c_t_sec) / (v_cr_ms * ld_cr))
+    if ac_type == "glider" or engine_type == "none":
+        ff_warmup = 1.0
+        ff_takeoff = 1.0
+        ff_climb = 1.0
+        ff_cruise = 1.0
+        ff_descent = 1.0
+        ff_loiter = 1.0
+        m_ff = 1.0
+        fuel_fraction = 0.0
     else:
-        # Silnik śmigłowy (tłokowy lub turbośmigłowy): sfc w [g/(kW*h)] (lub przeliczenie z kg/(kW*h) jeśli w przedziale 0.12..1.5)
-        if 0.12 <= raw_sfc <= 1.5:
-            sfc_g_kwh = raw_sfc * 1000.0
-        elif raw_sfc >= 80.0:
-            sfc_g_kwh = raw_sfc
+        # Etap 1: Rozruch i kołowanie (Warm-up & Taxi)
+        ff_warmup = 0.992 if engine_type == "prop" else 0.975
+        
+        # Etap 2: Start (Takeoff)
+        ff_takeoff = 0.995 if engine_type == "prop" else 0.985
+        
+        # Etap 3: Wznoszenie (Climb)
+        ff_climb = 0.988 if engine_type == "prop" else 0.978
+        
+        # Etap 4: Przelot obliczeniowy (Cruise wg wzoru Bregueta)
+        raw_sfc = float(params.get("sfc", 0.62 if engine_type == "jet" else 265.0))
+        if engine_type == "jet":
+            # Zabezpieczenie na wypadek pozostawienia sfc śmigłowego (np. 265 g/kWh) po zmianie napędu na 'jet'
+            sfc_h = raw_sfc if 0.15 <= raw_sfc <= 4.0 else 0.62
+            c_t_sec = sfc_h / 3600.0
+            ff_cruise = math.exp(- (range_m * c_t_sec) / (v_cr_ms * ld_cr))
         else:
-            sfc_g_kwh = 265.0
-        c_p = (sfc_g_kwh * 1e-3) / (1000.0 * 3600.0) # [kg / (W*s)]
-        ff_cruise = math.exp(- (range_m * c_p * G0) / (eta_p * ld_cr))
+            # Silnik śmigłowy (tłokowy lub turbośmigłowy): sfc w [g/(kW*h)] (lub przeliczenie z kg/(kW*h) jeśli w przedziale 0.12..1.5)
+            if 0.12 <= raw_sfc <= 1.5:
+                sfc_g_kwh = raw_sfc * 1000.0
+            elif raw_sfc >= 80.0:
+                sfc_g_kwh = raw_sfc
+            else:
+                sfc_g_kwh = 265.0
+            c_p = (sfc_g_kwh * 1e-3) / (1000.0 * 3600.0) # [kg / (W*s)]
+            ff_cruise = math.exp(- (range_m * c_p * G0) / (eta_p * ld_cr))
+            
+        # Etap 5: Zniżanie (Descent)
+        ff_descent = 0.992
         
-    # Etap 5: Zniżanie (Descent)
-    ff_descent = 0.992
-    
-    # Etap 6: Krążenie / Rezerwa nawigacyjna (Loiter)
-    t_loiter_sec = loiter_min * 60.0
-    if engine_type == "jet":
-        # Krążenie odrzutowca przy doskonałości maksymalnej K_max
-        ld_loiter = max(ld_cr, k_max_theo)
-        ff_loiter = math.exp(- (t_loiter_sec * c_t_sec) / ld_loiter)
-    else:
-        # Krążenie samolotu śmigłowego na prędkości ekonomicznej V_ekon (Cz_ekon = sqrt(3)*Cz_opt, K_ekon = 0.866*K_max)
-        ld_loiter = 0.866 * k_max_theo
-        v_loiter_ms = v_cr_ms * 0.72
-        ff_loiter = math.exp(- (t_loiter_sec * v_loiter_ms * c_p * G0) / (eta_p * ld_loiter))
+        # Etap 6: Krążenie / Rezerwa nawigacyjna (Loiter)
+        t_loiter_sec = loiter_min * 60.0
+        if engine_type == "jet":
+            # Krążenie odrzutowca przy doskonałości maksymalnej K_max
+            ld_loiter = max(ld_cr, k_max_theo)
+            ff_loiter = math.exp(- (t_loiter_sec * c_t_sec) / ld_loiter)
+        else:
+            # Krążenie samolotu śmigłowego na prędkości ekonomicznej V_ekon (Cz_ekon = sqrt(3)*Cz_opt, K_ekon = 0.866*K_max)
+            ld_loiter = 0.866 * k_max_theo
+            v_loiter_ms = v_cr_ms * 0.72
+            ff_loiter = math.exp(- (t_loiter_sec * v_loiter_ms * c_p * G0) / (eta_p * ld_loiter))
+            
+        # Całkowity współczynnik misji M_ff
+        m_ff = ff_warmup * ff_takeoff * ff_climb * ff_cruise * ff_descent * ff_loiter
         
-    # Całkowity współczynnik misji M_ff
-    m_ff = ff_warmup * ff_takeoff * ff_climb * ff_cruise * ff_descent * ff_loiter
-    
-    # Względna masa zużytego paliwa i całkowita z rezerwą nienaruszalną (5% rezerwa technologiczna)
-    f_trapped = 1.05
-    fuel_fraction = f_trapped * (1.0 - m_ff)
-    if fuel_fraction >= 0.62:
-        raise ValueError("Brak wykonalnego bilansu masy dla tej misji: wymagany udział paliwa jest zbyt duży.")
+        # Względna masa zużytego paliwa i całkowita z rezerwą nienaruszalną (5% rezerwa technologiczna)
+        f_trapped = 1.05
+        fuel_fraction = f_trapped * (1.0 - m_ff)
+        if fuel_fraction >= 0.62:
+            raise ValueError("Brak wykonalnego bilansu masy dla tej misji: wymagany udział paliwa jest zbyt duży.")
     
     # 3. Parametry korelacji statystycznej dla masy pustej: m_empty / m_0 = A * m_0^C
     # wg Roskama / Raymera / ZSiS MEiL PW dla różnych kategorii
     stats_coeff = {
+        "glider":              {"A": 0.82, "C": -0.05, "guess": 420.0},
+        "motoglider":          {"A": 0.86, "C": -0.05, "guess": 650.0},
         "piston_ga":           {"A": 0.92, "C": -0.06, "guess": 1100.0},
         "turboprop_regional":  {"A": 0.96, "C": -0.05, "guess": 12000.0},
         "jet_business":        {"A": 1.02, "C": -0.06, "guess": 6500.0},
