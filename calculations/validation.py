@@ -18,6 +18,9 @@ NUMERIC_LIMITS = {
     "tc_ratio": (0.04, 0.3), "delta_cx0_flaps_to": (0, 0.5),
     "delta_cx0_flaps_lnd": (0, 0.5), "delta_cx0_gear": (0, 0.5),
     "vmo_kcas": (1, 1000), "mmo": (0.01, 2),
+    "trend_count": (0, 716), "trend_engine_count": (0, 8),
+    "trend_year_min": (0, 2100), "trend_year_max": (0, 2100),
+    "fuel_reserve_factor": (1, 1.5), "mission_ld_factor": (0.5, 1),
 }
 
 DEFAULTS = {
@@ -66,6 +69,26 @@ def validate_parameters(data):
         raise ValueError("Nieznana klasa konstrukcyjna samolotu.")
     if p["engine_type"] not in ("prop", "jet", "none"):
         raise ValueError("Nieznany rodzaj napędu.")
+    for key in ('trend_count', 'trend_engine_count', 'trend_year_min', 'trend_year_max'):
+        if key in p and not float(p[key]).is_integer():
+            raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
+    for key, allowed in {'trend_source': ('all', 'fast', 'cado'),
+                         'trend_weighting': ('family', 'variant'),
+                         'mission_phase_model': ('standard', 'galinski')}.items():
+        if key in p and p[key] not in allowed:
+            raise ValueError(f'Nieznana opcja: {key}.')
+    if p.get('trend_year_min') and p.get('trend_year_max') and p['trend_year_min'] > p['trend_year_max']:
+        raise ValueError('Początkowy rok próby musi być nie większy od końcowego.')
+    if 'variable_sweep' in p and not isinstance(p['variable_sweep'], bool):
+        raise ValueError('Pole variable_sweep: wymagana wartość logiczna.')
+    if 'trend_aircraft_ids' in p:
+        ids = p['trend_aircraft_ids']
+        if not isinstance(ids, list) or len(ids) > 716 or any(not isinstance(i, str) for i in ids):
+            raise ValueError('Dobór konstrukcji: wymagana lista identyfikatorów (maks. 716).')
+        from calculations.trends import load_aircraft
+        known = {r['id'] for r in load_aircraft()}
+        if any(i not in known for i in ids):
+            raise ValueError('Dobór konstrukcji zawiera nieznany identyfikator.')
     if p["v_stall_kmh"] >= p["cruise_speed_kmh"]:
         raise ValueError("Prędkość przelotowa musi być większa od prędkości przeciągnięcia VS0.")
     if p["aircraft_type"] != "glider" and p.get("takeoff_run_m", 0) < 50:

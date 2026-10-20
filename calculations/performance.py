@@ -252,25 +252,27 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     q_turn = 0.5 * RHO0 * (v_turn_ms ** 2)
     n_aero_max = (q_turn * cz_max_clean) / ws
     if engine_type == "none" or params.get("aircraft_type") == "glider":
-        # Szybowiec w krążeniu termicznym: typowy kąt przechylenia 45° (n = 1.41)
-        n_sustained = min(n_aero_max, 1.414)
+        # Kinematics of a gliding turn, not a sustained level turn (T != D).
+        n_sustained = min(n_aero_max, math.sqrt(2))
+        turn_mode = 'gliding'
     else:
         t_avail_turn = T0_avail if engine_type == "jet" else (P0_avail * eta_p) / v_turn_ms
         n_thrust_sq = ((t_avail_turn / W) * q_turn - (q_turn ** 2) * cx0 / ws) / (k_clean * ws)
-        n_sustained = min(n_aero_max, math.sqrt(max(1.05, n_thrust_sq)))
+        n_sustained = min(n_aero_max, math.sqrt(max(0.0, n_thrust_sq)))
+        turn_mode = 'level' if n_sustained > 1 else 'unavailable'
     
     # Kąt przechylenia phi = arccos(1/n) (wzór 31)
     cos_phi = min(1.0, 1.0 / max(1.0, n_sustained))
     bank_angle_deg = math.degrees(math.acos(cos_phi))
     
     # Promień zakrętu r_min = V^2 / (g * sqrt(n^2 - 1)) (wzór 34)
-    n_factor = math.sqrt(max(0.01, (n_sustained ** 2) - 1.0))
-    r_min_turn_m = (v_turn_ms ** 2) / (G0 * n_factor)
+    n_factor = math.sqrt(max(0.0, (n_sustained ** 2) - 1.0))
+    r_min_turn_m = (v_turn_ms ** 2) / (G0 * n_factor) if n_factor > 0 else None
     
     # Prędkość kątowa zakrętu dpsi/dt = g * sqrt(n^2 - 1) / V (wzory 36 i 52)
     psi_dot_rad_s = (G0 * n_factor) / v_turn_ms
     psi_dot_deg_s = math.degrees(psi_dot_rad_s)
-    t_turn_360_s = (2.0 * math.pi) / max(0.01, psi_dot_rad_s)
+    t_turn_360_s = (2.0 * math.pi) / psi_dot_rad_s if psi_dot_rad_s > 0 else None
     
     return {
         "speeds": {
@@ -312,11 +314,14 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
             "distance_from_15m": round(s_lnd_15, 1)
         },
         "turn": {
+            "mode": turn_mode,
+            "level_sustained": turn_mode == 'level',
+            "note": 'Kinematyka zakrętu szybowego 45° z utratą energii/wysokości.' if turn_mode == 'gliding' else ('Brak nadmiaru ciągu do zakrętu poziomego przy tej prędkości.' if turn_mode == 'unavailable' else 'Ograniczenie aerodynamiczne i napędowe; sprawdź osobno obwiednię konstrukcyjną.'),
             "n_sustained": round(n_sustained, 2),
             "bank_angle_deg": round(bank_angle_deg, 1),
-            "r_min_m": round(r_min_turn_m, 1),
+            "r_min_m": round(r_min_turn_m, 1) if r_min_turn_m is not None else None,
             "psi_dot_deg_s": round(psi_dot_deg_s, 2),
-            "t_360_s": round(t_turn_360_s, 1),
+            "t_360_s": round(t_turn_360_s, 1) if t_turn_360_s is not None else None,
             "v_turn_kmh": round(v_turn_ms * 3.6, 1)
         }
     }

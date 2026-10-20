@@ -1,0 +1,2 @@
+# Optional: only for reproducing tools/import_aircraft_data.py.
+openpyxl>=3.1,<4

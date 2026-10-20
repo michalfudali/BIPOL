@@ -220,6 +220,7 @@
         {% endif %}
       </table>
 
+      {% include "trend_report.html" %}
       </section>{% endif %}
       {% if 'p2' in selected_sections %}<section data-report-section="p2">
       <h2>2. Wstępny bilans mas samolotu (P2)</h2>
@@ -337,7 +338,7 @@
         <tr><th>Długość rozbiegu Sto</th><td><b>{{ res.performance.takeoff.ground_roll_m }} m</b></td><th>Start nad przeszkodę 15 m</th><td><b>{{ res.performance.takeoff.distance_to_15m }} m</b></td></tr>
         <tr><th>Długość dobiegu Slnd</th><td><b>{{ res.performance.landing.ground_roll_m }} m</b></td><th>Lądowanie znad przeszkody 15 m</th><td><b>{{ res.performance.landing.distance_from_15m }} m</b></td></tr>
         <tr><th>Pułap praktyczny (wy = 0.5 m/s)</th><td><b>{{ res.performance.ceiling.service_ceiling_m }} m</b></td><th>Prędkość przelotowa / Mach</th><td><b>{{ res.performance.speeds.v_cruise_kmh }} km/h (M {{ res.performance.speeds.mach_cruise }})</b></td></tr>
-        <tr><th>Zakręt ustalony (BIPOL 1 wzory 31–52)</th><td><b>n = {{ res.performance.turn.n_sustained }}, &Phi; = {{ res.performance.turn.bank_angle_deg }}&deg;</b></td><th>Promień i prędkość kątowa</th><td><b>R = {{ res.performance.turn.r_min_m }} m, &omega; = {{ res.performance.turn.psi_dot_deg_s }}&deg;/s (t_360 = {{ res.performance.turn.t_360_s }} s)</b></td></tr>
+        <tr><th>Zakręt (BIPOL 1 wzory 31–52)</th><td><b>n = {{ res.performance.turn.n_sustained }}, &Phi; = {{ res.performance.turn.bank_angle_deg }}&deg;</b><br>{{ res.performance.turn.note }}</td><th>Promień i prędkość kątowa</th><td><b>R = {{ res.performance.turn.r_min_m|trendnum(1) }} m, &omega; = {{ res.performance.turn.psi_dot_deg_s }}&deg;/s (t_360 = {{ res.performance.turn.t_360_s|trendnum(1) }} s)</b></td></tr>
       </table>
 
       <div class="report-chart-box" style="margin-top:1rem;">

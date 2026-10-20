@@ -11,9 +11,13 @@ from werkzeug.exceptions import BadRequest
 from calculations import run_bipol_project, AIRCRAFT_PRESETS
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend
+from calculations.trends import reference_catalog, SOURCES, DATA
+from calculations.trend_report import trend_chart
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
+app.jinja_env.globals['trend_chart'] = trend_chart
+app.jinja_env.filters['trendnum'] = lambda v, digits=3: f'{v:.{digits}f}' if isinstance(v, (int, float)) else '—'
 
 
 def report_parameters():
@@ -59,6 +63,19 @@ def get_topics():
         "categories": OFFICIAL_CATEGORIES,
         "topics": ALL_TOPICS
     })
+
+@app.route('/api/aircraft', methods=['GET'])
+def aircraft_catalog():
+    return jsonify(reference_catalog())
+
+
+@app.route('/download/aircraft/<source>/<kind>')
+def aircraft_source_download(source, kind):
+    if source not in SOURCES or kind not in ('data', 'license'):
+        abort(404)
+    if kind == 'license':
+        return send_from_directory(DATA / 'licenses', SOURCES[source]['license_file'], as_attachment=True)
+    return send_from_directory(DATA, source + '.json', as_attachment=True)
 
 @app.route('/api/scraped-files', methods=['GET'])
 def list_scraped_files():

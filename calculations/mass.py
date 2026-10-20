@@ -63,8 +63,8 @@ def calculate_mass_sizing(params: dict):
 
     k_max_theo = 0.5 * math.sqrt((math.pi * AR * oswald_e) / max(0.008, cx0_eff))
     if "aspect_ratio" in params and "cx0" in params:
-        # Doskonałość na przelocie: dla śmigłowych ~0.88 K_max, dla odrzutowych sqrt(3)/2 K_max = 0.866 K_max (wzór 28)
-        ld_cr = round(k_max_theo * (0.866 if engine_type == "jet" else 0.88), 2)
+        # BIPOL_1, s. 5: konserwatywne K przelotu = 0.8 Kmax; osobno od optimum zasięgu.
+        ld_cr = round(k_max_theo * float(params.get('mission_ld_factor', 0.8)), 2)
     else:
         ld_cr = float(params.get("ld_cruise", 12.0))
     
@@ -88,6 +88,7 @@ def calculate_mass_sizing(params: dict):
         ff_cruise = 1.0
         ff_descent = 1.0
         ff_loiter = 1.0
+        ff_landing = 1.0
         m_ff = 1.0
         fuel_fraction = 0.0
     else:
@@ -99,6 +100,11 @@ def calculate_mass_sizing(params: dict):
         
         # Etap 3: Wznoszenie (Climb)
         ff_climb = 0.988 if engine_type == "prop" else 0.978
+        ff_landing = 0.995
+        if params.get('mission_phase_model', 'standard') == 'galinski':
+            # BIPOL_1, pp. 4–6: 0.970–0.975 for start and landing.
+            # Treat start/taxi as one phase so it is not counted twice.
+            ff_warmup, ff_takeoff, ff_landing = 1.0, 0.975, 0.975
         
         # Etap 4: Przelot obliczeniowy (Cruise wg wzoru Bregueta)
         raw_sfc = float(params.get("sfc", 0.62 if engine_type == "jet" else 265.0))
@@ -134,10 +140,10 @@ def calculate_mass_sizing(params: dict):
             ff_loiter = math.exp(- (t_loiter_sec * v_loiter_ms * c_p * G0) / (eta_p * ld_loiter))
             
         # Całkowity współczynnik misji M_ff
-        m_ff = ff_warmup * ff_takeoff * ff_climb * ff_cruise * ff_descent * ff_loiter
+        m_ff = ff_warmup * ff_takeoff * ff_climb * ff_cruise * ff_descent * ff_loiter * ff_landing
         
-        # Względna masa zużytego paliwa i całkowita z rezerwą nienaruszalną (5% rezerwa technologiczna)
-        f_trapped = 1.05
+        # BIPOL_1, eq. 4: reserve + unusable fuel, distinct from explicit loiter.
+        f_trapped = float(params.get('fuel_reserve_factor', 1.06))
         fuel_fraction = f_trapped * (1.0 - m_ff)
         if fuel_fraction >= 0.62:
             raise ValueError("Brak wykonalnego bilansu masy dla tej misji: wymagany udział paliwa jest zbyt duży.")
@@ -259,6 +265,14 @@ def calculate_mass_sizing(params: dict):
         "fuel_fraction": round(fuel_fraction, 4),
         "payload_fraction": round(m_payload / m0, 4),
         "ld_cruise_used": round(ld_cr, 2),
+        "mission_assumptions": {
+            "phase_model": params.get('mission_phase_model', 'standard'),
+            "reserve_factor": float(params.get('fuel_reserve_factor', 1.06)),
+            "ld_factor": float(params.get('mission_ld_factor', 0.8)),
+            "mass_residual_relative": abs(m0 - m_empty - m_fuel - m_payload - m_crew) / m0,
+            "source": "BIPOL_1.pdf, s. 4–6, wzory (4)–(5)",
+            "note": "Metoda proporcji: bez zrzutu ładunku. Start/wznoszenie/zniżanie/lądowanie są przybliżeniami. Krążenie jest oddzielną fazą; współczynnik 1,06 dodaje rezerwę i paliwo nieużywalne.",
+        },
         "fuel_fractions_detail": {
             "warmup": round(ff_warmup, 4),
             "takeoff": round(ff_takeoff, 4),
@@ -266,6 +280,7 @@ def calculate_mass_sizing(params: dict):
             "cruise": round(ff_cruise, 4),
             "descent": round(ff_descent, 4),
             "loiter": round(ff_loiter, 4),
+            "landing": round(ff_landing, 4),
             "total_mff": round(m_ff, 4)
         },
         "breakdown": mass_components,

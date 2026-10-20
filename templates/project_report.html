@@ -303,35 +303,7 @@
         {% endif %}
       </table>
 
-      <h2 class="rep-h2">2. Analiza trendów (Galiński eq. 1)</h2>
-      <p class="rep-p">
-        Zależność udziału masy pustej od masy startowej: <em>We/W0 = A &bull; W0^C &bull; Kvs</em>, gdzie A = {{ p_data.trend_analysis.reg_A }}, C = {{ p_data.trend_analysis.reg_C }}, Kvs = {{ p_data.trend_analysis.k_vs }}.<br>
-        Wartość trendu We/W0: <b>{{ p_data.trend_analysis.we_wo_trend }}</b> &bull; Uzyskana w projekcie: <b>{{ p_data.trend_analysis.we_wo_actual }}</b>.
-      </p>
-
-      <h3 class="rep-h3">Zestawienie konstrukcji porównywalnych (Jane's Aircraft):</h3>
-      <table class="rep-table">
-        <thead>
-          <tr><th>Model samolotu</th><th>MTOW m0 [kg]</th><th>Masa pusta me [kg]</th><th>Powierzchnia S [m²]</th><th>{{ 'Ciąg startowy [kN]' if params.engine_type == 'jet' else 'Moc silnika [kW]' }}</th><th>Vmax [km/h]</th><th>Wydłużenie AR</th></tr>
-        </thead>
-        <tbody>
-          {% for a in p_data.trend_analysis.similar_aircraft %}
-          <tr>
-            <td><b>{{ a.model }}</b></td><td>{{ a.m0 }}</td><td>{{ a.me }}</td><td>{{ a.s }}</td><td>{{ a.t_kn if (params.engine_type == 'jet' and a.t_kn) else a.p_kw }}</td><td>{{ a.v_max }}</td><td>{{ a.ar }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <h3 class="rep-h3">Średnie parametry statystyczne usterzeń i sterów:</h3>
-      <table class="rep-table">
-        <tr><td>Współczynnik objętości usterzenia poziomego V_H</td><td><b>{{ p_data.trend_analysis.statistical_averages.vh_bar }}</b></td></tr>
-        <tr><td>Współczynnik objętości usterzenia pionowego V_V</td><td><b>{{ p_data.trend_analysis.statistical_averages.vv_bar }}</b></td></tr>
-        <tr><td>Względna rozpiętość lotek ba / b</td><td>{{ p_data.trend_analysis.statistical_averages.aileron_span_fraction }}</td></tr>
-        <tr><td>Względna cięciwa lotek ca / c</td><td>{{ p_data.trend_analysis.statistical_averages.aileron_chord_fraction }}</td></tr>
-        <tr><td>Względna cięciwa steru wysokości ce / ch</td><td>{{ p_data.trend_analysis.statistical_averages.elevator_chord_fraction }}</td></tr>
-        <tr><td>Względna cięciwa steru kierunku cr / cv</td><td>{{ p_data.trend_analysis.statistical_averages.rudder_chord_fraction }}</td></tr>
-      </table>
+      {% include "trend_report.html" %}
 
     {% elif p_id == 'p2' %}
       <!-- PROJEKT 2: STUDIUM WYKONALNOŚCI -->

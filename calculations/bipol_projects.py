@@ -7,6 +7,8 @@ import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 from calculations.official_topics import ALL_TOPICS
 from calculations.paturski_ml import run_paturski_mechanika_lotu
+from calculations.trends import analyze_trends
+from calculations.preliminary import preliminary_insights
 from calculations.polish_law import SUBCATEGORIES, K_CATEGORIES, resolve_category
 
 def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dict, aero_res: dict, perf_res: dict, env_res: dict, bal_res: dict, params: dict) -> dict:
@@ -80,44 +82,10 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     else:
         p_req_p1_kw = round((drag_cr * v_cr_ms) / (float(params.get("prop_efficiency", 0.82)) * 1000.0), 1)
     
-    # 1.2 Analiza trendów (Raymer Tab. 3.1 / Galiński wzór 1: We/Wo = A * Wo^C * K_vs, Wo w [kg])
-    k_vs = 1.04 if params.get("variable_sweep", False) else 1.00
-    reg_table_si = {
-        "glider": (0.86, -0.05),
-        "piston_ga": (0.92, -0.06),
-        "piston_twin": (1.09, -0.08),
-        "turboprop_regional": (0.96, -0.05),
-        "jet_business": (1.02, -0.06),
-        "jet_transport": (0.95, -0.05),
-        "uav": (0.82, -0.04),
-    }
-    reg_A, reg_C = reg_table_si.get(ac_type, (0.92, -0.06))
-    we_wo_trend = round(reg_A * math.pow(max(50.0, m0), reg_C) * k_vs, 3)
-    
-    # Baza samolotów podobnych dla analizy trendów (z podziałem na śmigłowe i odrzutowe)
-    similar_aircraft_db = [
-        {"model": "Bayraktar TB2 (UAV MALE)", "eng": "prop", "m0": 650, "me": 420, "s": 8.6, "p_kw": 75, "t_kn": None, "v_max": 220, "ar": 16.8},
-        {"model": "PZL-102B Kos", "eng": "prop", "m0": 630, "me": 397, "s": 11.0, "p_kw": 67, "t_kn": None, "v_max": 192, "ar": 7.33},
-        {"model": "Cessna 152", "eng": "prop", "m0": 757, "me": 490, "s": 14.8, "p_kw": 82, "t_kn": None, "v_max": 204, "ar": 7.47},
-        {"model": "MQ-1 Predator (UAV)", "eng": "prop", "m0": 1020, "me": 512, "s": 11.5, "p_kw": 86, "t_kn": None, "v_max": 217, "ar": 19.0},
-        {"model": "Piper PA-28 Cherokee", "eng": "prop", "m0": 1111, "me": 640, "s": 15.8, "p_kw": 119, "t_kn": None, "v_max": 230, "ar": 7.24},
-        {"model": "Cessna 172 Skyhawk", "eng": "prop", "m0": 1157, "me": 767, "s": 16.2, "p_kw": 134, "t_kn": None, "v_max": 228, "ar": 7.52},
-        {"model": "Diamond DA40", "eng": "prop", "m0": 1200, "me": 800, "s": 13.5, "p_kw": 134, "t_kn": None, "v_max": 285, "ar": 10.2},
-        {"model": "Cirrus SR22", "eng": "prop", "m0": 1542, "me": 1021, "s": 13.5, "p_kw": 231, "t_kn": None, "v_max": 339, "ar": 10.1},
-        {"model": "Beechcraft King Air C90", "eng": "prop", "m0": 4377, "me": 2700, "s": 27.3, "p_kw": 820, "t_kn": None, "v_max": 461, "ar": 8.6},
-        {"model": "PZL M28 Skytruck", "eng": "prop", "m0": 7500, "me": 4350, "s": 39.7, "p_kw": 1640, "t_kn": None, "v_max": 355, "ar": 11.0},
-        {"model": "ATR 42-500", "eng": "prop", "m0": 18600, "me": 11250, "s": 54.5, "p_kw": 3580, "t_kn": None, "v_max": 556, "ar": 11.1},
-        {"model": "Cirrus Vision SF50 (VLJ)", "eng": "jet", "m0": 2722, "me": 1610, "s": 18.1, "p_kw": 8.2, "t_kn": 8.2, "v_max": 576, "ar": 7.7},
-        {"model": "Cessna Citation Mustang", "eng": "jet", "m0": 3921, "me": 2540, "s": 19.5, "p_kw": 13.0, "t_kn": 13.0, "v_max": 630, "ar": 8.7},
-        {"model": "HondaJet HA-420", "eng": "jet", "m0": 4853, "me": 3267, "s": 16.4, "p_kw": 18.2, "t_kn": 18.2, "v_max": 782, "ar": 8.9},
-        {"model": "Embraer Phenom 100EV", "eng": "jet", "m0": 4800, "me": 3275, "s": 18.8, "p_kw": 15.4, "t_kn": 15.4, "v_max": 750, "ar": 7.9},
-        {"model": "Cessna Citation CJ2+", "eng": "jet", "m0": 5670, "me": 3552, "s": 24.5, "p_kw": 22.2, "t_kn": 22.2, "v_max": 774, "ar": 9.1},
-        {"model": "Embraer ERJ-145", "eng": "jet", "m0": 22000, "me": 12100, "s": 51.2, "p_kw": 66.0, "t_kn": 66.0, "v_max": 833, "ar": 7.9},
-        {"model": "Airbus A220-100", "eng": "jet", "m0": 60780, "me": 35220, "s": 112.3, "p_kw": 207.0, "t_kn": 207.0, "v_max": 871, "ar": 11.0}
-    ]
-    pool_db = [a for a in similar_aircraft_db if a["eng"] == engine_type] or similar_aircraft_db
-    similar_sorted = sorted(pool_db, key=lambda a: abs(a["m0"] - m0))[:4]
-    
+    # BIPOL_1, p. 1: actual reference cohort and fitted coefficients in kg.
+    trend_analysis = analyze_trends(params, m0, m_empty)
+    preliminary = preliminary_insights(params, mass_res, geom_res, aero_res)
+
     wing_cfg_pl = {
         "low": "dolnopłata wolnonośnego",
         "high": "górnopłata wolnonośnego",
@@ -133,6 +101,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         eng_pl = "turboodrzutowy dwuprzepływowy (Turbofan)"
     elif ac_type == "turboprop_regional":
         eng_pl = "turbośmigłowy (Turboprop)"
+    elif engine_type == "none":
+        eng_pl = "brak napędu"
     else:
         eng_pl = "tłokowy śmigłowy"
 
@@ -163,23 +133,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         "k_max_est": k_max_p1,
         "p_req_est_kw": p_req_p1_kw,
         "t_req_est_kn": t_req_p1_kn,
-        "trend_analysis": {
-            "reg_A": reg_A,
-            "reg_C": reg_C,
-            "k_vs": k_vs,
-            "we_wo_trend": we_wo_trend,
-            "we_wo_actual": round(m_empty / m0, 3),
-            "similar_aircraft": similar_sorted,
-            "statistical_averages": {
-                "vh_bar": float(params.get("v_h", 0.70)),
-                "vv_bar": float(params.get("v_v", 0.05)),
-                "aileron_span_fraction": 0.38,
-                "aileron_chord_fraction": 0.22,
-                "elevator_chord_fraction": 0.35,
-                "rudder_chord_fraction": 0.38,
-                "dihedral_deg": float(params.get("dihedral_deg", 3.0))
-            }
-        },
+        "trend_analysis": trend_analysis,
+        "preliminary": preliminary,
         "points_max": {"obligatory": 3, "optional": 2, "total": 5}
     }
     
@@ -194,8 +149,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         {"phase": "3. Wznoszenie i przyspieszanie (Climb)", "fraction": fuel_detail["climb"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"], 1)},
         {"phase": "4. Przelot obliczeniowy (Cruise Breguet)", "fraction": fuel_detail["cruise"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"] * fuel_detail["cruise"], 1)},
         {"phase": "5. Zniżanie do lądowania (Descent)", "fraction": fuel_detail["descent"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"] * fuel_detail["cruise"] * fuel_detail["descent"], 1)},
-        {"phase": "6. Oczekiwanie / Rezerwa nawigacyjna (Loiter)", "fraction": fuel_detail["loiter"], "mass_end_kg": round(m0 * fuel_detail["total_mff"], 1)},
-        {"phase": "7. Lądowanie i kołowanie (Landing)", "fraction": 0.995, "mass_end_kg": round(m0 * fuel_detail["total_mff"] * 0.995, 1)}
+        {"phase": "6. Oczekiwanie / Rezerwa nawigacyjna (Loiter)", "fraction": fuel_detail["loiter"], "mass_end_kg": round(m0 * fuel_detail["total_mff"] / fuel_detail["landing"], 1)},
+        {"phase": "7. Lądowanie i kołowanie (Landing)", "fraction": fuel_detail["landing"], "mass_end_kg": round(m0 * fuel_detail["total_mff"], 1)}
     ]
     
     # 2.2 Dobór profilu skrzydła z katalogu (BIPOL_3_2010.pdf)

@@ -3,7 +3,7 @@
   'use strict';
   const {escape: esc, format: fmt, filename, snapshot, metrics, csv, resultRows} = BipolStudio;
   const VARIANTS_KEY = 'bipol_studio_variants_v1';
-  const wideTabs = new Set(['tab-overview', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods']);
+  const wideTabs = new Set(['tab-overview', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
   let view = 'iso', fresh = false, resultProject = null, messageTimer;
   const $ = id => document.getElementById(id);
   const announce = (message, error = false) => {
@@ -36,13 +36,14 @@
   function syncNavigation() {
     const target = document.querySelector('.tab-content.active')?.id || 'tab-overview';
     document.body.classList.toggle('studio-wide', currentPortalMode === 'holistic' && wideTabs.has(target));
+    document.body.classList.toggle('studio-trends', currentPortalMode === 'holistic' && target === 'tab-trends');
     document.querySelectorAll('[data-studio-nav]').forEach(button => {
       const selected = currentPortalMode === 'holistic' && button.dataset.studioNav === target;
       button.classList.toggle('active', selected);
       if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
     });
     const current = document.querySelector('.studio-nav-item.active');
-    $('studioBreadcrumb').textContent = currentPortalMode === 'projects' ? 'Projekty semestralne P1–P6' : current?.textContent.trim() || 'Pracownia';
+    $('studioBreadcrumb').textContent = currentPortalMode === 'projects' ? 'Projekty semestralne P1–P6' : current?.querySelector('span:nth-of-type(2)')?.textContent.trim() || 'Pracownia';
   }
 
   function variants() {

@@ -7,6 +7,7 @@
   <title>BIPOL Studio - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
   <link rel="stylesheet" href="/static/css/style.css?v=14">
   <link rel="stylesheet" href="/static/css/studio.css?v=1">
+  <link rel="stylesheet" href="/static/css/trends.css?v=1">
 </head>
 <body>
   {% include "studio_sidebar.html" %}
@@ -735,6 +736,7 @@
           <button class="bipol-tab" data-target="tab-reports">Raporty</button>
           <button class="bipol-tab" data-target="tab-glide">Lot szybowy</button>
           <button class="bipol-tab" data-target="tab-methods">Metody</button>
+          <button class="bipol-tab" data-target="tab-trends">Baza i trendy</button>
           <button class="bipol-tab" data-target="tab-cad">📐 CAD A3Z</button>
           <button class="bipol-tab" data-target="tab-p1-p2">📦 P1/P2: MTOW & Matching</button>
           <button class="bipol-tab" data-target="tab-p3">📐 P3: Wymiarowanie & Schrenk</button>
@@ -1708,7 +1710,7 @@
               </label>
               <label class="project-checklist-item">
                 <input type="checkbox" id="chk_p1_2" onchange="updateSemesterScores()">
-                <span>1.2 Analiza trendów Jane's (2 pkt - opcjonalne)</span>
+                <span>1.2 Analiza trendów konstrukcji podobnych (2 pkt - opcjonalne)</span>
               </label>
               <span class="score-badge success" style="margin-left:auto;">Punkty Projektu 1: <strong id="score_p1_display">5</strong> / 5 pkt</span>
             </div>
@@ -1737,8 +1739,9 @@
                 </div>
                 <div class="subpoint-body">
                   <p style="font-size:0.86rem; color:#475569; margin-bottom:0.75rem;">
-                    Regresja statystyczna udziału masy pustej wg Galińskiego: <code>We / W0 = A &bull; W0^C &bull; Kvs</code>. Wartość statystyczna: <strong id="p1_we_trend">---</strong> &bull; Wartość uzyskana: <strong id="p1_we_actual">---</strong>.
+                    Regresja z wybranych konstrukcji: <code>OEW / MTOW = A &bull; m₀[kg]^C &bull; Kvs</code>. Wartość trendu: <strong id="p1_we_trend">---</strong> &bull; Wartość uzyskana: <strong id="p1_we_actual">---</strong>.
                   </p>
+                  <p id="p1_trend_summary"></p><button type="button" class="btn btn-primary" data-studio-target="tab-trends">Otwórz bazę, wykresy i dobór próby →</button>
                   <div style="overflow-x:auto;">
                     <table class="b-table" id="p1_similar_table">
                       <thead>
@@ -2885,7 +2888,8 @@
   <script src="/static/js/studio-visuals.js?v=1"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=12"></script>
-  <script src="/static/js/app.js?v=14"></script>
-  <script src="/static/js/studio.js?v=1"></script>
+  <script src="/static/js/app.js?v=15"></script>
+  <script src="/static/js/studio.js?v=2"></script>
+  <script src="/static/js/trends.js?v=1"></script>
 </body>
 </html>

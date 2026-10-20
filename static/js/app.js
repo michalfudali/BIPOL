@@ -852,7 +852,7 @@ function setFieldValue(id, val) {
 
 function collectFormData() {
   const data = { ...formBaseParams };
-  const inputs = document.querySelectorAll('#designForm input, #designForm select');
+  const inputs = document.querySelectorAll('#designForm input, #designForm select, [data-analysis-param]');
   inputs.forEach(input => {
     if (!input.id) return;
     const val = input.value;
@@ -912,6 +912,8 @@ async function performCalculation() {
   if (reportBtn) reportBtn.setAttribute('data-results-stale', 'true');
   try {
     validateNumericFields(document.getElementById('designForm'));
+    const analysisControls = document.getElementById('trendControls');
+    if (analysisControls) validateNumericFields(analysisControls);
     const formData = collectFormData();
     if (btn) {
       btn.disabled = true;
@@ -1460,13 +1462,13 @@ function populateP5Tables(res) {
   const p5Man = document.getElementById('p5ManeuverTableBody');
   if (p5Man) {
     const t = res.performance?.turn || {};
-    const nSus = Number(t.n_sustained ?? t.n_max_sustained ?? 2.0);
+    const nSus = Number(t.n_sustained ?? 0);
     const bankDeg = (t.bank_angle_deg !== undefined) ? Number(t.bank_angle_deg) : (Math.acos(1.0 / Math.max(1.01, nSus)) * 180 / Math.PI);
-    const rMin = Number(t.r_min_m ?? t.radius_m ?? 100);
+    const rMin = t.r_min_m;
     p5Man.innerHTML = `
-      <tr><td>Maksymalne przeciążenie w zakręcie ustalonym</td><td><b>n_ust</b></td><td class="num"><b>${nSus.toFixed(2)}</b></td><td>-</td><td>Ograniczone nadmiarem mocy i dopuszczalnym kątem natarcia</td></tr>
-      <tr><td>Kąt przechylenia w zakręcie ustalonym</td><td><b>&gamma;</b></td><td class="num"><b>${bankDeg.toFixed(1)}</b></td><td>&deg;</td><td>Wyznaczony ze wzoru cos(&gamma;) = 1/n_ust</td></tr>
-      <tr><td>Minimalny promień zakrętu ustalonego</td><td><b>R_min</b></td><td class="num"><b>${rMin.toFixed(1)}</b></td><td>m</td><td>Zdolność do manewrowania w strefie lotniska i w kanionie</td></tr>
+      <tr><td>${t.mode === 'gliding' ? 'Kinematyka krążenia szybowego' : 'Maksymalne przeciążenie w zakręcie ustalonym'}</td><td><b>n_ust</b></td><td class="num"><b>${nSus.toFixed(2)}</b></td><td>-</td><td>${escapeHtml(t.note || '')}</td></tr>
+      <tr><td>Kąt przechylenia</td><td><b>&phi;</b></td><td class="num"><b>${t.mode === 'unavailable' ? '—' : bankDeg.toFixed(1)}</b></td><td>&deg;</td><td>cos(&phi;) = 1/n, tylko dla wykonalnego zakrętu</td></tr>
+      <tr><td>Promień dla badanego warunku</td><td><b>R</b></td><td class="num"><b>${Number.isFinite(rMin) ? rMin.toFixed(1) : '—'}</b></td><td>m</td><td>Prędkość ${t.v_turn_kmh} km/h; nie jest minimum po wszystkich prędkościach</td></tr>
     `;
   }
 }
@@ -3239,18 +3241,18 @@ function hydrateSemesterProjectsData(res) {
     const simTbody = document.getElementById('p1_similar_tbody');
     if (simTbody && Array.isArray(p1.trend_analysis?.similar_aircraft)) {
       simTbody.innerHTML = p1.trend_analysis.similar_aircraft.map(a => {
-        const powerOrThrust = (a.engine_type === 'jet' || (p1.engine_type === 'jet' && a.t_kn !== undefined))
-          ? `${a.t_kn} kN`
-          : `${a.p_kw} kW`;
+        const powerOrThrust = a.engine_type === 'jet'
+          ? (a.t_kn == null ? '—' : `${a.t_kn.toFixed(1)} kN`)
+          : (a.p_kw == null ? '—' : `${a.p_kw.toFixed(1)} kW`);
         return `
         <tr>
           <td><b>${escapeHtml(a.model)}</b></td>
           <td>${a.m0}</td>
-          <td>${a.me}</td>
-          <td>${a.s}</td>
+          <td>${a.me ?? '—'}</td>
+          <td>${a.s ?? '—'}</td>
           <td>${powerOrThrust}</td>
-          <td>${a.v_max}</td>
-          <td>${a.ar}</td>
+          <td>${a.v_max ?? '—'}</td>
+          <td>${a.ar?.toFixed(2) ?? '—'}</td>
         </tr>
       `;
       }).join('');

@@ -1,0 +1,28 @@
+#tab-trends { min-width: 0; }
+.studio-layout.studio-trends .kpi-grid { display: none; }
+#trendStatus { margin: 0 0 18px; color: #365862; }
+#trendStatus.trend-error { color: #a12727; }
+.trend-controls { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 16px; margin: 18px 0; }
+#tab-trends label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 650; color: #294650; }
+#tab-trends input:not([type=checkbox]), #tab-trends select { font: inherit; border: 1px solid #bacdd5; border-radius: 7px; padding: 10px 12px; background: #fff; color: #193b47; width: 100%; box-sizing: border-box; min-width: 0; }
+#tab-trends button:focus-visible, #tab-trends input:focus-visible, #tab-trends select:focus-visible { outline: 3px solid #098baf; outline-offset: 2px; }
+.trend-warnings { margin: 0 0 20px; }
+.trend-warnings:empty { display: none; }
+.trend-warnings p { border-left: 3px solid #b87523; background: #fff7e9; color: #765020; border-radius: 5px; padding: 12px 16px; margin: 8px 0; font-size: 13px; }
+.trend-chart { min-width: 0; margin-top: 16px; }
+.trend-chart svg { display: block; width: 100%; height: auto; overflow: hidden; }
+.trend-chart svg text { fill: #48636e; font-family: system-ui,sans-serif; font-size: 12px; }
+.trend-chart circle:hover { fill: #133e50; r: 7; }
+.trend-table-scroll { overflow-x: auto; max-width: 100%; margin: 16px 0; }
+#trendAircraftRows small, #trendPreliminary small { display: block; margin-top: 6px; color: #4f6873; }
+#trendAircraftRows td { vertical-align: top; font-variant-numeric: tabular-nums; }
+#trendAircraftRows td:nth-child(2) { min-width: 210px; }
+#trendAircraftRows input { accent-color: #168c83; width: 19px; height: 19px; }
+#trendAircraftRows details p { max-width: 340px; white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+.trend-selected { background: #eff8f5; }
+.trend-empty { padding: 30px 10px; text-align: center; color: #526e78; background: #f4f8fa; }
+.trend-pagination { justify-content: flex-end; align-items: center; }
+#tab-trends .studio-card { min-width: 0; }
+#tab-trends .studio-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#trendSources p { overflow-wrap: anywhere; }
+@media(max-width:600px) { .trend-controls { grid-template-columns: 1fr; } #tab-trends .studio-heading { display: block; } #tab-trends .studio-actions { margin-top: 14px; } .trend-chart svg text { font-size: 14px; } }

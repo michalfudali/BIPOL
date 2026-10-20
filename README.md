@@ -23,6 +23,14 @@ wariantów, eksport CSV/SVG, raport z wyborem etapów P1–P6, dane i wnioski au
 oraz dokładną biegunową lotu szybowego. Raport można pobrać jako samodzielny HTML.
 Szczegóły integracji i testów są w `docs/INTEGRACJA_STUDIO.md`.
 
+Widok **Baza i analiza trendów** zawiera **716 konstrukcji i wariantów** z FAST
+Aerobase oraz ENAC CADO: filtry i ręczny dobór próby, regresję udziału masy pustej,
+trendy czasowe z prognozą +5 lat, zależności osiągów i eksport danych ze źródłami.
+Daty certyfikacji są jawnie odróżnione od lat produkcji, a brakujące dane pozostają
+oznaczone. Wdrożenie obu materiałów P1 i ograniczenia metod opisuje
+[`docs/ANALIZA_TRENDOW.md`](docs/ANALIZA_TRENDOW.md), a pochodzenie i licencje baz
+[`data/aircraft/README.md`](data/aircraft/README.md).
+
 Model służy do obliczeń dydaktycznych. Sprawdza wybrane warunki i nie stanowi
 potwierdzenia certyfikacji. Wszystkie poziomy CS-23 1–4 obejmuje limit 8618 kg
 i maksymalnie 19 miejsc pasażerskich. Poziomu osiągów nie określa się z Vcr TAS;
