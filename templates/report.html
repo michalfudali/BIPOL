@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Raport BIPOL I - Wstępny Projekt Samolotu</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .report-sheet {
+      background: #ffffff;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 1.5rem auto;
+      padding: 22mm 20mm;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      box-sizing: border-box;
+      position: relative;
+    }
+    .bipol-official-frame {
+      width: 100%;
+      height: 242mm;
+      border: 1px solid #000000;
+      box-sizing: border-box;
+      position: relative;
+      padding: 10px 14px;
+      font-family: Calibri, "Segoe UI", Arial, sans-serif;
+      color: #000000;
+      background: #ffffff;
+    }
+    .bipol-top-right {
+      text-align: right;
+      font-size: 16pt;
+      line-height: 1.32;
+      font-weight: 400;
+      color: #000000;
+    }
+    .bipol-r1-univ {
+      margin-top: 75px;
+      text-align: center;
+      font-size: 16pt;
+      font-weight: 700;
+      line-height: 1.35;
+      color: #000000;
+    }
+    .bipol-r1-subject {
+      margin-top: 75px;
+      text-align: center;
+      font-size: 28pt;
+      font-weight: 400;
+      line-height: 1.32;
+      color: #000000;
+    }
+    .bipol-r2-date {
+      position: absolute;
+      bottom: 85px;
+      left: 14px;
+      text-align: left;
+      font-size: 16pt;
+      line-height: 1.3;
+      font-weight: 400;
+      color: #000000;
+    }
+    .bipol-r2-grade {
+      position: absolute;
+      bottom: 18px;
+      right: 14px;
+      text-align: right;
+      font-size: 16pt;
+      line-height: 1.3;
+      font-weight: 400;
+      color: #000000;
+    }
+    .bipol-r1-footer {
+      position: absolute;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 16pt;
+      font-weight: 400;
+      color: #000000;
+    }
+    
+    .report-section {
+      margin-bottom: 2.5rem;
+    }
+    .report-section h2 {
+      color: #005691;
+      font-size: 1.35rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.4rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+    .report-section h3 {
+      font-size: 1.1rem;
+      color: #1e293b;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .report-chart-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1.25rem 0;
+      background: #ffffff;
+    }
+    
+    @media print {
+      body { background: #ffffff !important; }
+      .report-sheet {
+        margin: 0 !important;
+        padding: 18mm 15mm !important;
+        box-shadow: none !important;
+        width: 100% !important;
+      }
+      .no-print { display: none !important; }
+      .page-break { page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls Bar (No print) + Panel Danych Projektanta-Studenta -->
+  <div class="no-print" style="position:sticky; top:0; background:#0b2545; color:#fff; padding:0.75rem 2rem; z-index:1000; box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:0.5rem;">
+      <div>
+        <strong>Dokumentacja Techniczna Projektu BIPOL I (Wzorzec 1:1 MEiL PW)</strong> &bull; {{ params.get('name', 'Projekt Wstępny') }}
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <a href="/" class="btn btn-outline" style="color:#fff; border-color:#94a3b8;">⬅️ Wróć do Edytora</a>
+        <button onclick="window.print()" class="btn btn-success">🖨️ Drukuj Raport / Zapisz jako PDF</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; background:#1e293b; padding:8px 10px; border-radius:6px; border:1px solid #334155;">
+      <div>
+        <label style="display:block; font-size:0.70rem; color:#94a3b8;">Imię i Nazwisko projektanta:</label>
+        <input type="text" value="{{ student_name }}" oninput="document.getElementById('hol_student').textContent=this.value" style="width:100%; padding:3px 6px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.8rem; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block; font-size:0.70rem; color:#94a3b8;">Nr Albumu:</label>
+        <input type="text" value="{{ album_no }}" oninput="document.getElementById('hol_album').textContent=this.value" style="width:100%; padding:3px 6px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.8rem; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block; font-size:0.70rem; color:#94a3b8;">Grupa:</label>
+        <input type="text" value="{{ group_no }}" oninput="document.getElementById('hol_group').textContent=this.value" style="width:100%; padding:3px 6px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.8rem; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block; font-size:0.70rem; color:#94a3b8;">Prowadzący:</label>
+        <input type="text" value="{{ supervisor }}" oninput="document.getElementById('hol_sup').textContent=this.value" style="width:100%; padding:3px 6px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.8rem; box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block; font-size:0.70rem; color:#94a3b8;">Data oddania projektu:</label>
+        <input type="text" value="{{ submission_date }}" oninput="document.getElementById('hol_date').textContent=this.value" style="width:100%; padding:3px 6px; border-radius:4px; border:1px solid #475569; background:#0f172a; color:#fff; font-size:0.8rem; box-sizing:border-box;">
+      </div>
+    </div>
+  </div>
+
+  <!-- STRONA 1: STRONA TYTUŁOWA 1:1 WG WZORCA MEiL PW (Rys. 1 / Rys. 2) -->
+  <div class="report-sheet page-break">
+    <div class="bipol-official-frame">
+      <div class="bipol-top-right">
+        <div contenteditable="true" id="hol_student">{{ student_name }}</div>
+        <div contenteditable="true" id="hol_album">{{ album_no }}</div>
+        <div>Grupa; <span contenteditable="true" id="hol_group">{{ group_no }}</span></div>
+        <div>Prowadzący: <span contenteditable="true" id="hol_sup">{{ supervisor }}</span></div>
+        <div contenteditable="true">{{ params.get('name', 'Nazwa Projektu') }}</div>
+      </div>
+
+      <div class="bipol-r1-univ">
+        <div>Politechnika Warszawska</div>
+        <div>Wydział Mechaniczny Energetyki i Lotnictwa</div>
+        <div>Zakład Samolotów i Śmigłowców</div>
+      </div>
+
+      <div class="bipol-r1-subject">
+        <div>Budowa i Projektowanie</div>
+        <div>Obiektów Latających I</div>
+      </div>
+
+      <div class="bipol-r2-date">
+        Data oddania projektu: <span contenteditable="true" id="hol_date">{{ submission_date }}</span>
+      </div>
+
+      <div class="bipol-r2-grade">
+        Ocena:……………….
+      </div>
+
+      <div class="bipol-r1-footer">
+        Warszawa <span contenteditable="true">{{ academic_year }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRONA 2: CZĘŚĆ P1 I P2 (Założenia, Bilans Mas, Matching Chart) -->
+  <div class="report-sheet page-break">
+    <div class="report-section">
+      <h2>1. Założenia taktyczno-techniczne i definicja misji (P1)</h2>
+      <p>
+        Celem projektu jest wstępne wymiarowanie i analiza osiągów samolotu spełniającego wymagania zdatności do lotu kategorii <strong>{{ params.get('category', 'normal').upper() }}</strong>.
+      </p>
+      <table class="b-table">
+        <tr><th>Zasięg obliczeniowy R</th><td><b>{{ params.range_km }} km</b></td><th>Wysokość przelotowa H</th><td><b>{{ params.cruise_altitude_m }} m</b></td></tr>
+        <tr><th>Prędkość przelotowa Vcr</th><td><b>{{ params.cruise_speed_kmh }} km/h</b></td><th>Maks. prędkość lądowania Vs0</th><td><b>{{ params.v_stall_kmh }} km/h</b></td></tr>
+        <tr><th>Wymagana droga rozbiegu Sto</th><td><b>{{ params.takeoff_run_m }} m</b></td><th>Min. prędkość wznoszenia wy</th><td><b>{{ params.climb_rate_ms }} m/s</b></td></tr>
+        <tr><th>Liczba pasażerów</th><td><b>{{ params.n_pax }} os.</b></td><th>Liczba członków załogi</th><td><b>{{ params.n_crew }} os.</b></td></tr>
+      </table>
+
+      <h2>2. Wstępny bilans mas samolotu (P2)</h2>
+      <p>
+        Wstępne oszacowanie maksymalnej masy startowej MTOW (\(m_0\)) wykonano metodą iteracyjną na podstawie ułamków zużycia paliwa na poszczególnych etapach misji (równanie Bregueta) oraz korelacji statystycznych Roskama/Torenbeeka dla masy pustej.
+      </p>
+      
+      <table class="b-table">
+        <thead>
+          <tr><th>Komponent bilansu</th><th>Oznaczenie</th><th>Masa [kg]</th><th>Udział w masie startowej [%]</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Masa płatna (Payload)</td><td>\(m_{pl}\)</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Załoga (Crew)</td><td>\(m_{crew}\)</td><td><b>{{ res.mass.m_crew }}</b></td><td>{{ ((res.mass.m_crew / res.mass.m0) * 100)|round(1) }}%</td></tr>
+          <tr><td>Paliwo całkowite (Fuel)</td><td>\(m_{f}\)</td><td><b>{{ res.mass.m_fuel }}</b></td><td>{{ (res.mass.fuel_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Masa pusta wyposażona (OEW)</td><td>\(m_{e}\)</td><td><b>{{ res.mass.m_empty }}</b></td><td>{{ (res.mass.empty_fraction * 100)|round(1) }}%</td></tr>
+          <tr style="background:#f8fafc; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td>\(m_0\)</td><td><b>{{ res.mass.m0 }}</b></td><td>100.0%</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:1.5rem;">Dobór obciążenia powierzchni skrzydła i napędu (Matching Chart)</h3>
+      <p>
+        Wyznaczono ograniczenia z warunków: prędkości przeciążenia, rozbiegu, wznoszenia oraz prędkości przelotowej. Wybrany punkt projektowy:
+        <strong>W/S = {{ res.sizing.design_point.ws }} N/m²</strong>, 
+        {% if res.sizing.design_point.tw %}
+        <strong>T/W = {{ res.sizing.design_point.tw }} [-]</strong> (ciąg startowy <strong>\(T_0 = {{ res.sizing.design_point.thrust_kn }}\text{ kN}\)</strong>).
+        {% else %}
+        <strong>P/W = {{ res.sizing.design_point.pw }} W/N</strong> ({{ res.sizing.design_point.pw_hp_kg }} KM/kg, moc startowa <strong>\(P_0 = {{ res.sizing.design_point.power_kw }}\text{ kW}\)</strong>).
+        {% endif %}
+      </p>
+      
+      <div class="report-chart-box">
+        <canvas id="repChartMatching" style="width:100%; height:260px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRONA 3: CZĘŚĆ P3 (Geometria i Rysunek Zestawieniowy) -->
+  <div class="report-sheet page-break">
+    <div class="report-section">
+      <h2>3. Geometria głównych zespołów płatowca (P3)</h2>
+      
+      <table class="b-table">
+        <thead>
+          <tr><th>Zespół / Element</th><th>Parametr</th><th>Wartość</th><th>Jednostka</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="6"><b>Skrzydło</b></td><td>Powierzchnia nośna \(S\)</td><td><b>{{ res.geometry.wing.S }}</b></td><td>m²</td></tr>
+          <tr><td>Rozpiętość skrzydła \(b\)</td><td><b>{{ res.geometry.wing.b }}</b></td><td>m</td></tr>
+          <tr><td>Wydłużenie skrzydła \(\Lambda\)</td><td><b>{{ res.geometry.wing.AR }}</b></td><td>-</td></tr>
+          <tr><td>Zbieżność \(\eta = c_t/c_r\)</td><td><b>{{ res.geometry.wing.eta }}</b></td><td>-</td></tr>
+          <tr><td>Cięciwa przykadłubowa \(c_r\) / końcowa \(c_t\)</td><td><b>{{ res.geometry.wing.cr }} / {{ res.geometry.wing.ct }}</b></td><td>m</td></tr>
+          <tr><td>Średnia Cięciwa Aerodynamiczna (ŚDA / MAC)</td><td><b>{{ res.geometry.wing.mac }}</b></td><td>m</td></tr>
+
+          <tr><td rowspan="2"><b>Kadłub</b></td><td>Długość całkowita \(L_f\)</td><td><b>{{ res.geometry.fuselage.length }}</b></td><td>m</td></tr>
+          <tr><td>Średnica / szerokość maksymalna \(D_f\)</td><td><b>{{ res.geometry.fuselage.diameter }}</b></td><td>m</td></tr>
+
+          <tr><td rowspan="3"><b>Usterzenie Poziome (UP)</b></td><td>Współczynnik objętości \(V_H\)</td><td><b>{{ res.geometry.horizontal_tail.vh_coeff }}</b></td><td>-</td></tr>
+          <tr><td>Powierzchnia \(S_H\)</td><td><b>{{ res.geometry.horizontal_tail.S_h }}</b></td><td>m²</td></tr>
+          <tr><td>Rozpiętość \(b_H\)</td><td><b>{{ res.geometry.horizontal_tail.b_h }}</b></td><td>m</td></tr>
+
+          <tr><td rowspan="3"><b>Usterzenie Pionowe (UV)</b></td><td>Współczynnik objętości \(V_V\)</td><td><b>{{ res.geometry.vertical_tail.vv_coeff }}</b></td><td>-</td></tr>
+          <tr><td>Powierzchnia \(S_V\)</td><td><b>{{ res.geometry.vertical_tail.S_v }}</b></td><td>m²</td></tr>
+          <tr><td>Wysokość \(h_V\)</td><td><b>{{ res.geometry.vertical_tail.h_v }}</b></td><td>m</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:1.5rem;">Rysunek zestawieniowy 3-rzutowy wg normy PN-EN ISO / ZPK MEiL PW (Formatka A3Z)</h3>
+      <div id="repBlueprint" class="blueprint-box" style="margin-top:0.75rem; background:#ffffff; padding:0.25rem;"></div>
+    </div>
+  </div>
+
+  <!-- STRONA 4: CZĘŚĆ P4 I P5 (Aerodynamika, Mechanizacja Płata, Rozkład Schrenka, Osiągi) -->
+  <div class="report-sheet page-break">
+    <div class="report-section">
+      <h2>4. Charakterystyki aerodynamiczne i uzasadnienie mechanizacji płata (P4)</h2>
+      <p>
+        Biegunowa aerodynamiczna samolotu wyznaczona została według klasycznej zależności Lilienthala:
+        \(C_x = C_{x0} + \frac{C_z^2}{\pi \Lambda e}\).
+        Dla konfiguracji gładkiej: \(C_{x0} = {{ res.aerodynamics.cx0_clean }}\), \(e = {{ params.oswald_e }}\), co daje maksymalną doskonałość aerodynamiczną 
+        <strong>\(K_{max} = {{ res.aerodynamics.k_max }}\)</strong> przy \(C_{z,opt} = {{ res.aerodynamics.cz_opt }}\).
+      </p>
+
+      <!-- Uzasadnienie dydaktyczno-konstrukcyjne wybranej mechanizacji wg prof. C. Galińskiego -->
+      <div id="repFlapJustification" style="margin:0.8rem 0; padding:0.75rem; border:1px solid #cbd5e1; border-left:4px solid #005691; border-radius:6px; background:#f8fafc; font-size:0.82rem;"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="report-chart-box">
+          <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Biegunowe aerodynamiczne Cz(Cx)</div>
+          <canvas id="repChartPolar" style="width:100%; height:230px;"></canvas>
+        </div>
+        <div class="report-chart-box">
+          <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Rozkład Schrenka wzdłuż rozpiętości</div>
+          <canvas id="repChartSchrenk" style="width:100%; height:230px;"></canvas>
+        </div>
+      </div>
+
+      <h2>5. Osiągi samolotu (P5)</h2>
+      <table class="b-table">
+        <tr><th>Prędkość przeciągnięcia z klapami do lądowania Vs0</th><td><b>{{ res.performance.speeds.vs_lnd_kmh }} km/h</b></td><th>Prędkość podejścia Vapp (1.3 Vs0)</th><td><b>{{ res.performance.speeds.v_app_kmh }} km/h</b></td></tr>
+        <tr><th>Maksymalna prędkość wznoszenia wy_max</th><td><b>{{ res.performance.climb.wy_max_ms }} m/s</b></td><th>Prędkość dla wy_max</th><td><b>{{ res.performance.climb.v_wy_max_kmh }} km/h</b></td></tr>
+        <tr><th>Długość rozbiegu Sto</th><td><b>{{ res.performance.takeoff.ground_roll_m }} m</b></td><th>Start nad przeszkodę 15 m</th><td><b>{{ res.performance.takeoff.distance_to_15m }} m</b></td></tr>
+        <tr><th>Długość dobiegu Slnd</th><td><b>{{ res.performance.landing.ground_roll_m }} m</b></td><th>Lądowanie znad przeszkody 15 m</th><td><b>{{ res.performance.landing.distance_from_15m }} m</b></td></tr>
+        <tr><th>Pułap praktyczny (wy = 0.5 m/s)</th><td><b>{{ res.performance.ceiling.service_ceiling_m }} m</b></td><th>Prędkość przelotowa / Mach</th><td><b>{{ res.performance.speeds.v_cruise_kmh }} km/h (M {{ res.performance.speeds.mach_cruise }})</b></td></tr>
+        <tr><th>Zakręt ustalony (BIPOL 1 wzory 31–52)</th><td><b>n = {{ res.performance.turn.n_sustained }}, &Phi; = {{ res.performance.turn.bank_angle_deg }}&deg;</b></td><th>Promień i prędkość kątowa</th><td><b>R = {{ res.performance.turn.r_min_m }} m, &omega; = {{ res.performance.turn.psi_dot_deg_s }}&deg;/s (t_360 = {{ res.performance.turn.t_360_s }} s)</b></td></tr>
+      </table>
+
+      <div class="report-chart-box" style="margin-top:1rem;">
+        <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Krzywa prędkości wznoszenia wy(V) na poziomie morza</div>
+        <canvas id="repChartClimb" style="width:100%; height:200px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRONA 5: CZĘŚĆ P6 I PODSUMOWANIE (Obwiednia V-n, Wyważenie, Weryfikacja) -->
+  <div class="report-sheet">
+    <div class="report-section">
+      <h2>6. Obwiednia obciążeń dopuszczalnych i wyważenie (P6)</h2>
+      <p>
+        Wykres manewrowo-podmuchowy \(V-n\) został sporządzony według norm zdatności <strong>{{ res.envelope.limits.category.upper() }}</strong> oraz podręcznika <strong>prof. J. Danileckiego <em>Konstruowanie samolotów</em></strong> (rozdz. 1 i 2).
+        Dopuszczalne przeciążenia: \(n_{max} = +{{ res.envelope.limits.n_max }}\), \(n_{min} = {{ res.envelope.limits.n_min }}\).
+        Współczynnik bezpieczeństwa konstrukcji: \(\nu = {{ res.envelope.limits.safety_factor_nu }}\) (obciążenia niszczące: \(n_{ult} = +{{ res.envelope.limits.n_ult_pos }} / {{ res.envelope.limits.n_ult_neg }}\)).
+        Prędkości charakterystyczne: \(V_A = {{ res.envelope.speeds.v_a_kmh }}\) km/h, \(V_C = {{ res.envelope.speeds.v_c_kmh }}\) km/h, \(V_D = {{ res.envelope.speeds.v_d_kmh }}\) km/h.
+        Podmuch obliczeniowy: \(U_C = {{ res.envelope.gust_factors.u_c_ms }}\) m/s, cecha masowa \(\mu_g = {{ res.envelope.gust_factors.mu_g }}\), współczynnik łagodzenia \(K_g = {{ res.envelope.gust_factors.k_g }}\) (\(\Delta n_C = \pm {{ res.envelope.gust_factors.delta_n_c }}\)).
+      </p>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div class="report-chart-box">
+          <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Obwiednia obciążeń V-n (CS-23/25)</div>
+          <canvas id="repChartVn" style="width:100%; height:230px;"></canvas>
+        </div>
+        <div class="report-chart-box">
+          <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Diagram wędrówki Środka Masy (CG)</div>
+          <canvas id="repChartBalance" style="width:100%; height:230px;"></canvas>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.25rem;">Stateczność statyczna podłużna:</h3>
+      <p>
+        Położenie punktu neutralnego płatowca wynosi <strong>{{ res.balance.neutral_point.x_n_mac_pct }}% ŚDA</strong>.
+        Zakres wędrówki środka masy we wszystkich konfiguracjach załadowania wynosi od <strong>{{ res.balance.cg_range.forward_pct }}%</strong> do <strong>{{ res.balance.cg_range.aft_pct }}% ŚDA</strong>.
+        Zapas stateczności statycznej w najbardziej niekorzystnym tylnym położeniu ŚM wynosi 
+        <strong>\(K_n = {{ res.balance.stability.static_margin_aft_pct }}\)% ŚDA</strong> (warunek \(K_n \ge 5\%\) jest spełniony).
+      </p>
+
+      <h2>7. Podsumowanie i zgodność z wymaganiami</h2>
+      <table class="b-table">
+        <thead>
+          <tr><th>Wymóg taktyczno-techniczny</th><th>Wymagano</th><th>Uzyskano</th><th>Ocena</th></tr>
+        </thead>
+        <tbody>
+          {% for c in res.compliance_checks %}
+          <tr>
+            <td>{{ c.parameter }}</td>
+            <td>{{ c.required }}</td>
+            <td><b>{{ c.actual }}</b></td>
+            <td><span class="badge {{ 'badge-success' if c.passed else 'badge-danger' }}">{{ 'ZGODNE' if c.passed else 'PRZEKROCZONE' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div style="margin-top:3rem; display:flex; justify-content:space-between; font-size:0.9rem; color:#475569;">
+        <div>
+          Data zatwierdzenia: ___________________
+        </div>
+        <div>
+          Podpis prowadzącego: ___________________
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/static/js/didactic_data.js?v=6"></script>
+  <script src="/static/js/charts.js?v=6"></script>
+  <script>
+    function applyHydratedData(res, params) {
+      if (params.name) {
+        const titleEl = document.querySelector('.project-title-box h1');
+        if (titleEl) titleEl.textContent = params.name;
+        const bannerEl = document.querySelector('.no-print strong');
+        if (bannerEl) bannerEl.textContent = 'Dokumentacja Techniczna: ' + params.name;
+      }
+      const justEl = document.getElementById('repFlapJustification');
+      if (justEl && typeof DIDACTIC_DATABASE !== 'undefined') {
+        const flap = DIDACTIC_DATABASE.flaps[params.flap_type || 'single_slotted'] || DIDACTIC_DATABASE.flaps.single_slotted;
+        const wing = DIDACTIC_DATABASE.wing_config[params.wing_config || 'low'] || DIDACTIC_DATABASE.wing_config.low;
+        justEl.innerHTML = `
+          <div style="font-weight:800; color:#005691; margin-bottom:4px;">Uzasadnienie konstrukcyjne mechanizacji płata i układu nośnego (${flap.reference}):</div>
+          <div><strong>Wybrana mechanizacja spływu:</strong> ${flap.name} (ΔCz_max = +${flap.delta_cz_max}, złożoność: ${flap.kinematic_complexity}) &bull; <strong>Układ płata:</strong> ${wing.name}</div>
+          <div style="margin-top:4px;"><strong>Zalety (Plusy):</strong> ${flap.pros.slice(0, 2).join(' ')}</div>
+          <div style="margin-top:2px;"><strong>Wady i kompromisy (Minusy):</strong> ${flap.cons.slice(0, 2).join(' ')}</div>
+          <div style="margin-top:4px; font-style:italic; color:#334155;">Komentarz wg prof. C. Galińskiego: „${flap.galinski_quote}”</div>
+        `;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      let resData = {{ res|tojson }};
+      let paramsData = {{ params|tojson }};
+
+      const saved = localStorage.getItem('bipol_custom_report_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.res && parsed.params) {
+            resData = parsed.res;
+            paramsData = parsed.params;
+          }
+        } catch(e) { console.error(e); }
+      }
+      applyHydratedData(resData, paramsData);
+
+      drawMatchingChart('repChartMatching', resData.sizing);
+      drawPolarChart('repChartPolar', resData.aerodynamics);
+      drawSchrenkChart('repChartSchrenk', resData.geometry.schrenk);
+      drawClimbChart('repChartClimb', resData.performance.climb);
+      drawVnEnvelope('repChartVn', resData.envelope);
+      drawBalanceDiagram('repChartBalance', resData.balance);
+      render3ViewBlueprint('repBlueprint', resData.geometry, resData);
+    });
+  </script>
+</body>
+</html>

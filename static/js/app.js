@@ -1,0 +1,3802 @@
+/**
+ * BIPOL Studio - Główna logika interaktywna i dydaktyczna
+ * Obsługa:
+ * - 110 tematów wydziałowych ZSiS MEiL PW
+ * - Encyklopedii każdego parametru projektowego (PARAMETER_ENCYCLOPEDIA)
+ * - Kart plusów i minusów klap, slotów i układów nośnych wg monografii prof. C. Galińskiego
+ * - Rysunku technicznego A3Z wg polskich norm PN-EN ISO / ZPK MEiL PW
+ */
+
+let currentResults = null;
+let presetsData = {};
+let topicsData = [];
+let categoriesData = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  setupTabs();
+  initDidacticSystem();
+  initWizardSystem();
+
+  // 1. Pobierz tematy i kategorie wydziałowe
+  try {
+    const topResp = await fetch('/api/topics');
+    const topJson = await topResp.json();
+    categoriesData = topJson.categories;
+    topicsData = topJson.topics;
+    populateCategorySelect();
+    populateTopicsSelect('all');
+  } catch (err) {
+    console.error('Błąd pobierania tematów:', err);
+  }
+
+  // 2. Pobierz presety klasyczne
+  try {
+    const res = await fetch('/api/presets');
+    presetsData = await res.json();
+    populatePresetsSelect();
+  } catch (err) {
+    console.error('Błąd pobierania presetów:', err);
+  }
+
+  // 3. Pobierz listę materiałów z wydziału (BIPOL, Mechanika Lotu, ZPK CAD1)
+  loadScrapedFiles();
+
+  // 4. Listeners dla wyboru kategorii i tematu
+  const catSelect = document.getElementById('categorySelect');
+  if (catSelect) {
+    catSelect.addEventListener('change', (e) => {
+      populateTopicsSelect(e.target.value);
+    });
+  }
+
+  const topicSelect = document.getElementById('topicSelect');
+  if (topicSelect) {
+    topicSelect.addEventListener('change', (e) => {
+      loadTopic(e.target.value);
+    });
+  }
+
+  const presetSelect = document.getElementById('presetSelect');
+  if (presetSelect) {
+    presetSelect.addEventListener('change', (e) => {
+      loadPreset(e.target.value);
+    });
+  }
+
+  const calcBtn = document.getElementById('calcBtn');
+  if (calcBtn) {
+    calcBtn.addEventListener('click', performCalculation);
+  }
+
+  // Inicjalizacja modularnego paska bocznego
+  initSidebarModularity();
+
+  // Inicjalizacja Systemu Dwuwersyjnego Portalu (Całościowy vs Projekty Semestralne P1-P6)
+  initDualPortalSystem();
+
+  // Inicjalizacja Systemu Projektowego (Project Management System & Session Starter)
+  initProjectSystem();
+});
+
+// ==========================================
+// MODULAR SIDEBAR & ACCORDION SYSTEM
+// ==========================================
+let currentSidebarMode = 'basic';
+
+function syncFormPropulsionUI(triggerAutoSfc = false) {
+  const engEl = document.getElementById('engine_type');
+  const locEl = document.getElementById('engine_location');
+  const acEl = document.getElementById('aircraft_type');
+  const sfcEl = document.getElementById('sfc');
+  const propGroup = document.getElementById('group_prop_efficiency');
+  const titleMod4 = document.getElementById('title_mod4');
+  const labelSfc = document.getElementById('label_sfc_text');
+
+  const eng = engEl ? engEl.value : 'prop';
+  const acType = acEl ? acEl.value : 'piston_ga';
+
+  if (titleMod4) {
+    titleMod4.textContent = eng === 'jet'
+      ? '4. Zespół Napędowy Odrzutowy (P2/P5)'
+      : '4. Zespół Napędowy & Śmigło (P2/P5)';
+  }
+
+  if (propGroup) {
+    propGroup.style.display = eng === 'jet' ? 'none' : '';
+  }
+
+  if (locEl) {
+    const noseOpt = locEl.querySelector('option[value="nose"]');
+    const retrOpt = locEl.querySelector('option[value="retractable"]');
+    if (noseOpt) {
+      noseOpt.disabled = (eng === 'jet');
+      noseOpt.hidden = (eng === 'jet');
+    }
+    if (retrOpt) {
+      retrOpt.disabled = (eng === 'jet');
+      retrOpt.hidden = (eng === 'jet');
+    }
+    if (eng === 'jet' && (locEl.value === 'nose' || locEl.value === 'retractable')) {
+      locEl.value = (acType === 'jet_transport') ? 'wing' : 'rear';
+    }
+  }
+
+  if (sfcEl) {
+    const curVal = parseFloat(sfcEl.value);
+    if (eng === 'jet') {
+      if (labelSfc) labelSfc.innerHTML = 'Zużycie TSFC c_j [1/h (kg/daN&bull;h)]';
+      sfcEl.min = '0.25';
+      sfcEl.max = '1.80';
+      sfcEl.step = '0.02';
+      if (triggerAutoSfc || isNaN(curVal) || curVal > 4.0) {
+        sfcEl.value = (acType === 'jet_transport') ? '0.58' : '0.62';
+      }
+    } else {
+      if (labelSfc) labelSfc.innerHTML = 'Zużycie SFC c_p [g/(kW&bull;h)]';
+      sfcEl.min = '140';
+      sfcEl.max = '500';
+      sfcEl.step = '5';
+      if (triggerAutoSfc || isNaN(curVal) || curVal < 50.0) {
+        if (!triggerAutoSfc && curVal >= 0.15 && curVal <= 1.5) {
+          sfcEl.value = String(Math.round(curVal * 1000));
+        } else {
+          sfcEl.value = (acType === 'turboprop_regional') ? '280' : '265';
+        }
+      }
+    }
+  }
+}
+
+function initSidebarModularity() {
+  const form = document.getElementById('designForm');
+  const engEl = document.getElementById('engine_type');
+  const acEl = document.getElementById('aircraft_type');
+
+  if (engEl) {
+    engEl.addEventListener('change', () => {
+      syncFormPropulsionUI(true);
+      updateAccordionPills();
+      performCalculation();
+    });
+  }
+
+  if (acEl) {
+    acEl.addEventListener('change', () => {
+      const ac = acEl.value;
+      if (engEl) {
+        if (ac === 'jet_business' || ac === 'jet_transport') {
+          engEl.value = 'jet';
+          const locEl = document.getElementById('engine_location');
+          if (locEl) locEl.value = (ac === 'jet_transport') ? 'wing' : 'rear';
+        } else if (ac === 'piston_ga' || ac === 'turboprop_regional') {
+          engEl.value = 'prop';
+          const locEl = document.getElementById('engine_location');
+          if (locEl) locEl.value = (ac === 'turboprop_regional') ? 'wing' : 'nose';
+        }
+      }
+      syncFormPropulsionUI(true);
+      updateAccordionPills();
+      performCalculation();
+    });
+  }
+
+  if (form) {
+    form.addEventListener('input', updateAccordionPills);
+    form.addEventListener('change', updateAccordionPills);
+  }
+  syncFormPropulsionUI(false);
+  updateAccordionPills();
+}
+
+function setSidebarMode(mode) {
+  currentSidebarMode = mode;
+  const form = document.getElementById('designForm');
+  const basicBtn = document.getElementById('modeBasicBtn');
+  const advBtn = document.getElementById('modeAdvancedBtn');
+
+  if (form) {
+    if (mode === 'advanced') {
+      form.classList.remove('mode-basic');
+      form.classList.add('mode-advanced');
+    } else {
+      form.classList.remove('mode-advanced');
+      form.classList.add('mode-basic');
+    }
+  }
+
+  if (basicBtn && advBtn) {
+    basicBtn.classList.toggle('active', mode === 'basic');
+    advBtn.classList.toggle('active', mode === 'advanced');
+  }
+}
+
+function toggleFacultyDrawer() {
+  const drawer = document.getElementById('facultyTopicsDrawer');
+  const btn = document.getElementById('toggleFacultyTopicsBtn');
+  if (!drawer) return;
+  const isHidden = drawer.style.display === 'none' || drawer.style.display === '';
+  drawer.style.display = isHidden ? 'block' : 'none';
+  if (btn) {
+    btn.innerHTML = isHidden
+      ? '🏛️ Ukryj bazę tematów ▴'
+      : '🏛️ Baza 110 tematów MEiL ▾';
+  }
+}
+
+function selectQuickPreset(presetKey) {
+  document.querySelectorAll('.quick-preset-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.getAttribute('data-preset') === presetKey);
+  });
+  const sel = document.getElementById('presetSelect');
+  if (sel) sel.value = presetKey;
+  loadPreset(presetKey);
+}
+
+function toggleAccordion(modKey) {
+  const header = document.querySelector(`.module-header[onclick*="${modKey}"]`);
+  const body = document.getElementById(`body_${modKey}`);
+  const chev = document.getElementById(`chev_${modKey}`);
+  if (!body) return;
+
+  const isCollapsed = body.classList.contains('collapsed');
+  if (isCollapsed) {
+    body.classList.remove('collapsed');
+    if (header) header.classList.add('active');
+    if (chev) chev.style.transform = 'rotate(0deg)';
+  } else {
+    body.classList.add('collapsed');
+    if (header) header.classList.remove('active');
+    if (chev) chev.style.transform = 'rotate(-90deg)';
+  }
+}
+
+function toggleAllAccordions(expand) {
+  ['mod1', 'mod2', 'mod3', 'mod4'].forEach(key => {
+    const header = document.querySelector(`.module-header[onclick*="${key}"]`);
+    const body = document.getElementById(`body_${key}`);
+    const chev = document.getElementById(`chev_${key}`);
+    if (body) {
+      if (expand) {
+        body.classList.remove('collapsed');
+        if (header) header.classList.add('active');
+        if (chev) chev.style.transform = 'rotate(0deg)';
+      } else {
+        body.classList.add('collapsed');
+        if (header) header.classList.remove('active');
+        if (chev) chev.style.transform = 'rotate(-90deg)';
+      }
+    }
+  });
+}
+
+function updateAccordionPills() {
+  // Moduł 1: Pasażerowie & Zasięg & Prędkość
+  const nPax = document.getElementById('n_pax')?.value || '1';
+  const rKm = document.getElementById('range_km')?.value || '640';
+  const vCr = document.getElementById('cruise_speed_kmh')?.value || '174';
+  const pill1 = document.getElementById('pill_mod1');
+  if (pill1) pill1.textContent = `${nPax} pas. • ${rKm} km • ${vCr} km/h`;
+
+  // Moduł 2: Układ skrzydła & Wydłużenie & Zbieżność
+  const wingCfg = document.getElementById('wing_config')?.value || 'low';
+  const cfgNames = { low: 'Dolnopłat', high: 'Górnopłat', braced_high: 'Zastrzałowy', mid: 'Średniopłat' };
+  const ar = document.getElementById('aspect_ratio')?.value || '7.3';
+  const pill2 = document.getElementById('pill_mod2');
+  if (pill2) pill2.textContent = `${cfgNames[wingCfg] || wingCfg} • AR=${ar}`;
+
+  // Moduł 3: Mechanizacja & Cz_max
+  const flap = document.getElementById('flap_type')?.value || 'single_slotted';
+  const flapShort = {
+    plain: 'Zwykła',
+    split: 'Krokodylowa',
+    junkers: 'Junkersa',
+    single_slotted: '1-szczelinowa',
+    fowler: 'Fowlera',
+    double_slotted: '2-szczelinowa',
+    flaperon: 'Klapolotka'
+  };
+  const czLnd = document.getElementById('cz_max_lnd')?.value || '2.05';
+  const pill3 = document.getElementById('pill_mod3');
+  if (pill3) pill3.textContent = `Klapa ${flapShort[flap] || flap} • Cz=${czLnd}`;
+
+  // Moduł 4: Silnik & SFC
+  const eng = document.getElementById('engine_type')?.value || 'prop';
+  const sfc = document.getElementById('sfc')?.value || (eng === 'jet' ? '0.62' : '265');
+  const etaP = document.getElementById('prop_efficiency')?.value || '0.80';
+  const pill4 = document.getElementById('pill_mod4');
+  if (pill4) {
+    pill4.textContent = eng === 'jet'
+      ? `Odrzutowy • TSFC=${sfc} 1/h`
+      : `Śmigłowy • ${sfc} g/kWh • ηp=${etaP}`;
+  }
+}
+
+let popoverHideTimer = null;
+let activeIconEl = null;
+
+/**
+ * INICJALIZACJA SYSTEMU DYDAKTYCZNEGO:
+ * - Większość wskazówek pojawia się w pływającym dymku po najechaniu na okrągłą ikonkę (i) obok nazwy parametru
+ * - Opcjonalnie można też rozwinąć skrócone podpowiedzi pod polami przyciskiem w pasku nawigacji
+ * - Podpina karty Plusów i Minusów dla wyboru Klapy, Slotu i Układu Skrzydła
+ */
+function initDidacticSystem() {
+  if (typeof PARAMETER_ENCYCLOPEDIA !== 'undefined') {
+    for (const [paramKey, info] of Object.entries(PARAMETER_ENCYCLOPEDIA)) {
+      const hintEl = document.getElementById(`hint_${paramKey}`);
+      if (hintEl) {
+        hintEl.innerHTML = `
+          <strong>Co to jest (${info.symbol}):</strong> ${info.short_desc}
+          <span class="hint-range">📏 Typowo: ${info.typical_ranges}</span>
+        `;
+      }
+    }
+  }
+
+  // Obsługa najechania (hover / focus / click) na okrągłe ikonki informacyjne (i)
+  const infoIcons = document.querySelectorAll('.info-circle-icon[data-param]');
+  const popover = document.getElementById('didacticPopover');
+
+  infoIcons.forEach(icon => {
+    const paramKey = icon.getAttribute('data-param');
+    icon.addEventListener('mouseenter', () => {
+      clearTimeout(popoverHideTimer);
+      showDidacticPopover(paramKey, icon);
+    });
+    icon.addEventListener('mouseleave', () => {
+      scheduleHideDidacticPopover();
+    });
+    icon.addEventListener('focus', () => {
+      clearTimeout(popoverHideTimer);
+      showDidacticPopover(paramKey, icon);
+    });
+    icon.addEventListener('blur', () => {
+      scheduleHideDidacticPopover();
+    });
+    icon.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearTimeout(popoverHideTimer);
+      showDidacticPopover(paramKey, icon);
+    });
+  });
+
+  if (popover) {
+    popover.addEventListener('mouseenter', () => {
+      clearTimeout(popoverHideTimer);
+    });
+    popover.addEventListener('mouseleave', () => {
+      scheduleHideDidacticPopover();
+    });
+  }
+
+  document.addEventListener('scroll', () => {
+    if (activeIconEl && popover && popover.classList.contains('visible')) {
+      positionPopoverNearIcon(popover, activeIconEl);
+    }
+  }, { passive: true });
+
+  // Przycisk przełączania widoczności dodatkowych opisów pod wszystkimi polami naraz
+  const toggleBtn = document.getElementById('toggleDidacticHintsBtn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('show-inline-hints');
+      const inlineShown = document.body.classList.contains('show-inline-hints');
+      toggleBtn.textContent = inlineShown
+        ? '🎓 Wskazówki: Rozwinięte pod polami + dymki (i)'
+        : 'ℹ️ Wskazówki: Po najechaniu na ikonkę (i)';
+      toggleBtn.style.background = inlineShown ? '#059669' : '#1e40af';
+    });
+  }
+
+  // Obsługa wyboru Klapy i Slotu -> Karta Plusy i Minusy + przeliczenie Cz_max,lnd
+  const flapSel = document.getElementById('flap_type');
+  const slatSel = document.getElementById('slat_type');
+  if (flapSel) {
+    flapSel.addEventListener('change', () => {
+      renderFlapDidacticCard(true);
+      performCalculation();
+    });
+  }
+  if (slatSel) {
+    slatSel.addEventListener('change', () => {
+      renderFlapDidacticCard(true);
+      performCalculation();
+    });
+  }
+
+  // Obsługa wyboru układu skrzydła -> Karta Plusy i Minusy układu nośnego
+  const wingCfgSel = document.getElementById('wing_config');
+  if (wingCfgSel) {
+    wingCfgSel.addEventListener('change', () => {
+      renderWingConfigDidacticCard();
+      performCalculation();
+    });
+  }
+
+  renderFlapDidacticCard(false);
+  renderWingConfigDidacticCard();
+}
+
+function showDidacticPopover(paramKey, anchorEl) {
+  if (typeof PARAMETER_ENCYCLOPEDIA === 'undefined') return;
+  const info = PARAMETER_ENCYCLOPEDIA[paramKey];
+  const popover = document.getElementById('didacticPopover');
+  if (!info || !popover) return;
+
+  if (activeIconEl && activeIconEl !== anchorEl) {
+    activeIconEl.classList.remove('active');
+  }
+  activeIconEl = anchorEl;
+  anchorEl.classList.add('active');
+
+  document.getElementById('popSymbol').textContent = info.symbol;
+  document.getElementById('popTitle').textContent = info.title;
+  document.getElementById('popDesc').innerHTML = `<strong>Co to jest:</strong> ${info.short_desc}<br><span style="color:#475569;">${info.full_definition}</span>`;
+  document.getElementById('popFormula').textContent = `Wzór BIPOL I:  ${info.formula}`;
+  document.getElementById('popEffect').textContent = info.effect_increase;
+  document.getElementById('popRanges').textContent = info.typical_ranges;
+  document.getElementById('popGalinski').textContent = info.galinski_note;
+
+  popover.classList.add('visible');
+  popover.setAttribute('aria-hidden', 'false');
+  positionPopoverNearIcon(popover, anchorEl);
+}
+
+function positionPopoverNearIcon(popover, anchorEl) {
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const gap = 10;
+
+  // Preferuj wyświetlenie po prawej stronie ikonki (i); jeśli brak miejsca, po lewej lub pod spodem
+  let left = rect.right + gap;
+  if (left + popRect.width > vw - 14) {
+    left = rect.left - popRect.width - gap;
+  }
+  if (left < 12) {
+    left = Math.max(12, Math.min(vw - popRect.width - 12, rect.left));
+  }
+
+  let top = rect.top - 12;
+  if (top + popRect.height > vh - 14) {
+    top = vh - popRect.height - 14;
+  }
+  if (top < 12) {
+    top = 12;
+  }
+
+  popover.style.left = `${Math.round(left)}px`;
+  popover.style.top = `${Math.round(top)}px`;
+}
+
+function scheduleHideDidacticPopover() {
+  clearTimeout(popoverHideTimer);
+  popoverHideTimer = setTimeout(() => {
+    const popover = document.getElementById('didacticPopover');
+    if (popover) {
+      popover.classList.remove('visible');
+      popover.setAttribute('aria-hidden', 'true');
+    }
+    if (activeIconEl) {
+      activeIconEl.classList.remove('active');
+      activeIconEl = null;
+    }
+  }, 140);
+}
+
+// Renderowanie Karty Plusów i Minusów wybranej Klapy oraz Slotu (wg Rozdz. 16 prof. C. Galińskiego)
+function renderFlapDidacticCard(autoUpdateCz = false) {
+  const card = document.getElementById('flapDidacticCard');
+  if (!card || typeof DIDACTIC_DATABASE === 'undefined') return;
+
+  const flapId = document.getElementById('flap_type')?.value || 'single_slotted';
+  const slatId = document.getElementById('slat_type')?.value || 'none';
+
+  const flap = DIDACTIC_DATABASE.flaps[flapId] || DIDACTIC_DATABASE.flaps.single_slotted;
+  const slat = DIDACTIC_DATABASE.slats[slatId] || DIDACTIC_DATABASE.slats.none;
+
+  const czClean = parseFloat(document.getElementById('cz_max_clean')?.value || 1.40);
+  const computedCzLnd = +(czClean + flap.delta_cz_max + slat.delta_cz_max).toFixed(2);
+
+  if (autoUpdateCz) {
+    setFieldValue('cz_max_lnd', computedCzLnd);
+  }
+
+  card.innerHTML = `
+    <div class="flap-card-top">
+      <div>
+        <div style="font-size:0.72rem; text-transform:uppercase; font-weight:800; color:#0284c7;">
+          📖 Analiza Konstrukcyjna Wybranej Mechanizacji (${flap.reference})
+        </div>
+        <div style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-top:2px;">
+          ${flap.name} ${slatId !== 'none' ? ' + ' + slat.name : ''}
+        </div>
+        <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:0.35rem;">
+          <span class="badge badge-success">ΔCz_klapy = +${flap.delta_cz_max.toFixed(2)}</span>
+          ${slat.delta_cz_max > 0 ? `<span class="badge badge-info">ΔCz_slotu = +${slat.delta_cz_max.toFixed(2)} (Δα_kryt +${slat.alpha_crit_inc_deg}°)</span>` : ''}
+          <span class="badge badge-warning">ΔCx0_lnd = +${flap.delta_cx0_lnd.toFixed(3)}</span>
+          <span class="badge" style="background:#f1f5f9; color:#334155;">Złożoność: ${flap.kinematic_complexity}</span>
+        </div>
+      </div>
+      <div class="flap-svg-box" title="Schemat kinematyczny przekroju wybranej klapy">
+        ${flap.svg_icon}
+      </div>
+    </div>
+
+    <div class="pros-cons-grid">
+      <div class="pros-box">
+        <h5>👍 PLUSY (Zalety konstrukcyjne i aerodynamiczne):</h5>
+        <ul>
+          ${flap.pros.map(p => `<li>${p}</li>`).join('')}
+          ${slatId !== 'none' ? slat.pros.map(p => `<li><strong>[Natarcie]</strong> ${p}</li>`).join('') : ''}
+        </ul>
+      </div>
+      <div class="cons-box">
+        <h5>⚠️ MINUSY (Wady, ograniczenia i zagrożenia):</h5>
+        <ul>
+          ${flap.cons.map(c => `<li>${c}</li>`).join('')}
+          ${slatId !== 'none' ? slat.cons.map(c => `<li><strong>[Natarcie]</strong> ${c}</li>`).join('') : ''}
+        </ul>
+      </div>
+    </div>
+
+    <div class="galinski-quote-box">
+      <strong>📘 Monografia prof. C. Galińskiego (PW MEiL):</strong> „${flap.galinski_quote}”
+      ${slatId !== 'none' ? `<br><strong>📘 Krawędź natarcia:</strong> „${slat.galinski_quote}”` : ''}
+      <div style="margin-top:4px; font-size:0.73rem; color:#0f172a;">
+        <strong>✈️ Przykłady samolotów:</strong> ${flap.typical_aircraft} &bull;
+        <strong>Wyliczony Cz_max,lnd = ${computedCzLnd}</strong>
+      </div>
+    </div>
+  `;
+}
+
+// Renderowanie Karty Plusów i Minusów wybranego Układu Skrzydła (Dolnopłat / Górnopłat / Zastrzałowy / Średniopłat)
+function renderWingConfigDidacticCard() {
+  const box = document.getElementById('wingConfigDidacticBox');
+  if (!box || typeof DIDACTIC_DATABASE === 'undefined') return;
+
+  const cfgId = document.getElementById('wing_config')?.value || 'low';
+  const cfg = DIDACTIC_DATABASE.wing_config[cfgId] || DIDACTIC_DATABASE.wing_config.low;
+
+  box.innerHTML = `
+    <div style="font-size:0.78rem; font-weight:800; color:#0f172a; margin-bottom:0.35rem; display:flex; justify-content:space-between;">
+      <span>📐 Układ Płata: ${cfg.name}</span>
+      <span style="color:#0284c7; font-size:0.72rem;">${cfg.reference}</span>
+    </div>
+    <div class="pros-cons-grid" style="margin-bottom:0.35rem;">
+      <div class="pros-box">
+        <h5>👍 PLUSY układu:</h5>
+        <ul>${cfg.pros.map(p => `<li>${p}</li>`).join('')}</ul>
+      </div>
+      <div class="cons-box">
+        <h5>⚠️ MINUSY układu:</h5>
+        <ul>${cfg.cons.map(c => `<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="galinski-quote-box">
+      <strong>📘 Zasada prof. C. Galińskiego:</strong> ${cfg.galinski_quote}
+    </div>
+  `;
+}
+
+// Wypełnianie kategorii wydziałowych
+function populateCategorySelect() {
+  const sel = document.getElementById('categorySelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="all">-- Wszystkie 13 kategorii wydziałowych (110 tematów) --</option>';
+  for (const [key, name] of Object.entries(categoriesData)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  }
+}
+
+// Wypełnianie listy 110 tematów
+function populateTopicsSelect(filterCat) {
+  const sel = document.getElementById('topicSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Wybierz oficjalny temat z listy wydziałowej BIPOL I --</option>';
+  
+  const filtered = filterCat === 'all' 
+    ? topicsData 
+    : topicsData.filter(t => t.category === filterCat);
+
+  filtered.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.title;
+    sel.appendChild(opt);
+  });
+}
+
+// Załadowanie tematu wybranego z listy wydziałowej
+function loadTopic(topicId) {
+  const topic = topicsData.find(t => String(t.id) === String(topicId));
+  if (!topic) return;
+
+  const def = topic.defaults;
+  const pnd = document.getElementById('projectNameDisplay');
+  if (pnd) pnd.textContent = topic.title;
+
+  setFieldValue('aircraft_type', def.aircraft_type);
+  setFieldValue('engine_type', def.engine_type);
+  setFieldValue('engine_location', def.engine_location);
+  setFieldValue('wing_config', def.wing_config);
+  setFieldValue('n_pax', def.n_pax);
+  setFieldValue('m_cargo', def.m_cargo);
+  setFieldValue('range_km', def.range_km);
+  setFieldValue('cruise_altitude_m', def.cruise_altitude_m);
+  setFieldValue('cruise_speed_kmh', def.cruise_speed_kmh);
+  setFieldValue('climb_rate_ms', def.climb_rate_ms);
+  
+  if (def.span_limit) {
+    setFieldValue('wingspan_m', def.span_limit);
+  } else {
+    setFieldValue('wingspan_m', 0);
+  }
+
+  // Automatyczny dobór mechanizacji płata i Vs0 zależnie od kategorii tematu
+  const titleLower = topic.title.toLowerCase();
+  if (titleLower.includes('stol') || titleLower.includes('rolnicz')) {
+    setFieldValue('flap_type', 'junkers');
+    setFieldValue('slat_type', 'fixed_slot');
+    setFieldValue('v_stall_kmh', 75);
+    setFieldValue('takeoff_run_m', 180);
+  } else if (def.aircraft_type === 'jet_transport' || def.aircraft_type === 'turboprop_regional') {
+    setFieldValue('flap_type', 'fowler');
+    setFieldValue('slat_type', 'slats_auto');
+    setFieldValue('v_stall_kmh', def.aircraft_type === 'jet_transport' ? 185 : 140);
+    setFieldValue('takeoff_run_m', def.aircraft_type === 'jet_transport' ? 1400 : 750);
+  } else if (titleLower.includes('motoszybow')) {
+    setFieldValue('flap_type', 'flaperon');
+    setFieldValue('slat_type', 'none');
+    setFieldValue('v_stall_kmh', 72);
+    setFieldValue('takeoff_run_m', 220);
+  } else {
+    setFieldValue('flap_type', 'single_slotted');
+    setFieldValue('slat_type', 'none');
+    setFieldValue('v_stall_kmh', 90);
+    setFieldValue('takeoff_run_m', 280);
+  }
+
+  syncFormPropulsionUI(true);
+  renderWingConfigDidacticCard();
+  renderFlapDidacticCard(true);
+  updateAccordionPills();
+  performCalculation();
+}
+
+function setFieldValue(id, val) {
+  const el = document.getElementById(id);
+  if (el && val !== undefined) {
+    el.value = val;
+  }
+}
+
+function populatePresetsSelect() {
+  const sel = document.getElementById('presetSelect');
+  if (!sel) return;
+  sel.innerHTML = '';
+  for (const [key, p] of Object.entries(presetsData)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  }
+}
+
+function loadPreset(presetKey) {
+  const p = presetsData[presetKey];
+  if (!p) return;
+
+  const pnd = document.getElementById('projectNameDisplay');
+  if (pnd) pnd.textContent = p.name;
+
+  const fields = [
+    'aircraft_type', 'category', 'engine_type', 'engine_location',
+    'wing_config', 'n_pax', 'm_cargo', 'n_crew', 'm_crew_person',
+    'range_km', 'cruise_altitude_m', 'cruise_speed_kmh', 'v_stall_kmh',
+    'takeoff_run_m', 'climb_rate_ms', 'aspect_ratio', 'taper_ratio',
+    'sweep_quarter_deg', 'dihedral_deg', 'cx0', 'oswald_e',
+    'cz_max_clean', 'cz_max_to', 'cz_max_lnd', 'ld_cruise', 'sfc',
+    'prop_efficiency', 'prop_eff_to', 'loiter_time_min', 'v_h', 'v_v'
+  ];
+
+  fields.forEach(field => {
+    setFieldValue(field, p[field]);
+  });
+  // Pole m_pax w formularzu oznacza "Masa 1 osoby z bagażem [kg]"
+  const totalPaxPerson = (typeof p.m_pax === 'number' ? p.m_pax : 80) + (typeof p.m_bag === 'number' ? p.m_bag : 20);
+  setFieldValue('m_pax', totalPaxPerson > 0 ? totalPaxPerson : 100);
+  setFieldValue('wingspan_m', 0);
+
+  // Dobierz typ klapy dla presetu
+  if (presetKey === 'pzl_kos') {
+    setFieldValue('flap_type', 'split');
+    setFieldValue('slat_type', 'none');
+  } else if (presetKey === 'ga_trainer') {
+    setFieldValue('flap_type', 'single_slotted');
+    setFieldValue('slat_type', 'none');
+  } else if (presetKey === 'regional_turboprop' || presetKey === 'twin_turboprop' || presetKey === 'vlj_jet') {
+    setFieldValue('flap_type', 'fowler');
+    setFieldValue('slat_type', 'none');
+  }
+
+  document.querySelectorAll('.quick-preset-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.getAttribute('data-preset') === presetKey);
+  });
+
+  syncFormPropulsionUI(false);
+  renderWingConfigDidacticCard();
+  renderFlapDidacticCard(false);
+  updateAccordionPills();
+  performCalculation();
+}
+
+function collectFormData() {
+  const data = {};
+  const inputs = document.querySelectorAll('#designForm input, #designForm select');
+  inputs.forEach(input => {
+    if (!input.id) return;
+    const val = input.value;
+    if (input.type === 'number') {
+      data[input.id] = parseFloat(val);
+    } else {
+      data[input.id] = val;
+    }
+  });
+
+  // Przekaż parametry wybranej klapy do obliczeń aerodynamicznych
+  if (typeof DIDACTIC_DATABASE !== 'undefined') {
+    const flap = DIDACTIC_DATABASE.flaps[data.flap_type] || DIDACTIC_DATABASE.flaps.single_slotted;
+    data['delta_cx0_flaps_lnd'] = flap.delta_cx0_lnd;
+    data['cz_max_to'] = +(data.cz_max_clean + flap.delta_cz_max * 0.6).toFixed(2);
+  }
+
+  const activeProj = typeof getActiveProject === 'function' ? getActiveProject() : null;
+  const nameEl = document.getElementById('projectNameDisplay');
+  data['name'] = activeProj ? activeProj.name : (nameEl ? nameEl.textContent.trim() : 'Wstępny Projekt Samolotu');
+  return data;
+}
+
+async function performCalculation() {
+  const formData = collectFormData();
+  const btn = document.getElementById('calcBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Obliczanie P1–P6 i Rysunku CAD...';
+  }
+
+  try {
+    const resp = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json();
+      throw new Error(errData.message || 'Błąd obliczeń');
+    }
+
+    currentResults = await resp.json();
+    updateUI(currentResults);
+
+    if (typeof autoSaveActiveProject === 'function') {
+      autoSaveActiveProject(currentResults);
+    }
+  } catch (err) {
+    alert('Błąd podczas obliczeń: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '⚙️ Wykonaj Obliczenia BIPOL (P1–P6) i Odśwież Rysunek Techniczny CAD';
+    }
+  }
+}
+
+function updateUI(res) {
+  if (!res) return;
+  // 1. Zaktualizuj KPI główne z bezpieczną obsługą brakujących wartości
+  try {
+    const kpiM0 = document.getElementById('kpi_m0');
+    if (kpiM0) kpiM0.textContent = (res.mass?.m0 != null ? res.mass.m0.toFixed(1) : '---') + ' kg';
+
+    const kpiS = document.getElementById('kpi_wing_s');
+    if (kpiS) kpiS.textContent = (res.geometry?.wing?.S != null ? res.geometry.wing.S.toFixed(2) : '---') + ' m²';
+
+    const kpiB = document.getElementById('kpi_wingspan');
+    if (kpiB) kpiB.textContent = (res.geometry?.wing?.b != null ? res.geometry.wing.b.toFixed(2) : '---') + ' m';
+
+    const kpiWy = document.getElementById('kpi_wy_max');
+    if (kpiWy) kpiWy.textContent = (res.performance?.climb?.wy_max_ms != null ? res.performance.climb.wy_max_ms.toFixed(2) : '---') + ' m/s';
+
+    const kpiVs0 = document.getElementById('kpi_vs0');
+    if (kpiVs0) kpiVs0.textContent = (res.performance?.speeds?.vs_lnd_kmh != null ? res.performance.speeds.vs_lnd_kmh.toFixed(1) : '---') + ' km/h';
+
+    const kpiSm = document.getElementById('kpi_sm');
+    if (kpiSm) kpiSm.textContent = (res.balance?.stability?.static_margin_aft_pct != null ? res.balance.stability.static_margin_aft_pct.toFixed(1) : '---') + '% ŚDA';
+  } catch (err) {
+    console.warn('Błąd aktualizacji kafelków KPI:', err);
+  }
+
+  // 2. Odśwież wizualizacje dla aktualnie aktywnej zakładki
+  try {
+    const activeTab = document.querySelector('.tab-content.active');
+    const activeTabId = activeTab ? activeTab.id : 'tab-cad';
+    renderTabVisuals(activeTabId);
+  } catch (err) {
+    console.warn('Błąd renderTabVisuals:', err);
+  }
+
+  // 3. Moduł CAD: Wykaz Części (BOM) i Wymiary Główne
+  try { populateCadTables(res); } catch (err) { console.warn('Błąd populateCadTables:', err); }
+
+  // 4. Moduł P1/P2: Wymagania, MTOW, Torenbeek i Punkt Projektowy
+  try { populateP1P2Tables(res); } catch (err) { console.warn('Błąd populateP1P2Tables:', err); }
+
+  // 5. Moduł P3: Geometria Skrzydła, ŚDA/MAC, Kadłub, Usterzenia, Podwozie, Schrenk
+  try { populateP3Tables(res); } catch (err) { console.warn('Błąd populateP3Tables:', err); }
+
+  // 6. Moduł P4: Mechanizacja Płata i Punkty Optymalne Biegunowej
+  try { populateP4Tables(res); } catch (err) { console.warn('Błąd populateP4Tables:', err); }
+
+  // 7. Moduł P5: Spektrum Prędkości, Wznoszenie, Pułap, Start/Lądowanie, Zakręt
+  try { populateP5Tables(res); } catch (err) { console.warn('Błąd populateP5Tables:', err); }
+
+  // 8. Moduł P6: Obwiednia V-n, Stany Załadowania, Stateczność Statyczna
+  try { populateP6Tables(res); } catch (err) { console.warn('Błąd populateP6Tables:', err); }
+
+  // 9. Weryfikacja wymagań i Asystent Dydaktyczny
+  try { updateDidacticAdvisor(res); } catch (err) { console.warn('Błąd updateDidacticAdvisor:', err); }
+
+  try {
+    const checksTbody = document.getElementById('complianceChecksBody');
+    if (checksTbody && Array.isArray(res.compliance_checks)) {
+      checksTbody.innerHTML = res.compliance_checks.map(c => `
+        <tr>
+          <td><b>${c.parameter}</b><br><small style="color:#64748b;">${c.note}</small></td>
+          <td>${c.required}</td>
+          <td><b>${c.actual}</b></td>
+          <td>
+            <span class="badge ${c.passed ? 'badge-success' : 'badge-danger'}">
+              ${c.passed ? '✓ Zgodne' : '✗ Przekroczone'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.warn('Błąd complianceChecks:', err);
+  }
+
+  // 10. Aktualizacja pigułek nagłówków modułów (Live Modularity Badges)
+  try { updateAccordionPills(); } catch (err) { console.warn('Błąd updateAccordionPills:', err); }
+
+  // 11. Przycisk generowania raportu
+  try {
+    const reportBtn = document.getElementById('openReportBtn');
+    if (reportBtn) {
+      const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
+      const currentParams = collectFormData();
+      reportBtn.href = `/report?preset=${encodeURIComponent(presetKey)}&params_json=${encodeURIComponent(JSON.stringify(currentParams))}`;
+      reportBtn.onclick = () => {
+        localStorage.setItem('bipol_custom_report_data', JSON.stringify({
+          res: currentResults,
+          params: currentParams
+        }));
+      };
+    }
+  } catch (err) {
+    console.warn('Błąd konfiguracji przycisku raportu:', err);
+  }
+
+  // 12. Aktualizacja danych w Wersji 2 Portalu: Projekty Semestralne P1–P6
+  try {
+    if (typeof hydrateSemesterProjectsData === 'function') {
+      hydrateSemesterProjectsData(res);
+    }
+  } catch (err) {
+    console.warn('Błąd hydrateSemesterProjectsData:', err);
+  }
+}
+
+// Renderowanie wizualizacji modułowych (Canvas / SVG) zależnie od aktywnego modułu
+function renderTabVisuals(targetId) {
+  if (!currentResults) return;
+  setTimeout(() => {
+    switch (targetId) {
+      case 'tab-cad':
+        render3ViewBlueprint('blueprintView', currentResults.geometry, currentResults);
+        break;
+      case 'tab-p1-p2':
+        drawMatchingChart('chartMatching', currentResults.sizing);
+        break;
+      case 'tab-p3':
+        drawSchrenkChart('chartSchrenk', currentResults.geometry.schrenk);
+        break;
+      case 'tab-p4':
+        drawPolarChart('chartPolar', currentResults.aerodynamics);
+        break;
+      case 'tab-p5':
+        drawClimbChart('chartClimb', currentResults.performance.climb);
+        break;
+      case 'tab-p6':
+        drawVnEnvelope('chartVn', currentResults.envelope);
+        drawBalanceDiagram('chartBalance', currentResults.balance);
+        break;
+    }
+  }, 40);
+}
+
+// 3. Tabele Modułu CAD (BOM i Wymiarowanie PN-EN ISO 129 / 6433)
+function populateCadTables(res) {
+  const isJet = (res.sizing?.engine_type === 'jet') || (document.getElementById('engine_type')?.value === 'jet');
+  const bomTbody = document.getElementById('cadBomTableBody');
+  if (bomTbody) {
+    const bd = res.mass?.breakdown || {};
+    const propDesc = isJet
+      ? '<b>Zespół napędowy</b> (silniki turboodrzutowe, gondole i pylony)'
+      : '<b>Zespół napędowy</b> (silnik ze śmigłem i osprzętem)';
+    const propMount = isJet
+      ? 'Zabudowa w gondolach kadłubowych / podskrzydłowych'
+      : 'Zabudowa w nosie kadłuba / gondoli skrzydłowej';
+    bomTbody.innerHTML = `
+      <tr><td>6</td><td class="num">1 kpl</td><td>${propDesc}</td><td>PW-ZPK-06</td><td>Inconel / Tytan / Dural</td><td class="num">${(bd.m_propulsion || 0).toFixed(1)}</td><td>${propMount}</td></tr>
+      <tr><td>5</td><td class="num">1 kpl</td><td><b>Podwozie trójpodporowe</b> (przednie + główne)</td><td>PW-ZPK-05</td><td>Stal 30HGSA / Dural PA6</td><td class="num">${(bd.m_gear || 0).toFixed(1)}</td><td>Golenie teleskopowe z amortyzatorami</td></tr>
+      <tr><td>4</td><td class="num">1 kpl</td><td><b>Usterzenie poziome</b> (statecznik + ster wys.)</td><td>PW-ZPK-04</td><td>Stop duralowy PA7 / Kompozyt</td><td class="num">${((bd.m_tail || 0) * 0.6).toFixed(1)}</td><td>Profil symetryczny NACA 0009 / 0012</td></tr>
+      <tr><td>3</td><td class="num">1 kpl</td><td><b>Usterzenie pionowe</b> (statecznik + ster kier.)</td><td>PW-ZPK-03</td><td>Stop duralowy PA7 / Kompozyt</td><td class="num">${((bd.m_tail || 0) * 0.4).toFixed(1)}</td><td>Płetwa grzbietowa i wyważenie rogowe</td></tr>
+      <tr><td>2</td><td class="num">1 kpl</td><td><b>Skrzydło nośne</b> (keson, dźwigar, lotki, klapy)</td><td>PW-ZPK-02</td><td>Dural PA7 (2024-T3) / PA9</td><td class="num">${(bd.m_wing || 0).toFixed(1)}</td><td>Dźwigar belkowy z kesonem noskowym</td></tr>
+      <tr><td>1</td><td class="num">1 szt</td><td><b>Kadłub półskorupowy</b> (wręgi, podłużnice, poszycie)</td><td>PW-ZPK-01</td><td>Dural PA7 / Kratownica 30HGSA</td><td class="num">${(bd.m_fuselage || 0).toFixed(1)}</td><td>Konstrukcja półskorupowa, kabina załogi</td></tr>
+    `;
+  }
+
+  const dimsTbody = document.getElementById('cadDimsTableBody');
+  if (dimsTbody) {
+    const w = res.geometry?.wing || {};
+    const f = res.geometry?.fuselage || {};
+    const v = res.geometry?.vertical_tail || {};
+    const g = res.geometry?.gear || {};
+    const hv = v.h_v != null ? v.h_v : 1.2;
+    const totalHeight = (hv + 0.9).toFixed(2);
+    const sweepVal = Number(w.sweep_deg ?? w.sweep_25_deg ?? 0);
+    const lenNote = isJet
+      ? 'Od nosa kadłuba do krawędzi spływu usterzenia kierunku'
+      : 'Od kołpaka śmigła/dziobu do krawędzi spływu steru kierunku';
+    dimsTbody.innerHTML = `
+      <tr><td><b>b</b></td><td>Rozpiętość całkowita skrzydła</td><td class="num"><b>${(w.b ?? 0).toFixed(2)}</b></td><td>m</td><td>Wymiar skrajny do hangarowania i obrysu rzutów</td></tr>
+      <tr><td><b>L</b></td><td>Długość całkowita samolotu</td><td class="num"><b>${(f.length ?? 0).toFixed(2)}</b></td><td>m</td><td>${lenNote}</td></tr>
+      <tr><td><b>H</b></td><td>Wysokość całkowita na postoju</td><td class="num"><b>${totalHeight}</b></td><td>m</td><td>Od płaszczyzny ziemi do wierzchołka usterzenia pionowego</td></tr>
+      <tr><td><b>B_p</b></td><td>Rozstaw kół podwozia głównego</td><td class="num"><b>${(g.track ?? 0).toFixed(2)}</b></td><td>m</td><td>Zapewnia stabilność przeciwwywrotną przy lądowaniu z wiatrem bocznym</td></tr>
+      <tr><td><b>L_p</b></td><td>Baza podwozia trójpodporowego</td><td class="num"><b>${(g.wheelbase ?? 0).toFixed(2)}</b></td><td>m</td><td>Odległość między osią koła przedniego a osią kół głównych</td></tr>
+      <tr><td><b>&Gamma;</b></td><td>Kąt wzniosu skrzydła</td><td class="num"><b>${(w.dihedral_deg ?? 0).toFixed(1)}</b></td><td>&deg;</td><td>Stateczność poprzeczna i samoczynne tłumienie przechyłu</td></tr>
+      <tr><td><b>&chi;₂₅</b></td><td>Kąt skosu ćwierci cięciw</td><td class="num"><b>${sweepVal.toFixed(1)}</b></td><td>&deg;</td><td>Krytyczna liczba Macha oraz wyważenie podłużne</td></tr>
+    `;
+  }
+}
+
+// 4. Tabele Modułu P1/P2
+function populateP1P2Tables(res) {
+  const p1Cat = document.getElementById('p1CategoryBadge');
+  if (p1Cat) p1Cat.textContent = `Kategoria: ${(res.envelope?.limits?.category || 'normal').toUpperCase()}`;
+  const p1M0 = document.getElementById('p1KpiM0');
+  if (p1M0) p1M0.textContent = (res.mass?.m0 ?? 0).toFixed(1) + ' kg';
+  const p1Me = document.getElementById('p1KpiMe');
+  if (p1Me) p1Me.textContent = (res.mass?.m_empty ?? 0).toFixed(1) + ' kg';
+  const p1Mf = document.getElementById('p1KpiMf');
+  if (p1Mf) p1Mf.textContent = (res.mass?.m_fuel ?? 0).toFixed(1) + ' kg';
+  const p1Mpl = document.getElementById('p1KpiMpl');
+  if (p1Mpl) p1Mpl.textContent = ((res.mass?.m_payload ?? 0) + (res.mass?.m_crew ?? 0)).toFixed(1) + ' kg';
+
+  const p1Req = document.getElementById('p1MissionReqBody');
+  if (p1Req) {
+    const fd = collectFormData();
+    p1Req.innerHTML = `
+      <tr><td>Zasięg obliczeniowy</td><td><b>R</b></td><td class="num"><b>${fd.range_km}</b></td><td>km</td><td>Zasięg przelotowy z uwzględnieniem rezerw przepisowych</td></tr>
+      <tr><td>Wysokość przelotu</td><td><b>H</b></td><td class="num"><b>${fd.cruise_altitude_m}</b></td><td>m</td><td>Optymalna wysokość ekonomiczna w atmosferze ISA</td></tr>
+      <tr><td>Liczba pasażerów</td><td><b>n_pax</b></td><td class="num"><b>${fd.n_pax}</b></td><td>os.</td><td>Pasażerowie kabiny z bagażem podręcznym i rejestrowanym</td></tr>
+      <tr><td>Ładunek cargo / chemikalia</td><td><b>m_cargo</b></td><td class="num"><b>${fd.m_cargo}</b></td><td>kg</td><td>Dodatkowy ładunek handlowy w luku bagażowym</td></tr>
+      <tr><td>Załoga lotnicza</td><td><b>n_crew</b></td><td class="num"><b>${fd.n_crew}</b></td><td>os.</td><td>Liczba pilotów obsługujących statek powietrzny</td></tr>
+      <tr><td>Prędkość przelotowa</td><td><b>V_cr</b></td><td class="num"><b>${fd.cruise_speed_kmh}</b></td><td>km/h</td><td>Prędkość marszowa w konfiguracji gładkiej</td></tr>
+      <tr><td>Maks. prędkość lądowania</td><td><b>V_s0</b></td><td class="num"><b>${fd.v_stall_kmh}</b></td><td>km/h</td><td>Prędkość przeciążenia z pełnymi klapami lądowania</td></tr>
+      <tr><td>Dopuszczalny rozbieg</td><td><b>S_to</b></td><td class="num"><b>${fd.takeoff_run_m}</b></td><td>m</td><td>Maksymalna długość rozbiegu z nawierzchni trawiastej/utwardzonej</td></tr>
+      <tr><td>Wznoszenie przy ziemi</td><td><b>w_y</b></td><td class="num"><b>${fd.climb_rate_ms}</b></td><td>m/s</td><td>Minimalna prędkość wznoszenia w warunkach ISA MSL</td></tr>
+    `;
+  }
+
+  const p2Mass = document.getElementById('p2MassTableBody');
+  if (p2Mass) {
+    const m0 = res.mass?.m0 || 1;
+    p2Mass.innerHTML = `
+      <tr><td>Masa płatna (Payload: pasażerowie + bagaż + cargo)</td><td><b>m_pl</b></td><td class="num"><b>${(res.mass?.m_payload ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.payload_fraction ?? 0) * 100).toFixed(1)}%</td><td>Zadanie projektowe (założenia P1)</td></tr>
+      <tr><td>Załoga (Crew)</td><td><b>m_crew</b></td><td class="num"><b>${(res.mass?.m_crew ?? 0).toFixed(1)}</b></td><td class="num">${(((res.mass?.m_crew ?? 0) / m0) * 100).toFixed(1)}%</td><td>Liczba pilotów &times; masa 1 osoby</td></tr>
+      <tr><td>Paliwo całkowite (Fuel wg Bregueta)</td><td><b>m_f</b></td><td class="num"><b>${(res.mass?.m_fuel ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.fuel_fraction ?? 0) * 100).toFixed(1)}%</td><td>Równanie Bregueta + 45 min rezerwy</td></tr>
+      <tr><td>Masa pusta wyposażona (OEW)</td><td><b>m_e</b></td><td class="num"><b>${(res.mass?.m_empty ?? 0).toFixed(1)}</b></td><td class="num">${((res.mass?.empty_fraction ?? 0) * 100).toFixed(1)}%</td><td>Korelacja statystyczna Torenbeeka</td></tr>
+      <tr style="background:#f1f5f9; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td><b>m₀</b></td><td class="num"><b>${(res.mass?.m0 ?? 0).toFixed(1)}</b></td><td class="num">100.0%</td><td>Wynik zbieżności iteracyjnej bilansu</td></tr>
+    `;
+  }
+
+  const p2Empty = document.getElementById('p2EmptyTableBody');
+  if (p2Empty) {
+    const bd = res.mass?.breakdown || {};
+    const me = res.mass?.m_empty || 1;
+    const m0 = res.mass?.m0 || 1;
+    const rows = [
+      { name: 'Skrzydło (dźwigary, żebra, pokrycie, lotki, klapy)', m: bd.m_wing || 0 },
+      { name: 'Kadłub (wręgi, podłużnice, oszklenie, wyposażenie kabiny)', m: bd.m_fuselage || 0 },
+      { name: 'Usterzenia poziome i pionowe ze sterami', m: bd.m_tail || 0 },
+      { name: 'Podwozie trójpodporowe z układem hamulcowym', m: bd.m_gear || 0 },
+      { name: 'Zespół napędowy (silnik, łoże, osprzęt, śmigło)', m: bd.m_propulsion || 0 },
+      { name: 'Instalacje pokładowe, sterowanie, awionika, akumulatory', m: bd.m_systems || 0 }
+    ];
+    p2Empty.innerHTML = rows.map(r => `
+      <tr><td><b>${r.name}</b></td><td class="num"><b>${r.m.toFixed(1)}</b></td><td class="num">${((r.m / me) * 100).toFixed(1)}%</td><td class="num">${((r.m / m0) * 100).toFixed(1)}%</td></tr>
+    `).join('') + `
+      <tr style="background:#f8fafc; font-weight:bold;"><td>Suma masy pustej wyposażonej (OEW)</td><td class="num"><b>${me.toFixed(1)}</b></td><td class="num">100.0%</td><td class="num">${((me / m0) * 100).toFixed(1)}%</td></tr>
+    `;
+  }
+
+  const p2Dp = document.getElementById('p2DesignPointBody');
+  if (p2Dp) {
+    const dp = res.sizing?.design_point || {};
+    p2Dp.innerHTML = `
+      <tr><td>Obciążenie powierzchni skrzydła <b>(W/S)</b></td><td class="num"><b>${(dp.ws ?? 0).toFixed(1)}</b></td><td>N/m²</td><td>Ograniczenie prędkości lądowania Vs0 (maksymalne dopuszczalne W/S)</td></tr>
+      <tr><td>${dp.tw ? 'Obciążenie ciągu <b>(T/W)</b>' : 'Obciążenie mocy <b>(P/W)</b>'}</td><td class="num"><b>${dp.tw ? Number(dp.tw).toFixed(3) : (dp.pw ?? 0).toFixed(1) + ' (' + (dp.pw_hp_kg ?? 0).toFixed(3) + ' KM/kg)'}</b></td><td>${dp.tw ? '-' : 'W/N'}</td><td>Ograniczenie prędkości wznoszenia wy oraz drogi rozbiegu Sto</td></tr>
+      <tr><td>Obliczona powierzchnia nośna <b>S</b></td><td class="num"><b>${(res.geometry?.wing?.S ?? 0).toFixed(2)}</b></td><td>m²</td><td>Wyznaczona ze stosunku MTOW &bull; g / (W/S)</td></tr>
+      <tr><td>${dp.power_kw ? 'Wymagana moc silnika <b>P_sil</b>' : 'Wymagany ciąg silnika <b>T</b>'}</td><td class="num"><b>${dp.power_kw ? Number(dp.power_kw).toFixed(1) + ' kW (' + (dp.power_hp ?? 0).toFixed(1) + ' KM)' : (dp.thrust_kn ?? 0).toFixed(2) + ' kN'}</b></td><td>${dp.power_kw ? 'kW (KM)' : 'kN'}</td><td>Minimalna moc zespołu napędowego spełniająca wszystkie wymogi</td></tr>
+    `;
+  }
+}
+
+// 5. Tabele Modułu P3
+function populateP3Tables(res) {
+  const p3Wing = document.getElementById('p3WingTableBody');
+  if (p3Wing) {
+    const w = res.geometry?.wing || {};
+    const sweepVal = Number(w.sweep_deg ?? w.sweep_25_deg ?? 0);
+    p3Wing.innerHTML = `
+      <tr><td>Powierzchnia nośna skrzydła</td><td><b>S</b></td><td class="num"><b>${(w.S ?? 0).toFixed(2)}</b></td><td>m²</td><td>Wyznaczona z punktu projektowego Matching Chart</td></tr>
+      <tr><td>Rozpiętość skrzydła</td><td><b>b</b></td><td class="num"><b>${(w.b ?? 0).toFixed(2)}</b></td><td>m</td><td>Wyliczona ze wzoru b = &radic;(S &bull; &Lambda;)</td></tr>
+      <tr><td>Wydłużenie skrzydła</td><td><b>&Lambda; (AR)</b></td><td class="num"><b>${(w.AR ?? 0).toFixed(2)}</b></td><td>-</td><td>Wpływa bezpośrednio na opór indukowany k = 1/(&pi;&Lambda;e)</td></tr>
+      <tr><td>Zbieżność trapezowa skrzydła</td><td><b>&eta; = c_t/c_r</b></td><td class="num"><b>${(w.eta ?? 0).toFixed(2)}</b></td><td>-</td><td>Optymalna &eta; &asymp; 0.45&ndash;0.60 dla minimalnego oporu indukowanego</td></tr>
+      <tr><td>Cięciwa przykadłubowa</td><td><b>c_r</b></td><td class="num"><b>${(w.cr ?? 0).toFixed(3)}</b></td><td>m</td><td>Cięciwa u nasady skrzydła przy kadłubie</td></tr>
+      <tr><td>Cięciwa końcowa</td><td><b>c_t</b></td><td class="num"><b>${(w.ct ?? 0).toFixed(3)}</b></td><td>m</td><td>Cięciwa na końcówce płata</td></tr>
+      <tr><td>Kąt skosu ćwierci cięciw</td><td><b>&chi;₂₅%</b></td><td class="num"><b>${sweepVal.toFixed(1)}</b></td><td>&deg;</td><td>Dla samolotów poddźwiękowych &chi; &asymp; 0&deg;, dla odrzutowych 15&ndash;35&deg;</td></tr>
+      <tr><td>Kąt wzniosu skrzydła</td><td><b>&Gamma;</b></td><td class="num"><b>${(w.dihedral_deg ?? 0).toFixed(1)}</b></td><td>&deg;</td><td>Dla dolnopłata typowo 4&ndash;6&deg;, dla górnopłata 0&ndash;2&deg;</td></tr>
+    `;
+  }
+
+  const p3Mac = document.getElementById('p3MacTableBody');
+  if (p3Mac) {
+    const w = res.geometry?.wing || {};
+    const xLeMac = Number(w.x_le_mac ?? w.x_lemac ?? 0);
+    p3Mac.innerHTML = `
+      <tr><td>Średnia Cięciwa Aerodynamiczna (ŚDA / MAC)</td><td><b>b_A</b></td><td class="num"><b>${(w.mac ?? 0).toFixed(3)}</b></td><td>m</td><td>Długość cięciwy odniesienia momentów aerodynamicznych</td></tr>
+      <tr><td>Współrzędna poprzeczna położenia ŚDA</td><td><b>y_mac</b></td><td class="num"><b>${(w.y_mac ?? 0).toFixed(3)}</b></td><td>m</td><td>Odległość od osi symetrii samolotu: y_mac = (b/6)&bull;(1+2&eta;)/(1+&eta;)</td></tr>
+      <tr><td>Współrzędna wzdłużna noska ŚDA od natarcia c_r</td><td><b>x_lemac</b></td><td class="num"><b>${xLeMac.toFixed(3)}</b></td><td>m</td><td>Przesunięcie noska ŚDA w osi X: x_lemac = y_mac &bull; tg(&chi;_LE)</td></tr>
+    `;
+  }
+
+  const p3Fuse = document.getElementById('p3FuselageTableBody');
+  if (p3Fuse) {
+    const f = res.geometry?.fuselage || {};
+    p3Fuse.innerHTML = `
+      <tr><td>Długość całkowita kadłuba</td><td><b>L_k</b></td><td class="num"><b>${(f.length ?? 0).toFixed(2)}</b></td><td>m</td><td>Zapewnia wymagane ramiona sił usterzeń l_H i l_V</td></tr>
+      <tr><td>Maksymalna średnica / szerokość</td><td><b>D_k</b></td><td class="num"><b>${(f.diameter ?? 0).toFixed(2)}</b></td><td>m</td><td>Uwarunkowana ergonomią kabiny (szerokość foteli pilotów)</td></tr>
+      <tr><td>Smukłość kadłuba</td><td><b>&lambda;_k = L_k/D_k</b></td><td class="num"><b>${(f.fineness ?? 0).toFixed(2)}</b></td><td>-</td><td>Optymalna aerodynamicznie &lambda;_k &asymp; 6.0&ndash;9.5 (niski opór tarcia)</td></tr>
+    `;
+  }
+
+  const p3Tails = document.getElementById('p3TailsTableBody');
+  if (p3Tails) {
+    const h = res.geometry?.horizontal_tail || {};
+    const v = res.geometry?.vertical_tail || {};
+    p3Tails.innerHTML = `
+      <tr><td><b>Usterzenie poziome (UP)</b> &bull; Powierzchnia</td><td class="num"><b>${(h.S_h ?? 0).toFixed(2)}</b></td><td>m²</td><td>Typowo 18&ndash;25% powierzchni skrzydła S</td></tr>
+      <tr><td><b>Usterzenie poziome (UP)</b> &bull; Rozpiętość b_H</td><td class="num"><b>${(h.b_h ?? 0).toFixed(2)}</b></td><td>m</td><td>Wydłużenie &Lambda;_H = ${(h.ar_h ?? 0).toFixed(1)}</td></tr>
+      <tr><td><b>Usterzenie poziome (UP)</b> &bull; Ramię siły l_H</td><td class="num"><b>${(h.l_h ?? 0).toFixed(2)}</b></td><td>m</td><td>Odległość 0.25 ŚDA skrzydła do 0.25 ŚDA usterzenia</td></tr>
+      <tr><td><b>Usterzenie poziome (UP)</b> &bull; Współczynnik V_H</td><td class="num"><b>${(h.vh_coeff ?? 0).toFixed(3)}</b></td><td>-</td><td>Wymóg zalecany: V_H &ge; 0.50 (dobra stateczność podłużna)</td></tr>
+      <tr style="border-top:2px solid #cbd5e1;"><td><b>Usterzenie pionowe (UV)</b> &bull; Powierzchnia</td><td class="num"><b>${(v.S_v ?? 0).toFixed(2)}</b></td><td>m²</td><td>Typowo 10&ndash;16% powierzchni skrzydła S</td></tr>
+      <tr><td><b>Usterzenie pionowe (UV)</b> &bull; Wysokość h_V</td><td class="num"><b>${(v.h_v ?? 0).toFixed(2)}</b></td><td>m</td><td>Wydłużenie &Lambda;_V = ${(v.ar_v ?? 0).toFixed(1)}</td></tr>
+      <tr><td><b>Usterzenie pionowe (UV)</b> &bull; Ramię siły l_V</td><td class="num"><b>${(v.l_v ?? 0).toFixed(2)}</b></td><td>m</td><td>Odległość 0.25 ŚDA skrzydła do 0.25 ŚDA statecznika pionowego</td></tr>
+      <tr><td><b>Usterzenie pionowe (UV)</b> &bull; Współczynnik V_V</td><td class="num"><b>${(v.vv_coeff ?? 0).toFixed(3)}</b></td><td>-</td><td>Wymóg zalecany: V_V &ge; 0.035 (stateczność kierunkowa)</td></tr>
+    `;
+  }
+
+  const p3Gear = document.getElementById('p3GearTableBody');
+  if (p3Gear) {
+    const g = res.geometry?.gear || {};
+    p3Gear.innerHTML = `
+      <tr><td>Rozstaw kół podwozia głównego</td><td><b>B_p</b></td><td class="num"><b>${(g.track ?? 0).toFixed(2)}</b></td><td>m</td><td>Zapewnia stabilność przy lądowaniu (kąt wywrotu &gt; 35&deg;)</td></tr>
+      <tr><td>Baza podwozia trójpodporowego</td><td><b>L_p</b></td><td class="num"><b>${(g.wheelbase ?? 0).toFixed(2)}</b></td><td>m</td><td>Dystans między osią przednią a główną (przeciwdziała kapotażowi)</td></tr>
+      <tr><td>Wysokość goleni podwozia</td><td><b>H_p</b></td><td class="num"><b>${(g.height ?? 0.85).toFixed(2)}</b></td><td>m</td><td>Bezpieczny prześwit śmigła nad ziemią &ge; 230 mm wg CS-23</td></tr>
+    `;
+  }
+
+  const p3Schrenk = document.getElementById('p3SchrenkTableBody');
+  if (p3Schrenk && res.geometry?.schrenk) {
+    const sList = Array.isArray(res.geometry.schrenk) ? res.geometry.schrenk : [];
+    const stallEta = res.geometry?.schrenk_Pinpoint?.stall_eta_span;
+    if (sList.length > 0) {
+      const c0 = (sList[0].c_schrenk || 1);
+      let html = '';
+      sList.forEach((item, i) => {
+        const etaNum = item.eta_span !== undefined ? Number(item.eta_span) : (i / Math.max(1, sList.length - 1));
+        const etaVal = etaNum.toFixed(2);
+        const liftPct = c0 > 0 ? ((item.c_schrenk / c0) * 100).toFixed(1) : '0.0';
+        const cz1Val = (item.cz1 !== undefined ? Number(item.cz1) : ((item.c_schrenk || 0) / Math.max(0.01, item.c_geom || 1))).toFixed(3);
+        const isStall = stallEta !== undefined && Math.abs(etaNum - Number(stallEta)) < 0.005;
+        html += `
+          <tr style="${isStall ? 'background:#fef3c7; font-weight:700;' : ''}">
+            <td><b>${etaVal}</b> (${(etaNum * 100).toFixed(0)}% b/2) ${isStall ? '<span class="badge badge-warning">Początek oderwania</span>' : ''}</td>
+            <td class="num">${(item.y ?? 0).toFixed(3)}</td>
+            <td class="num">${(item.c_geom ?? 0).toFixed(3)}</td>
+            <td class="num">${(item.c_ellip ?? 0).toFixed(3)}</td>
+            <td class="num"><b>${(item.c_schrenk ?? 0).toFixed(3)}</b></td>
+            <td class="num"><b>${cz1Val}</b></td>
+            <td class="num">${liftPct}%</td>
+          </tr>
+        `;
+      });
+      p3Schrenk.innerHTML = html;
+    }
+  }
+}
+
+// 6. Tabele Modułu P4
+function populateP4Tables(res) {
+  const p4Card = document.getElementById('p4FlapJustificationCard');
+  if (p4Card && typeof DIDACTIC_DATABASE !== 'undefined') {
+    const fd = collectFormData();
+    const flap = DIDACTIC_DATABASE.flaps[fd.flap_type] || DIDACTIC_DATABASE.flaps.single_slotted;
+    const slat = DIDACTIC_DATABASE.slats[fd.slat_type] || DIDACTIC_DATABASE.slats.none;
+    p4Card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#0d9488;">
+            Uzasadnienie Wyboru Mechanizacji (${flap.reference})
+          </div>
+          <div style="font-size:1.05rem; font-weight:800; color:#0f172a;">
+            ${flap.name} ${fd.slat_type !== 'none' ? '+ ' + slat.name : ''}
+          </div>
+        </div>
+        <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <span class="badge badge-success">&Delta;Cz_klapy = +${flap.delta_cz_max.toFixed(2)}</span>
+          ${slat.delta_cz_max > 0 ? `<span class="badge badge-info">&Delta;Cz_slotu = +${slat.delta_cz_max.toFixed(2)}</span>` : ''}
+          <span class="badge badge-warning">&Delta;Cx0_lnd = +${flap.delta_cx0_lnd.toFixed(3)}</span>
+          <span class="badge" style="background:#f1f5f9; color:#334155;">Złożoność: ${flap.kinematic_complexity}</span>
+        </div>
+      </div>
+      <div class="pros-cons-grid" style="margin-bottom:0.5rem;">
+        <div class="pros-box">
+          <h5>👍 Zalety konstrukcyjno-aerodynamiczne:</h5>
+          <ul>
+            ${flap.pros.map(p => `<li>${p}</li>`).join('')}
+            ${fd.slat_type !== 'none' ? slat.pros.map(p => `<li><strong>[Slot]</strong> ${p}</li>`).join('') : ''}
+          </ul>
+        </div>
+        <div class="cons-box">
+          <h5>⚠️ Wady, ograniczenia i kompromisy:</h5>
+          <ul>
+            ${flap.cons.map(c => `<li>${c}</li>`).join('')}
+            ${fd.slat_type !== 'none' ? slat.cons.map(c => `<li><strong>[Slot]</strong> ${c}</li>`).join('') : ''}
+          </ul>
+        </div>
+      </div>
+      <div class="galinski-quote-box">
+        <strong>📘 Opinia prof. C. Galińskiego (MEiL PW):</strong> „${flap.galinski_quote}”
+      </div>
+    `;
+  }
+
+  const p4Opt = document.getElementById('p4AeroOptimaTableBody');
+  if (p4Opt) {
+    const a = res.aerodynamics || {};
+    p4Opt.innerHTML = `
+      <tr><td><b>Maksymalna doskonałość (K_max)</b></td><td class="num"><b>${(a.cz_opt ?? 0).toFixed(3)}</b></td><td class="num">${(a.cx_opt ?? 0).toFixed(4)}</td><td class="num"><b>${(a.k_max ?? 0).toFixed(2)}</b></td><td>Optymalny kąt szybowania i maksymalny zasięg samolotu śmigłowego</td></tr>
+      <tr><td><b>Prędkość ekonomiczna (min. moc silnika)</b></td><td class="num"><b>${(a.cz_econ ?? 0).toFixed(3)}</b></td><td class="num">${(a.cx_econ ?? 0).toFixed(4)}</td><td class="num"><b>${(a.k_econ ?? 0).toFixed(2)}</b></td><td>Maksymalna długotrwałość lotu dla silnika tłokowego / turboprop</td></tr>
+      <tr><td><b>Daleki zasięg jet (min. paliwo)</b></td><td class="num"><b>${(a.cz_jet_range ?? 0).toFixed(3)}</b></td><td class="num">${(a.cx_jet_range ?? 0).toFixed(4)}</td><td class="num"><b>${(a.k_jet_range ?? 0).toFixed(2)}</b></td><td>Maksymalny zasięg samolotu z napędem turboodrzutowym</td></tr>
+      <tr><td><b>Konfiguracja czysta (Clean)</b> &bull; Cz_max</td><td class="num"><b>${(a.cz_max_clean ?? 0).toFixed(2)}</b></td><td class="num">${(a.cx0_clean ?? 0).toFixed(4)}</td><td class="num">&mdash;</td><td>Profil bazowy skrzydła bez wychylenia klap</td></tr>
+      <tr><td><b>Konfiguracja startowa (Takeoff)</b> &bull; Cz_max</td><td class="num"><b>${(a.cz_max_to ?? 0).toFixed(2)}</b></td><td class="num">${(a.cx0_to ?? 0).toFixed(4)}</td><td class="num">&mdash;</td><td>Klapy wychylone o 10&ndash;15&deg; (wzrost Cz przy umiarkowanym oporze)</td></tr>
+      <tr><td><b>Konfiguracja lądowania (Landing)</b> &bull; Cz_max</td><td class="num"><b>${(a.cz_max_lnd ?? 0).toFixed(2)}</b></td><td class="num">${(a.cx0_lnd ?? 0).toFixed(4)}</td><td class="num">&mdash;</td><td>Klapy wychylone w pełni o 35&ndash;45&deg; (hamowanie aerodynamiczne)</td></tr>
+    `;
+  }
+
+  // Podpunkt 4.4: Zestawienie Danych Statystycznych (Tabele A, B, C wg Z. Paturskiego)
+  const paHolistic = res.bipol_projects?.p4?.paturski_aero || res.paturski_ml?.p3_aircraft_aero || {};
+  const abcHolistic = paHolistic.statistical_benchmarks_abc;
+  const holSumEl = document.getElementById('holistic_paturski_abc_summary');
+  if (holSumEl && abcHolistic?.summary) {
+    const s = abcHolistic.summary;
+    holSumEl.innerHTML = `
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:0.5rem; align-items:center;">
+        <div>
+          <strong>Klasyfikacja wg Tabeli A (Lp. ${s.matched_a_lp}):</strong> ${s.matched_a_desc} &bull;
+          Przedział statystyczny: <code>C_x,min = ${s.matched_a_range}</code> &bull;
+          <strong>Obliczone w projekcie: <code>C_x,min = ${s.project_cx_min}</code></strong>
+        </div>
+        <span class="badge ${s.in_statistical_range ? 'badge-success' : 'badge-info'}">
+          ${s.in_statistical_range ? '✓ Zgodne z Tabelą A i B' : 'ℹ️ Poza typowym przedziałem'}
+        </span>
+      </div>
+      <div style="margin-top:0.35rem; color:#475569;">
+        <strong>Tabela B (Lp. ${s.matched_b_lp}):</strong> ${s.matched_b_desc} &mdash;
+        referencyjne <code>(C_x,szk)_min = ${s.matched_b_cx_szk_min}</code> vs. obliczone z Tabeli 3.1: <strong><code>(C_x,szk)_min = ${s.project_cx_szk_min}</code></strong> &bull;
+        <strong>Wzorzec Tabeli C:</strong> ${s.matched_c_archetype}.
+      </div>
+    `;
+  }
+  const holTabCEl = document.getElementById('holistic_table_c_tbody');
+  if (holTabCEl && Array.isArray(abcHolistic?.tabela_c_rows)) {
+    const colKey = abcHolistic.summary?.matched_c_col_key || '';
+    holTabCEl.innerHTML = abcHolistic.tabela_c_rows.map(r => `
+      <tr>
+        <td>${r.lp}</td>
+        <td><b>${r.component}</b></td>
+        <td class="num" style="${colKey === 'biplane_fixed_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.biplane_fixed_pct !== null ? r.biplane_fixed_pct + ' %' : '&ndash;'}</td>
+        <td class="num" style="${colKey === 'high_wing_braced_fixed_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.high_wing_braced_fixed_pct !== null ? r.high_wing_braced_fixed_pct + ' %' : '&ndash;'}</td>
+        <td class="num" style="${colKey === 'low_wing_retractable_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.low_wing_retractable_pct !== null ? r.low_wing_retractable_pct + ' %' : '&ndash;'}</td>
+        <td class="num"><code>${Number(r.project_delta_cx).toFixed(4)}</code></td>
+        <td class="num" style="background:#f0fdf4; font-weight:800; color:#065f46;">${Number(r.project_share_pct).toFixed(1)} %</td>
+      </tr>
+    `).join('');
+  }
+}
+
+// 7. Tabele Modułu P5
+function populateP5Tables(res) {
+  const p5Speeds = document.getElementById('p5SpeedsTableBody');
+  if (p5Speeds) {
+    const sp = res.performance?.speeds || {};
+    const vMax = Number(sp.v_max_sl_kmh ?? sp.v_max_kmh ?? 0);
+    const vCr = Number(sp.v_cruise_kmh ?? 0);
+    const vLnd = Number(sp.vs_lnd_kmh ?? 0);
+    const vClean = Number(sp.vs_clean_kmh ?? 0);
+    const machCr = Number(sp.mach_cruise ?? (vCr / 1225));
+    p5Speeds.innerHTML = `
+      <tr><td>Prędkość przeciążenia z klapami do lądowania</td><td><b>V_s0</b></td><td class="num"><b>${vLnd.toFixed(1)}</b></td><td class="num">${(vLnd/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Ograniczenie przepisowe lądowania (Vs0 &le; zadana)</td></tr>
+      <tr><td>Prędkość przeciążenia w konfiguracji gładkiej</td><td><b>V_s1</b></td><td class="num"><b>${vClean.toFixed(1)}</b></td><td class="num">${(vClean/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Baza do wyznaczenia prędkości oderwania i manewrowej</td></tr>
+      <tr><td>Prędkość oderwania przy starcie (1.15 &bull; Vs_TO)</td><td><b>V_LOF</b></td><td class="num"><b>${(sp.v_liftoff_kmh ?? (vClean * 1.15)).toFixed(1)}</b></td><td class="num">${((sp.v_liftoff_kmh ?? (vClean * 1.15))/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Bezpieczny margines prędkości przy oderwaniu kół</td></tr>
+      <tr><td>Prędkość podejścia do lądowania (1.3 &bull; Vs0)</td><td><b>V_app</b></td><td class="num"><b>${(sp.v_approach_kmh ?? (vLnd * 1.3)).toFixed(1)}</b></td><td class="num">${((sp.v_approach_kmh ?? (vLnd * 1.3))/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Podejście po ścieżce schodzenia (H = 15 m)</td></tr>
+      <tr><td>Prędkość przelotowa obliczeniowa</td><td><b>V_cr</b></td><td class="num"><b>${vCr.toFixed(1)}</b></td><td class="num">${(vCr/3.6).toFixed(1)}</td><td class="num"><b>M ${machCr.toFixed(3)}</b></td><td>Standardowa prędkość marszowa w fazie przelotu</td></tr>
+      <tr><td>Maksymalna prędkość lotu poziomego przy ziemi</td><td><b>V_max</b></td><td class="num"><b>${vMax.toFixed(1)}</b></td><td class="num">${(vMax/3.6).toFixed(1)}</td><td class="num"><b>M ${(vMax/1225).toFixed(3)}</b></td><td>Punkt zrównania mocy rozporządzalnej i niezbędnej (wy = 0)</td></tr>
+    `;
+  }
+
+  const p5Climb = document.getElementById('p5KpiClimb');
+  if (p5Climb) p5Climb.textContent = (res.performance?.climb?.wy_max_ms ?? 0).toFixed(2) + ' m/s';
+  const p5Vwy = document.getElementById('p5KpiVwy');
+  if (p5Vwy) p5Vwy.textContent = (res.performance?.climb?.v_wy_max_kmh ?? 0).toFixed(1) + ' km/h';
+
+  const p5Ceil = document.getElementById('p5CeilingTableBody');
+  if (p5Ceil) {
+    const c = res.performance?.ceiling || {};
+    const hServ = Number(c.service_ceiling_m ?? 5000);
+    const hAbs = Number(c.absolute_ceiling_m ?? (hServ * 1.08));
+    p5Ceil.innerHTML = `
+      <tr><td><b>Pułap praktyczny</b> (Service Ceiling)</td><td class="num"><b>${hServ.toFixed(0)}</b></td><td class="num">${(hServ / 0.3048).toFixed(0)}</td><td>w_y = 0.5 m/s (100 ft/min)</td><td>Maksymalna wysokość użytkowa dla regularnych przelotów</td></tr>
+      <tr><td><b>Pułap teoretyczny</b> (Absolute Ceiling)</td><td class="num"><b>${hAbs.toFixed(0)}</b></td><td class="num">${(hAbs / 0.3048).toFixed(0)}</td><td>w_y = 0.0 m/s (brak nadmiaru mocy)</td><td>Wysokość graniczna – brak możliwości dalszego wznoszenia</td></tr>
+    `;
+  }
+
+  const p5Tolnd = document.getElementById('p5TakeoffLandingTableBody');
+  if (p5Tolnd) {
+    const to = res.performance?.takeoff || {};
+    const lnd = res.performance?.landing || {};
+    p5Tolnd.innerHTML = `
+      <tr><td><b>1. Rozbieg samolotu</b> (Ground Roll S_g)</td><td class="num"><b>${(to.ground_roll_m ?? 0).toFixed(1)}</b></td><td>0 &rarr; V_LOF (efekt ziemi McCormicka)</td><td>Fiszdon / Raymer &bull; tarcie toczne i opór w efekcie ziemi</td></tr>
+      <tr><td><b>2. Odcinek przejściowy i wznoszenie</b> (S_tr + S_climb)</td><td class="num"><b>${(to.air_distance_m ?? ((to.distance_to_15m ?? 0) - (to.ground_roll_m ?? 0))).toFixed(1)}</b></td><td>V_LOF &rarr; V₂ (kąt &gamma; = ${(to.climb_angle_deg ?? 0).toFixed(1)}&deg;)</td><td>Łuk wyrównania R_tr (${(to.transition_m ?? 0).toFixed(1)} m) + wznoszenie (${(to.climb_to_15m_m ?? 0).toFixed(1)} m)</td></tr>
+      <tr style="background:#f8fafc;"><td><b>Całkowita droga startu nad H = 15 m</b></td><td class="num"><b>${(to.distance_to_15m ?? 0).toFixed(1)}</b></td><td>Wysokość ekranu H = 15 m (50 ft)</td><td>Wymóg certyfikacyjny CS-23.53</td></tr>
+      <tr><td><b>3. Zniżanie z H = 15 m i wyrównanie</b> (S_air,lnd)</td><td class="num"><b>${(lnd.air_approach_m ?? 0).toFixed(1)}</b></td><td>V_app = 1.3 V_s0 &rarr; V_TD = 1.15 V_s0</td><td>Ścieżka podejścia i wytrzymanie nad pasem</td></tr>
+      <tr><td><b>4. Dobieg na ziemi</b> (1.5s swobodny + hamowanie)</td><td class="num"><b>${(lnd.ground_roll_m ?? 0).toFixed(1)}</b></td><td>V_TD &rarr; 0 (${(lnd.free_roll_m ?? 0).toFixed(1)} m + ${(lnd.braking_roll_m ?? 0).toFixed(1)} m)</td><td>Hamowanie aerodynamiczne i kołowe (&mu;_ham = 0.40)</td></tr>
+      <tr style="background:#f8fafc;"><td><b>Całkowita droga lądowania znad H = 15 m</b></td><td class="num"><b>${(lnd.distance_from_15m ?? 0).toFixed(1)}</b></td><td>Wysokość ekranu H = 15 m (50 ft)</td><td>Wymóg certyfikacyjny CS-23.73</td></tr>
+    `;
+  }
+
+  const p5Man = document.getElementById('p5ManeuverTableBody');
+  if (p5Man) {
+    const t = res.performance?.turn || {};
+    const nSus = Number(t.n_sustained ?? t.n_max_sustained ?? 2.0);
+    const bankDeg = (t.bank_angle_deg !== undefined) ? Number(t.bank_angle_deg) : (Math.acos(1.0 / Math.max(1.01, nSus)) * 180 / Math.PI);
+    const rMin = Number(t.r_min_m ?? t.radius_m ?? 100);
+    p5Man.innerHTML = `
+      <tr><td>Maksymalne przeciążenie w zakręcie ustalonym</td><td><b>n_ust</b></td><td class="num"><b>${nSus.toFixed(2)}</b></td><td>-</td><td>Ograniczone nadmiarem mocy i dopuszczalnym kątem natarcia</td></tr>
+      <tr><td>Kąt przechylenia w zakręcie ustalonym</td><td><b>&gamma;</b></td><td class="num"><b>${bankDeg.toFixed(1)}</b></td><td>&deg;</td><td>Wyznaczony ze wzoru cos(&gamma;) = 1/n_ust</td></tr>
+      <tr><td>Minimalny promień zakrętu ustalonego</td><td><b>R_min</b></td><td class="num"><b>${rMin.toFixed(1)}</b></td><td>m</td><td>Zdolność do manewrowania w strefie lotniska i w kanionie</td></tr>
+    `;
+  }
+}
+
+// 8. Tabele Modułu P6
+function populateP6Tables(res) {
+  const p6Env = document.getElementById('p6EnvelopeTableBody');
+  if (p6Env) {
+    const env = res.envelope || {};
+    const nMax = Number(env.limits?.n_max ?? 3.8);
+    const nMin = Number(env.limits?.n_min ?? -1.5);
+    const vA = Number(env.speeds?.v_a_kmh ?? 0);
+    const vC = Number(env.speeds?.v_c_kmh ?? 0);
+    const vD = Number(env.speeds?.v_d_kmh ?? 0);
+    p6Env.innerHTML = `
+      <tr><td>Maksymalne przeciążenie dodatnie</td><td><b>n_pos,max</b></td><td class="num">&mdash;</td><td class="num"><b>+${nMax.toFixed(2)}</b></td><td>Współczynnik obciążenia manewrowego wg przepisów CS</td></tr>
+      <tr><td>Maksymalne przeciążenie ujemne</td><td><b>n_neg,max</b></td><td class="num">&mdash;</td><td class="num"><b>${nMin.toFixed(2)}</b></td><td>Dopuszczalne przeciążenie w locie odwróconym / nurkowaniu</td></tr>
+      <tr><td>Prędkość manewrowa</td><td><b>V_A</b></td><td class="num"><b>${vA.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Pełne wychylenie sterów nie przekroczy dopuszczalnego n</td></tr>
+      <tr><td>Obliczeniowa prędkość przelotowa</td><td><b>V_C</b></td><td class="num"><b>${vC.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Bazowa prędkość do analizy podmuchów pionowych</td></tr>
+      <tr><td>Obliczeniowa prędkość nurkowania</td><td><b>V_D</b></td><td class="num"><b>${vD.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Graniczna prędkość flatterowa płatowca (V_D &ge; 1.25 V_C)</td></tr>
+      <tr><td>Linia podmuchu ostrego (&plusmn;15.24 m/s)</td><td><b>U_de = 15 m/s</b></td><td class="num"><b>przy V_C</b></td><td class="num">&plusmn;n_podmuch</td><td>Weryfikacja wytrzymałości pasów dźwigara na podmuchy</td></tr>
+    `;
+  }
+
+  const p6Load = document.getElementById('p6LoadingStatesTableBody');
+  if (p6Load && res.balance?.loading_states) {
+    p6Load.innerHTML = res.balance.loading_states.map(s => {
+      const xcgM = Number(s.xcg_m ?? s.x_cg_m ?? 0);
+      const xcgPct = Number(s.xcg_mac_pct ?? s.x_cg_pct_mac ?? 0);
+      const mass = Number(s.mass_kg ?? 0);
+      return `
+        <tr>
+          <td><b>${s.name}</b></td>
+          <td class="num"><b>${mass.toFixed(1)}</b></td>
+          <td class="num">${xcgM.toFixed(3)}</td>
+          <td class="num"><b>${xcgPct.toFixed(1)}%</b></td>
+          <td><span class="badge badge-success">✓ Dopuszczalne</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  const p6Stab = document.getElementById('p6StabilityTableBody');
+  if (p6Stab) {
+    const b = res.balance || {};
+    const smAft = Number(b.stability?.static_margin_aft_pct ?? 10.0);
+    const passed = smAft >= 5.0;
+    const xLemac = Number(b.x_lemac_m ?? 0);
+    const xNm = Number(b.neutral_point?.x_n_m ?? 0);
+    const xNPct = Number(b.neutral_point?.x_n_mac_pct ?? 0);
+    const cgFwd = Number(b.cg_range?.forward_pct ?? 0);
+    const cgAft = Number(b.cg_range?.aft_pct ?? 0);
+    const cgTrav = Number(b.stability?.cg_travel_pct_mac ?? 0);
+    p6Stab.innerHTML = `
+      <tr><td>Współrzędna noska ŚDA od dziobu kadłuba</td><td class="num"><b>${xLemac.toFixed(3)}</b></td><td>m</td><td>Początek bazy odniesienia (0% ŚDA)</td><td>Punkt bazowy</td></tr>
+      <tr><td>Położenie punktu neutralnego płatowca ze statecznikiem (x_N)</td><td class="num"><b>${xNm.toFixed(3)}</b> (${xNPct.toFixed(1)}% ŚDA)</td><td>m (% ŚDA)</td><td>Musi leżeć za ŚM: x_N &gt; x_CG</td><td>Punkt obojętności momentowej</td></tr>
+      <tr><td>Skrajne przednie położenie środka masy (x_CG,fwd)</td><td class="num"><b>${cgFwd.toFixed(1)}%</b></td><td>% ŚDA</td><td>Wymóg: sterowność przy lądowaniu</td><td>Maksymalny zapas stateczności</td></tr>
+      <tr><td>Skrajne tylne położenie środka masy (x_CG,aft)</td><td class="num"><b>${cgAft.toFixed(1)}%</b></td><td>% ŚDA</td><td>Wymóg: stateczność statyczna Kn &ge; 5%</td><td>Minimalny zapas stateczności</td></tr>
+      <tr><td>Całkowity zakres wędrówki środka masy (&Delta;x_CG)</td><td class="num"><b>${cgTrav.toFixed(1)}%</b></td><td>% ŚDA</td><td>Zakres dopuszczalnych położeń załadunku</td><td>Wędrówka ŚM</td></tr>
+      <tr style="background:#f8fafc; font-weight:bold;">
+        <td>Zapas stateczności statycznej podłużnej (K_n,aft)</td>
+        <td class="num"><b style="color:${passed ? '#16a34a' : '#dc2626'}; font-size:1.05rem;">${smAft.toFixed(1)}% ŚDA</b></td>
+        <td>% ŚDA</td>
+        <td>Wymóg przepisowy: <b>&ge; 5.0% ŚDA</b></td>
+        <td><span class="badge ${passed ? 'badge-success' : 'badge-danger'}">${passed ? '✓ ZGODNE (Stateczny)' : '✗ NIESTATECZNY'}</span></td>
+      </tr>
+    `;
+  }
+}
+
+// Asystent Dydaktyczny wykrywający błędy koncepcyjne w projekcie studenta
+function updateDidacticAdvisor(res) {
+  const advEl = document.getElementById('didacticAdvisorWarnings');
+  if (!advEl) return;
+
+  const p = collectFormData();
+  const warnings = [];
+  const wsVal = res.sizing?.design_point?.ws || res.sizing?.design_point?.ws_N_m2 || 0;
+
+  if (p.wing_config === 'mid' && (p.n_pax >= 2 || p.m_cargo >= 150)) {
+    warnings.push({
+      type: 'warning',
+      title: '⚠️ Uwaga Konstrukcyjna (Rozdz. 14 prof. Galińskiego): Średniopłat w samolocie pasażerskim/transportowym!',
+      text: 'Wybrałeś układ średniopłata przy znacznym ładunku płatnym. Dźwigary łączące skrzydła przejdą przez sam środek kabiny (w środku ciężkości), uniemożliwiając rozmieszczenie pasażerów lub ładunku! Rozważ dolnopłat lub górnopłat.'
+    });
+  }
+
+  if (p.wing_config === 'braced_high' && p.cruise_speed_kmh > 250) {
+    warnings.push({
+      type: 'warning',
+      title: '⚠️ Nieoptymalna aerodynamika: Górnopłat zastrzałowy przy dużej prędkości przelotowej!',
+      text: `Przy prędkości Vcr = ${p.cruise_speed_kmh} km/h opór szkodliwy zastrzałów (wzrost z V²) pochłania ogromną moc silnika. Powyżej 240 km/h zaleca się płat wolnonośny.`
+    });
+  }
+
+  if ((p.flap_type === 'plain' || p.flap_type === 'split') && wsVal > 1400) {
+    warnings.push({
+      type: 'danger',
+      title: '🛑 Zbyt słaba mechanizacja płata dla dużego obciążenia powierzchni W/S!',
+      text: `Obciążenie powierzchni wynosi ${wsVal.toFixed(0)} N/m². Klapa zwykła lub krokodylowa daje zbyt mały Cz_max, co wymusza dużą powierzchnię skrzydła. Wybierz klapę szczelinową lub Fowlera!`
+    });
+  }
+
+  if (p.slat_type === 'fixed_slot' && p.cruise_speed_kmh > 210) {
+    warnings.push({
+      type: 'warning',
+      title: '⚠️ Stały slot przy wysokiej prędkości przelotowej!',
+      text: 'Stałe przedskrzydło (Fixed Slat) generuje duży opór w locie poziomym. Przy prędkościach > 200 km/h zastosuj slot ruchomy (automatyczny/szynowy) lub klapę Kruegera.'
+    });
+  }
+
+  if (p.taper_ratio < 0.35) {
+    warnings.push({
+      type: 'danger',
+      title: '🛑 Niebezpieczeństwo oderwania strugi na końcówkach płata (Mała zbieżność η < 0.35)!',
+      text: 'Przy bardzo małej cięciwie końcowej lokalny współczynnik Cz na końcu płata osiąga maksimum wcześniej niż przy kadłubie, powodując nagłe zwalenie się samolotu na skrzydło i utratę skuteczności lotek!'
+    });
+  }
+
+  if (warnings.length === 0) {
+    advEl.innerHTML = `
+      <div style="background:#f0fdf4; border-left:4px solid #16a34a; padding:0.75rem; border-radius:4px; color:#14532d; font-size:0.85rem;">
+        <strong>✅ Konfiguracja poprawna dydaktycznie:</strong> Dobór układu nośnego (<code>${p.wing_config}</code>), mechanizacji spływu (<code>${p.flap_type}</code>), zbieżności (<code>η = ${p.taper_ratio}</code>) oraz prędkości jest spójny z wytycznymi konstrukcyjnymi MEiL PW.
+      </div>
+    `;
+  } else {
+    advEl.innerHTML = warnings.map(w => `
+      <div style="background:${w.type === 'danger' ? '#fef2f2' : '#fffbeb'}; border-left:4px solid ${w.type === 'danger' ? '#dc2626' : '#d97706'}; padding:0.7rem; border-radius:4px; margin-bottom:0.5rem; font-size:0.82rem; color:#1e293b;">
+        <div style="font-weight:800; margin-bottom:2px;">${w.title}</div>
+        <div>${w.text}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// Pobranie i wyświetlenie listy pobranych plików wydziałowych (Danilecki, BIPOL, ZPK CAD1, Mechanika Lotu)
+async function loadScrapedFiles() {
+  const containerDanilecki = document.getElementById('scrapedDanileckiFiles');
+  const containerBipol = document.getElementById('scrapedBipolFiles');
+  const containerZpk = document.getElementById('scrapedZpkFiles');
+  const containerMl = document.getElementById('scrapedMlFiles');
+  const badgeTotal = document.getElementById('facultyFilesTotalBadge');
+  if (!containerBipol || !containerMl) return;
+
+  try {
+    const resp = await fetch('/api/scraped-files');
+    const data = await resp.json();
+
+    const renderList = (items, icon) => (items || []).map(f => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem; border-bottom:1px solid #e2e8f0;">
+        <div>
+          <strong>${icon} ${f.name}</strong> <small style="color:#64748b;">(${(f.size/1024).toFixed(0)} KB)</small>
+        </div>
+        <a href="${f.path}" target="_blank" class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Podgląd / Pobierz</a>
+      </div>
+    `).join('');
+
+    if (containerDanilecki) containerDanilecki.innerHTML = renderList(data.danilecki, '📖');
+    containerBipol.innerHTML = renderList(data.bipol, '📄');
+    if (containerZpk) containerZpk.innerHTML = renderList(data.zpk_cad, '📐');
+    containerMl.innerHTML = renderList(data.mechanika_lotu, '📘');
+
+    if (badgeTotal && data.total_count) {
+      badgeTotal.textContent = `${data.total_count} Plików PDF lokalnie`;
+    }
+
+  } catch (err) {
+    console.error('Błąd wczytywania plików:', err);
+  }
+}
+
+function setupTabs() {
+  const tabs = document.querySelectorAll('.bipol-tab');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      tab.classList.add('active');
+      const targetId = tab.getAttribute('data-target');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) targetEl.classList.add('active');
+
+      renderTabVisuals(targetId);
+    });
+  });
+
+  // Responsywne przerysowanie wykresów po zmianie rozmiaru okna przeglądarki
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const activeTab = document.querySelector('.tab-content.active');
+      if (activeTab && currentResults) {
+        renderTabVisuals(activeTab.id);
+      }
+    }, 150);
+  });
+}
+
+/* ========================================================
+   WIZARD / KONFIGURATOR PROJEKTU KROK PO KROKU
+   ======================================================== */
+let currentWizardStep = 1;
+
+const WIZARD_TEMPLATES = {
+  trainer_ga: {
+    name: "Szkolno-Treningowy GA (PZL-102 / C152)",
+    aircraft_type: "piston_ga",
+    category: "normal",
+    n_crew: 1, n_pax: 1, m_pax: 90, m_cargo: 20,
+    range_km: 640, cruise_altitude_m: 2000, cruise_speed_kmh: 174,
+    v_stall_kmh: 84, takeoff_run_m: 210, climb_rate_ms: 4.1,
+    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.80, sfc: 265,
+    wing_config: "low", aspect_ratio: 7.33, taper_ratio: 0.60, sweep_quarter_deg: 0,
+    flap_type: "split", slat_type: "none"
+  },
+  touring_pax: {
+    name: "Turystyczny 4-miejscowy (Cirrus SR22 / Socata)",
+    aircraft_type: "piston_ga",
+    category: "normal",
+    n_crew: 1, n_pax: 3, m_pax: 100, m_cargo: 60,
+    range_km: 1250, cruise_altitude_m: 2500, cruise_speed_kmh: 245,
+    v_stall_kmh: 92, takeoff_run_m: 320, climb_rate_ms: 5.4,
+    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.82, sfc: 250,
+    wing_config: "low", aspect_ratio: 7.8, taper_ratio: 0.65, sweep_quarter_deg: 0,
+    flap_type: "single_slotted", slat_type: "none"
+  },
+  stol_agri: {
+    name: "Rolniczy / Krótkiego Startu STOL (PZL Kruk / Wilga)",
+    aircraft_type: "piston_ga",
+    category: "utility",
+    n_crew: 1, n_pax: 0, m_pax: 90, m_cargo: 850,
+    range_km: 550, cruise_altitude_m: 1000, cruise_speed_kmh: 165,
+    v_stall_kmh: 72, takeoff_run_m: 160, climb_rate_ms: 5.6,
+    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.78, sfc: 285,
+    wing_config: "high", aspect_ratio: 6.6, taper_ratio: 0.80, sweep_quarter_deg: 0,
+    flap_type: "junkers", slat_type: "fixed_slot"
+  },
+  turboprop_commuter: {
+    name: "Dyspozycyjny Turboprop (King Air / ATR 42)",
+    aircraft_type: "turboprop_regional",
+    category: "commuter",
+    n_crew: 2, n_pax: 8, m_pax: 100, m_cargo: 200,
+    range_km: 2200, cruise_altitude_m: 6500, cruise_speed_kmh: 460,
+    v_stall_kmh: 135, takeoff_run_m: 680, climb_rate_ms: 9.2,
+    engine_type: "prop", engine_location: "wing", prop_efficiency: 0.84, sfc: 280,
+    wing_config: "low", aspect_ratio: 10.5, taper_ratio: 0.55, sweep_quarter_deg: 2,
+    flap_type: "fowler", slat_type: "none"
+  },
+  vlj_bizjet: {
+    name: "Lekki Odrzutowiec Biznesowy VLJ (HondaJet / Citation)",
+    aircraft_type: "jet_business",
+    category: "normal",
+    n_crew: 1, n_pax: 5, m_pax: 95, m_cargo: 100,
+    range_km: 2400, cruise_altitude_m: 11000, cruise_speed_kmh: 680,
+    v_stall_kmh: 165, takeoff_run_m: 950, climb_rate_ms: 14.0,
+    engine_type: "jet", engine_location: "rear", prop_efficiency: 0.80, sfc: 0.62,
+    wing_config: "low", aspect_ratio: 8.2, taper_ratio: 0.40, sweep_quarter_deg: 18,
+    flap_type: "fowler", slat_type: "slats_auto"
+  },
+  motoglider_uav: {
+    name: "Motoszybowiec / Bezzałogowiec UAV MALE",
+    aircraft_type: "uav",
+    category: "utility",
+    n_crew: 0, n_pax: 0, m_pax: 0, m_cargo: 80,
+    range_km: 1800, cruise_altitude_m: 5000, cruise_speed_kmh: 130,
+    v_stall_kmh: 68, takeoff_run_m: 180, climb_rate_ms: 3.8,
+    engine_type: "prop", engine_location: "nose", prop_efficiency: 0.82, sfc: 255,
+    wing_config: "mid", aspect_ratio: 17.5, taper_ratio: 0.50, sweep_quarter_deg: 0,
+    flap_type: "flaperon", slat_type: "none"
+  }
+};
+// ==========================================
+// BIPOL STUDIO - SYSTEM ZARZĄDZANIA PROJEKTAMI (PROJECT SYSTEM)
+// ==========================================
+const STORAGE_PROJECTS_KEY = 'bipol_projects_v2';
+const STORAGE_ACTIVE_PROJ_KEY = 'bipol_active_project_id';
+const SESSION_INITIALIZED_KEY = 'bipol_session_initialized';
+
+let wizardProjectMode = 'create'; // 'create' lub 'edit'
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getProjectsList() {
+  try {
+    const raw = localStorage.getItem(STORAGE_PROJECTS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error('Błąd odczytu projektów z localStorage:', e);
+    return [];
+  }
+}
+
+function saveProjectsList(list) {
+  try {
+    localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Błąd zapisu projektów do localStorage:', e);
+  }
+}
+
+function getActiveProjectId() {
+  return localStorage.getItem(STORAGE_ACTIVE_PROJ_KEY);
+}
+
+function setActiveProjectId(id) {
+  localStorage.setItem(STORAGE_ACTIVE_PROJ_KEY, id);
+}
+
+function getActiveProject() {
+  const list = getProjectsList();
+  if (list.length === 0) return null;
+  const activeId = getActiveProjectId();
+  let found = list.find(p => p.id === activeId);
+  if (!found) {
+    found = list[0];
+    setActiveProjectId(found.id);
+  }
+  return found;
+}
+
+function saveProject(project) {
+  const list = getProjectsList();
+  const idx = list.findIndex(p => p.id === project.id);
+  project.updatedAt = new Date().toISOString();
+  if (idx >= 0) {
+    list[idx] = project;
+  } else {
+    list.unshift(project);
+  }
+  saveProjectsList(list);
+  renderProjectSwitcher();
+  renderProjectManagerModal();
+}
+
+function loadProjectIntoForm(project) {
+  if (!project || !project.params) return;
+  const params = project.params;
+
+  for (const [key, val] of Object.entries(params)) {
+    const el = document.getElementById(key);
+    if (el) {
+      el.value = val;
+    }
+  }
+
+  const pnd = document.getElementById('projectNameDisplay');
+  if (pnd) pnd.textContent = project.name;
+
+  syncFormPropulsionUI(false);
+  renderWingConfigDidacticCard();
+  renderFlapDidacticCard(false);
+  updateAccordionPills();
+
+  const reportBtn = document.getElementById('openReportBtn');
+  if (reportBtn) {
+    const sName = params.student_name || document.getElementById('student_name')?.value || 'Jan Kowalski';
+    const aNo = params.album_no || document.getElementById('album_no')?.value || 'Nr Albumu';
+    const gNo = params.group_no || document.getElementById('group_no')?.value || 'A – czwartek 8:15-9:00';
+    const sup = params.supervisor || document.getElementById('supervisor')?.value || 'M.Figat';
+    const subDate = params.submission_date || document.getElementById('submission_date')?.value || '14.12.2026';
+    const paramsJson = encodeURIComponent(JSON.stringify(params));
+    reportBtn.href = `/report?params_json=${paramsJson}&student=${encodeURIComponent(sName)}&album=${encodeURIComponent(aNo)}&group=${encodeURIComponent(gNo)}&supervisor=${encodeURIComponent(sup)}&date=${encodeURIComponent(subDate)}`;
+  }
+}
+
+function renderProjectSwitcher() {
+  const sel = document.getElementById('projectSwitcherSelect');
+  const countBadge = document.getElementById('projectCountBadge');
+  const navCount = document.getElementById('navProjectCount');
+  const list = getProjectsList();
+  const activeId = getActiveProjectId();
+
+  if (countBadge) countBadge.textContent = list.length;
+  if (navCount) navCount.textContent = list.length;
+
+  if (!sel) return;
+  sel.innerHTML = '';
+  list.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.id === activeId ? '✈️ ' : '📁 '} ${p.name}`;
+    if (p.id === activeId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function switchActiveProject(projectId) {
+  const list = getProjectsList();
+  const proj = list.find(p => p.id === projectId);
+  if (!proj) return;
+
+  setActiveProjectId(proj.id);
+  loadProjectIntoForm(proj);
+  renderProjectSwitcher();
+  performCalculation();
+  flashSaveStatus(`Załadowano: ${proj.name}`);
+}
+
+function flashSaveStatus(msg) {
+  const statusEl = document.getElementById('projectAutoSaveStatus');
+  if (!statusEl) return;
+  statusEl.innerHTML = `<span class="icon">💾</span> ${escapeHtml(msg)}`;
+  statusEl.style.opacity = '1';
+  statusEl.style.color = '#10b981';
+}
+
+function autoSaveActiveProject(res) {
+  const active = getActiveProject();
+  if (!active) return;
+  active.params = collectFormData();
+  active.updatedAt = new Date().toISOString();
+  if (res) {
+    active.summary = {
+      mtow: res.mass?.m0,
+      wingspan: res.geometry?.wing?.b,
+      wingArea: res.geometry?.wing?.S,
+      vStall: res.performance?.speeds?.vs_lnd_kmh,
+      wyMax: res.performance?.climb?.wy_max_ms
+    };
+  }
+  const list = getProjectsList();
+  const idx = list.findIndex(p => p.id === active.id);
+  if (idx >= 0) list[idx] = active;
+  saveProjectsList(list);
+  renderProjectSwitcher();
+  flashSaveStatus(`Zapisano automatycznie (${new Date().toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'})})`);
+}
+
+function duplicateActiveProject() {
+  const active = getActiveProject();
+  if (!active) return;
+  duplicateProject(active.id);
+}
+
+function duplicateProject(projectId) {
+  const list = getProjectsList();
+  const src = list.find(p => p.id === projectId);
+  if (!src) return;
+
+  const newId = 'proj_' + Date.now();
+  const cloned = {
+    ...JSON.parse(JSON.stringify(src)),
+    id: newId,
+    name: `${src.name} (Kopia)`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  list.unshift(cloned);
+  saveProjectsList(list);
+  setActiveProjectId(newId);
+  loadProjectIntoForm(cloned);
+  renderProjectSwitcher();
+  renderProjectManagerModal();
+  performCalculation();
+  flashSaveStatus(`Zduplikowano jako: ${cloned.name}`);
+}
+
+function deleteProject(projectId) {
+  const list = getProjectsList();
+  if (list.length <= 1) {
+    alert('W pracowni musi pozostać co najmniej jeden projekt!');
+    return;
+  }
+  const target = list.find(p => p.id === projectId);
+  if (!target) return;
+
+  if (!confirm(`Czy na pewno chcesz usunąć projekt:\n"${target.name}"?`)) {
+    return;
+  }
+
+  const updatedList = list.filter(p => p.id !== projectId);
+  saveProjectsList(updatedList);
+
+  const activeId = getActiveProjectId();
+  if (activeId === projectId) {
+    const nextProj = updatedList[0];
+    setActiveProjectId(nextProj.id);
+    loadProjectIntoForm(nextProj);
+    performCalculation();
+  }
+
+  renderProjectSwitcher();
+  renderProjectManagerModal();
+  flashSaveStatus('Usunięto projekt');
+}
+
+function promptRenameProject(projectId) {
+  const list = getProjectsList();
+  const proj = list.find(p => p.id === projectId);
+  if (!proj) return;
+
+  const newName = prompt('Podaj nową nazwę projektu:', proj.name);
+  if (newName && newName.trim() && newName.trim() !== proj.name) {
+    proj.name = newName.trim();
+    saveProject(proj);
+    const pnd = document.getElementById('projectNameDisplay');
+    if (pnd && getActiveProjectId() === proj.id) pnd.textContent = proj.name;
+    flashSaveStatus(`Zmieniono nazwę na: ${proj.name}`);
+  }
+}
+
+function exportActiveProjectJSON() {
+  const active = getActiveProject();
+  if (active) exportProjectJSON(active.id);
+}
+
+function exportProjectJSON(projectId) {
+  const list = getProjectsList();
+  const proj = list.find(p => p.id === projectId);
+  if (!proj) return;
+
+  const exportObj = {
+    bipol_version: '2.0',
+    export_date: new Date().toISOString(),
+    project: proj
+  };
+
+  const jsonStr = JSON.stringify(exportObj, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = proj.name.replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ_\-\s]/g, '').trim().replace(/\s+/g, '_');
+  a.href = url;
+  a.download = `${safeName || 'projekt_bipol'}.bipol.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importProjectFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let importedProj = null;
+
+      if (data.project && data.project.name && data.project.params) {
+        importedProj = data.project;
+      } else if (data.params && data.name) {
+        importedProj = data;
+      } else {
+        throw new Error('Plik nie zawiera poprawnej struktury projektu BIPOL.');
+      }
+
+      const newId = 'proj_imp_' + Date.now();
+      const projToSave = {
+        id: newId,
+        name: importedProj.name.includes('(Import)') ? importedProj.name : `${importedProj.name} (Import)`,
+        aircraft_type: importedProj.aircraft_type || 'piston_ga',
+        category: importedProj.category || 'normal',
+        createdAt: importedProj.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        params: importedProj.params,
+        summary: importedProj.summary || {}
+      };
+
+      const list = getProjectsList();
+      list.unshift(projToSave);
+      saveProjectsList(list);
+      setActiveProjectId(newId);
+      loadProjectIntoForm(projToSave);
+      renderProjectSwitcher();
+      renderProjectManagerModal();
+      performCalculation();
+      alert(`Pomyślnie zaimportowano projekt:\n"${projToSave.name}"!`);
+    } catch (err) {
+      alert('Błąd importu pliku JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function renderProjectManagerModal() {
+  const grid = document.getElementById('projectCardsGrid');
+  const countEl = document.getElementById('hubProjectsTotalCount');
+  if (!grid) return;
+
+  const list = getProjectsList();
+  const activeId = getActiveProjectId();
+  if (countEl) countEl.textContent = list.length;
+
+  if (list.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem; color:#64748b;">Brak projektów. Kliknij „Nowy Projekt”, aby uruchomić kreator!</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(p => {
+    const isActive = p.id === activeId;
+    const mtowStr = p.summary?.mtow ? `${p.summary.mtow.toFixed(0)} kg` : '---';
+    const spanStr = p.summary?.wingspan ? `${p.summary.wingspan.toFixed(1)} m` : '---';
+    const vStallStr = p.summary?.vStall ? `${p.summary.vStall.toFixed(0)} km/h` : '---';
+    const wyStr = p.summary?.wyMax ? `${p.summary.wyMax.toFixed(1)} m/s` : '---';
+    const updatedDate = p.updatedAt ? new Date(p.updatedAt).toLocaleString('pl-PL', {dateStyle:'short', timeStyle:'short'}) : '---';
+
+    return `
+      <div class="project-card ${isActive ? 'active' : ''}">
+        <div>
+          <div class="project-card-header">
+            <div class="project-card-title">${escapeHtml(p.name)}</div>
+            <span class="project-card-badge ${isActive ? 'current' : ''}">
+              ${isActive ? '★ Aktywny' : (p.category || 'Projekt')}
+            </span>
+          </div>
+          <div class="project-card-meta">
+            <div><strong>Typ:</strong> ${escapeHtml(p.aircraft_type || 'piston_ga')}</div>
+            <div><strong>Ostatnia zmiana:</strong> ${updatedDate}</div>
+          </div>
+          <div class="project-card-specs">
+            <span class="spec-tag" title="Masa startowa MTOW">MTOW: ${mtowStr}</span>
+            <span class="spec-tag" title="Rozpiętość skrzydła">b: ${spanStr}</span>
+            <span class="spec-tag" title="Prędkość przeciążenia z klapami">Vs0: ${vStallStr}</span>
+            <span class="spec-tag" title="Prędkość wznoszenia wy_max">wy: ${wyStr}</span>
+          </div>
+        </div>
+        <div class="project-card-actions">
+          ${!isActive ? `<button type="button" class="btn btn-primary btn-sm" onclick="switchActiveProject('${p.id}'); closeProjectManagerModal();" style="font-size:0.75rem; padding:0.25rem 0.6rem;">🚀 Otwórz</button>` : `<span class="badge badge-success" style="font-size:0.75rem; padding:0.3rem 0.5rem;">Aktualnie otwarty</span>`}
+          <button type="button" class="btn btn-outline btn-sm" onclick="promptRenameProject('${p.id}')" style="font-size:0.75rem; padding:0.25rem 0.5rem;" title="Zmień nazwę projektu">✏️ Nazwa</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="duplicateProject('${p.id}')" style="font-size:0.75rem; padding:0.25rem 0.5rem;" title="Zduplikuj ten projekt">📋 Kopia</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="exportProjectJSON('${p.id}')" style="font-size:0.75rem; padding:0.25rem 0.5rem;" title="Pobierz plik .json">💾 JSON</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')" style="font-size:0.75rem; padding:0.25rem 0.5rem;" title="Usuń projekt">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openProjectManagerModal() {
+  renderProjectManagerModal();
+  const backdrop = document.getElementById('projectManagerModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeProjectManagerModal() {
+  const backdrop = document.getElementById('projectManagerModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+}
+
+function openSessionStarterModal() {
+  const backdrop = document.getElementById('sessionStarterModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeSessionStarterModal() {
+  const backdrop = document.getElementById('sessionStarterModalBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  sessionStorage.setItem(SESSION_INITIALIZED_KEY, 'true');
+}
+
+function initProjectSystem() {
+  let list = getProjectsList();
+
+  // Jeśli brak projektów (pierwsze uruchomienie), stwórz projekt domyślny z PZL-Kos
+  if (list.length === 0) {
+    const defaultParams = collectFormData();
+    const initProj = {
+      id: 'proj_pzl_kos',
+      name: 'PZL-102B Kos (Klasyk MEiL PW - Projekt Referencyjny)',
+      aircraft_type: 'piston_ga',
+      category: 'normal',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      params: defaultParams,
+      summary: {
+        mtow: 1484.1,
+        wingspan: 9.87,
+        wingArea: 13.28,
+        vStall: 84.0,
+        wyMax: 4.1
+      }
+    };
+    list = [initProj];
+    saveProjectsList(list);
+    setActiveProjectId(initProj.id);
+  }
+
+  // Wczytaj aktywny projekt do formularza
+  const activeProj = getActiveProject();
+  if (activeProj) {
+    loadProjectIntoForm(activeProj);
+  }
+  renderProjectSwitcher();
+
+  // SPRAWDZENIE POCZĄTKU NOWEJ SESJI:
+  const isSessionInitialized = sessionStorage.getItem(SESSION_INITIALIZED_KEY);
+  if (!isSessionInitialized) {
+    // Na początku nowej sesji wyświetlamy modal wyboru / tworzenia z kreatora
+    openSessionStarterModal();
+  } else {
+    performCalculation();
+  }
+
+  setupProjectEventListeners();
+}
+
+function setupProjectEventListeners() {
+  const switcher = document.getElementById('projectSwitcherSelect');
+  if (switcher) {
+    switcher.addEventListener('change', (e) => {
+      switchActiveProject(e.target.value);
+    });
+  }
+
+  const btnNewProj = document.getElementById('btnNewProjectWizard');
+  if (btnNewProj) {
+    btnNewProj.addEventListener('click', () => openWizard('create'));
+  }
+
+  const btnOpenMgr = document.getElementById('btnOpenProjectManager');
+  if (btnOpenMgr) {
+    btnOpenMgr.addEventListener('click', openProjectManagerModal);
+  }
+
+  const btnOpenMgrNav = document.getElementById('btnOpenProjectManagerNav');
+  if (btnOpenMgrNav) {
+    btnOpenMgrNav.addEventListener('click', openProjectManagerModal);
+  }
+
+  const closeMgrBtn = document.getElementById('closeProjectManagerBtn');
+  if (closeMgrBtn) {
+    closeMgrBtn.addEventListener('click', closeProjectManagerModal);
+  }
+
+  const mgrBackdrop = document.getElementById('projectManagerModalBackdrop');
+  if (mgrBackdrop) {
+    mgrBackdrop.addEventListener('click', (e) => {
+      if (e.target === mgrBackdrop) closeProjectManagerModal();
+    });
+  }
+
+  const starterBackdrop = document.getElementById('sessionStarterModalBackdrop');
+  if (starterBackdrop) {
+    starterBackdrop.addEventListener('click', (e) => {
+      if (e.target === starterBackdrop) closeSessionStarterModal();
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (mgrBackdrop && mgrBackdrop.classList.contains('active')) closeProjectManagerModal();
+      if (starterBackdrop && starterBackdrop.classList.contains('active')) closeSessionStarterModal();
+    }
+  });
+
+  const btnDup = document.getElementById('btnDuplicateCurrentProject');
+  if (btnDup) {
+    btnDup.addEventListener('click', duplicateActiveProject);
+  }
+
+  const btnExport = document.getElementById('btnExportCurrentProject');
+  if (btnExport) {
+    btnExport.addEventListener('click', exportActiveProjectJSON);
+  }
+
+  const hubNew = document.getElementById('hubNewProjectBtn');
+  if (hubNew) {
+    hubNew.addEventListener('click', () => {
+      closeProjectManagerModal();
+      openWizard('create');
+    });
+  }
+
+  const hubImport = document.getElementById('hubImportProjectBtn');
+  const importInput = document.getElementById('projectImportFileInput');
+  if (hubImport && importInput) {
+    hubImport.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        importProjectFromFile(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+  }
+
+  // Session Starter Dual-Portal & Project choices
+  const starterHolisticBtn = document.getElementById('starterHolisticBtn');
+  const starterHolisticCard = document.getElementById('starterHolisticCard');
+  const handleStarterHolistic = (e) => {
+    if (e) e.stopPropagation();
+    closeSessionStarterModal();
+    setPortalMode('holistic');
+    performCalculation();
+  };
+  if (starterHolisticBtn) starterHolisticBtn.addEventListener('click', handleStarterHolistic);
+  if (starterHolisticCard) starterHolisticCard.addEventListener('click', handleStarterHolistic);
+
+  const starterProjectsBtn = document.getElementById('starterProjectsBtn');
+  const starterProjectsCard = document.getElementById('starterProjectsCard');
+  const handleStarterProjects = (e) => {
+    if (e) e.stopPropagation();
+    closeSessionStarterModal();
+    setPortalMode('projects');
+    performCalculation();
+  };
+  if (starterProjectsBtn) starterProjectsBtn.addEventListener('click', handleStarterProjects);
+  if (starterProjectsCard) starterProjectsCard.addEventListener('click', handleStarterProjects);
+
+  const starterNewBtn = document.getElementById('starterNewProjectBtn');
+  const starterNewCard = document.getElementById('starterNewProjectCard');
+  const handleStarterNew = (e) => {
+    if (e) e.stopPropagation();
+    closeSessionStarterModal();
+    openWizard('create');
+  };
+  if (starterNewBtn) starterNewBtn.addEventListener('click', handleStarterNew);
+  if (starterNewCard) starterNewCard.addEventListener('click', handleStarterNew);
+
+  const starterExistBtn = document.getElementById('starterExistingProjectBtn');
+  const starterExistCard = document.getElementById('starterExistingProjectCard');
+  const handleStarterExist = (e) => {
+    if (e) e.stopPropagation();
+    closeSessionStarterModal();
+    openProjectManagerModal();
+  };
+  if (starterExistBtn) starterExistBtn.addEventListener('click', handleStarterExist);
+  if (starterExistCard) starterExistCard.addEventListener('click', handleStarterExist);
+
+  const starterQuickKos = document.getElementById('starterQuickKosBtn');
+  if (starterQuickKos) {
+    starterQuickKos.addEventListener('click', () => {
+      closeSessionStarterModal();
+      selectQuickPreset('pzl_kos');
+    });
+  }
+}
+
+// Udostępnienie metod globalnie dla onclick w wygenerowanych kartach HTML
+window.switchActiveProject = switchActiveProject;
+window.closeProjectManagerModal = closeProjectManagerModal;
+window.promptRenameProject = promptRenameProject;
+window.duplicateProject = duplicateProject;
+window.deleteProject = deleteProject;
+window.exportProjectJSON = exportProjectJSON;
+
+function syncWizardPropulsionUI(triggerAutoSfc = false) {
+  const engEl = document.getElementById('wiz_engine_type');
+  const locEl = document.getElementById('wiz_engine_location');
+  const acEl = document.getElementById('wiz_aircraft_type');
+  const sfcEl = document.getElementById('wiz_sfc');
+  const propGroup = document.getElementById('wiz_group_prop_efficiency');
+  const pane3Title = document.getElementById('wiz_pane3_title');
+  const labelWizSfc = document.getElementById('label_wiz_sfc');
+
+  const eng = engEl ? engEl.value : 'prop';
+  const acType = acEl ? acEl.value : 'piston_ga';
+
+  if (pane3Title) {
+    pane3Title.textContent = eng === 'jet'
+      ? 'Krok 3: Zespół Napędowy Odrzutowy i Zużycie Paliwa TSFC (Projekt P2 / P4)'
+      : 'Krok 3: Zespół Napędowy i Sprawność Propulsywna Śmigła (Projekt P2 / P4)';
+  }
+
+  if (propGroup) {
+    propGroup.style.display = eng === 'jet' ? 'none' : '';
+  }
+
+  if (locEl) {
+    const noseOpt = locEl.querySelector('option[value="nose"]');
+    if (noseOpt) {
+      noseOpt.disabled = (eng === 'jet');
+      noseOpt.hidden = (eng === 'jet');
+    }
+    if (eng === 'jet' && locEl.value === 'nose') {
+      locEl.value = (acType === 'jet_transport') ? 'wing' : 'rear';
+    }
+  }
+
+  if (sfcEl) {
+    const curVal = parseFloat(sfcEl.value);
+    if (eng === 'jet') {
+      if (labelWizSfc) {
+        labelWizSfc.innerHTML = 'Jednostkowe zużycie paliwa TSFC c_j [1/h (kg/daN&bull;h)]:';
+      }
+      sfcEl.min = '0.25';
+      sfcEl.max = '1.80';
+      sfcEl.step = '0.02';
+      if (triggerAutoSfc || isNaN(curVal) || curVal > 4.0) {
+        sfcEl.value = (acType === 'jet_transport') ? '0.58' : '0.62';
+      }
+    } else {
+      if (labelWizSfc) {
+        labelWizSfc.innerHTML = 'Jednostkowe zużycie paliwa SFC c_p [g/(kW&bull;h)]:';
+      }
+      sfcEl.min = '140';
+      sfcEl.max = '500';
+      sfcEl.step = '5';
+      if (triggerAutoSfc || isNaN(curVal) || curVal < 50.0) {
+        if (!triggerAutoSfc && curVal >= 0.15 && curVal <= 1.5) {
+          sfcEl.value = String(Math.round(curVal * 1000));
+        } else {
+          sfcEl.value = (acType === 'turboprop_regional') ? '280' : '265';
+        }
+      }
+    }
+  }
+}
+
+function initWizardSystem() {
+  const openBtnNav = document.getElementById('launchWizardBtnNav');
+  const openBtnSidebar = document.getElementById('launchWizardBtnSidebar');
+  const closeBtn = document.getElementById('closeWizardBtn');
+  const cancelBtn = document.getElementById('wizCancelBtn');
+  const backdrop = document.getElementById('projectWizardBackdrop');
+  const nextBtn = document.getElementById('wizNextBtn');
+  const backBtn = document.getElementById('wizBackBtn');
+  const finishBtn = document.getElementById('wizFinishBtn');
+  const suggestBtn = document.getElementById('wizSuggestSpeedsBtn');
+
+  if (openBtnNav) openBtnNav.addEventListener('click', openWizard);
+  if (openBtnSidebar) openBtnSidebar.addEventListener('click', openWizard);
+  if (closeBtn) closeBtn.addEventListener('click', closeWizard);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeWizard);
+
+  if (backdrop) {
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeWizard();
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop && backdrop.classList.contains('active')) {
+      closeWizard();
+    }
+  });
+
+  // Przełączanie kroków przyciskami
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (currentWizardStep < 5) goToWizardStep(currentWizardStep + 1);
+    });
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      if (currentWizardStep > 1) goToWizardStep(currentWizardStep - 1);
+    });
+  }
+
+  if (finishBtn) {
+    finishBtn.addEventListener('click', commitWizardToForm);
+  }
+
+  // Zakładki kroków na pasku postępu (stepper)
+  document.querySelectorAll('.wizard-step-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const step = parseInt(tab.getAttribute('data-step') || '1', 10);
+      goToWizardStep(step);
+    });
+  });
+
+  // Szablony gotowe (Quick Templates)
+  document.querySelectorAll('.wizard-template-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const templateKey = chip.getAttribute('data-template');
+      applyWizardTemplate(templateKey);
+    });
+  });
+
+  if (suggestBtn) {
+    suggestBtn.addEventListener('click', () => suggestStepDefaults(2));
+  }
+
+  // Live change listeners dla rodzaju napędu i klasy statku w Kreatorze
+  const wizEngSel = document.getElementById('wiz_engine_type');
+  const wizAcSel = document.getElementById('wiz_aircraft_type');
+  if (wizEngSel) {
+    wizEngSel.addEventListener('change', () => {
+      syncWizardPropulsionUI(true);
+    });
+  }
+  if (wizAcSel) {
+    wizAcSel.addEventListener('change', () => {
+      const ac = wizAcSel.value;
+      if (wizEngSel) {
+        if (ac === 'jet_business' || ac === 'jet_transport') {
+          wizEngSel.value = 'jet';
+          const wizLoc = document.getElementById('wiz_engine_location');
+          if (wizLoc) wizLoc.value = (ac === 'jet_transport') ? 'wing' : 'rear';
+          const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
+          if (wizSweep) wizSweep.value = (ac === 'jet_transport') ? 25 : 15;
+          const wizFlap = document.getElementById('wiz_flap_type');
+          if (wizFlap) wizFlap.value = 'fowler';
+        } else if (ac === 'piston_ga' || ac === 'turboprop_regional' || ac === 'uav') {
+          wizEngSel.value = 'prop';
+          const wizLoc = document.getElementById('wiz_engine_location');
+          if (wizLoc) wizLoc.value = (ac === 'turboprop_regional') ? 'wing' : 'nose';
+          const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
+          if (wizSweep) wizSweep.value = (ac === 'turboprop_regional') ? 2 : 0;
+        }
+      }
+      suggestStepDefaults(2);
+      syncWizardPropulsionUI(true);
+    });
+  }
+
+  // Live change listeners dla mechanizacji w kroku 4
+  const flapSel = document.getElementById('wiz_flap_type');
+  const slatSel = document.getElementById('wiz_slat_type');
+  if (flapSel) flapSel.addEventListener('change', renderWizardStep4Mechanics);
+  if (slatSel) slatSel.addEventListener('change', renderWizardStep4Mechanics);
+}
+
+function openWizard(mode = 'create') {
+  wizardProjectMode = mode;
+  const wizardModalTitle = document.querySelector('.wizard-header h3');
+
+  if (mode === 'create') {
+    if (wizardModalTitle) {
+      wizardModalTitle.innerHTML = '🪄 Kreator Nowego Projektu Samolotu (Nowa Sesja / Nowy Projekt BIPOL I)';
+    }
+    const list = getProjectsList();
+    const wizNameInput = document.getElementById('wiz_name');
+    if (wizNameInput) {
+      wizNameInput.value = `Projekt Samolotu #${list.length + 1}`;
+    }
+    syncFormToWizard();
+  } else {
+    if (wizardModalTitle) {
+      wizardModalTitle.innerHTML = '🪄 Edycja Założeń Projektu w Kreatorze';
+    }
+    syncFormToWizard();
+    const active = getActiveProject();
+    const wizNameInput = document.getElementById('wiz_name');
+    if (wizNameInput && active) {
+      wizNameInput.value = active.name;
+    }
+  }
+
+  // Zacznij od kroku 1
+  currentWizardStep = 1;
+  goToWizardStep(1);
+
+  // Pokaż modal
+  const backdrop = document.getElementById('projectWizardBackdrop');
+  if (backdrop) {
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeWizard() {
+  const backdrop = document.getElementById('projectWizardBackdrop');
+  if (backdrop) {
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+}
+
+function syncFormToWizard() {
+  const mappings = [
+    { formId: 'aircraft_type', wizId: 'wiz_aircraft_type' },
+    { formId: 'category', wizId: 'wiz_category' },
+    { formId: 'n_crew', wizId: 'wiz_n_crew' },
+    { formId: 'n_pax', wizId: 'wiz_n_pax' },
+    { formId: 'm_pax', wizId: 'wiz_m_pax' },
+    { formId: 'm_cargo', wizId: 'wiz_m_cargo' },
+    { formId: 'range_km', wizId: 'wiz_range_km' },
+    { formId: 'cruise_altitude_m', wizId: 'wiz_cruise_altitude_m' },
+    { formId: 'cruise_speed_kmh', wizId: 'wiz_cruise_speed_kmh' },
+    { formId: 'v_stall_kmh', wizId: 'wiz_v_stall_kmh' },
+    { formId: 'takeoff_run_m', wizId: 'wiz_takeoff_run_m' },
+    { formId: 'climb_rate_ms', wizId: 'wiz_climb_rate_ms' },
+    { formId: 'engine_type', wizId: 'wiz_engine_type' },
+    { formId: 'engine_location', wizId: 'wiz_engine_location' },
+    { formId: 'prop_efficiency', wizId: 'wiz_prop_efficiency' },
+    { formId: 'sfc', wizId: 'wiz_sfc' },
+    { formId: 'wing_config', wizId: 'wiz_wing_config' },
+    { formId: 'aspect_ratio', wizId: 'wiz_aspect_ratio' },
+    { formId: 'taper_ratio', wizId: 'wiz_taper_ratio' },
+    { formId: 'sweep_quarter_deg', wizId: 'wiz_sweep_quarter_deg' },
+    { formId: 'flap_type', wizId: 'wiz_flap_type' },
+    { formId: 'slat_type', wizId: 'wiz_slat_type' }
+  ];
+
+  mappings.forEach(m => {
+    const fEl = document.getElementById(m.formId);
+    const wEl = document.getElementById(m.wizId);
+    if (fEl && wEl && fEl.value !== undefined && fEl.value !== '') {
+      wEl.value = fEl.value;
+    }
+  });
+
+  syncWizardPropulsionUI(false);
+
+  const projNameEl = document.getElementById('projectNameDisplay');
+  const wizNameEl = document.getElementById('wiz_name');
+  if (projNameEl && wizNameEl && projNameEl.textContent.trim()) {
+    wizNameEl.value = projNameEl.textContent.trim();
+  }
+}
+
+function goToWizardStep(step) {
+  if (step < 1) step = 1;
+  if (step > 5) step = 5;
+  currentWizardStep = step;
+
+  syncWizardPropulsionUI(false);
+
+  // 1. Zaktualizuj stepper tabs
+  document.querySelectorAll('.wizard-step-tab').forEach(tab => {
+    const s = parseInt(tab.getAttribute('data-step') || '1', 10);
+    tab.classList.remove('active', 'completed');
+    if (s < currentWizardStep) {
+      tab.classList.add('completed');
+      const circle = tab.querySelector('.step-circle');
+      if (circle) circle.textContent = '✓';
+    } else if (s === currentWizardStep) {
+      tab.classList.add('active');
+      const circle = tab.querySelector('.step-circle');
+      if (circle) circle.textContent = s;
+    } else {
+      const circle = tab.querySelector('.step-circle');
+      if (circle) circle.textContent = s;
+    }
+  });
+
+  // 2. Przełącz widoczność paneli
+  for (let i = 1; i <= 5; i++) {
+    const pane = document.getElementById(`wizardPane${i}`);
+    if (pane) {
+      if (i === currentWizardStep) {
+        pane.classList.add('active');
+      } else {
+        pane.classList.remove('active');
+      }
+    }
+  }
+
+  // 3. Przyciski stopki
+  const backBtn = document.getElementById('wizBackBtn');
+  const nextBtn = document.getElementById('wizNextBtn');
+  const finishBtn = document.getElementById('wizFinishBtn');
+
+  if (backBtn) {
+    backBtn.style.visibility = currentWizardStep === 1 ? 'hidden' : 'visible';
+  }
+
+  if (nextBtn && finishBtn) {
+    if (currentWizardStep === 5) {
+      nextBtn.style.display = 'none';
+      finishBtn.style.display = 'inline-flex';
+      renderWizardStep5Summary();
+    } else {
+      nextBtn.style.display = 'inline-flex';
+      finishBtn.style.display = 'none';
+      if (currentWizardStep === 4) {
+        renderWizardStep4Mechanics();
+      }
+    }
+  }
+
+  // Przewiń ciało modala na górę
+  const body = document.querySelector('.wizard-body');
+  if (body) body.scrollTop = 0;
+}
+
+function applyWizardTemplate(key) {
+  const t = WIZARD_TEMPLATES[key];
+  if (!t) return;
+
+  document.querySelectorAll('.wizard-template-chip').forEach(c => {
+    c.classList.toggle('active', c.getAttribute('data-template') === key);
+  });
+
+  for (const [k, v] of Object.entries(t)) {
+    const el = document.getElementById(`wiz_${k}`);
+    if (el) el.value = v;
+  }
+
+  syncWizardPropulsionUI(false);
+
+  if (currentWizardStep === 4) {
+    renderWizardStep4Mechanics();
+  } else if (currentWizardStep === 5) {
+    renderWizardStep5Summary();
+  }
+}
+
+function suggestStepDefaults(step) {
+  const acType = document.getElementById('wiz_aircraft_type')?.value || 'piston_ga';
+
+  if (step === 2) {
+    if (acType === 'piston_ga') {
+      setFieldValue('wiz_range_km', 750);
+      setFieldValue('wiz_cruise_altitude_m', 2000);
+      setFieldValue('wiz_cruise_speed_kmh', 190);
+      setFieldValue('wiz_v_stall_kmh', 85);
+      setFieldValue('wiz_takeoff_run_m', 220);
+      setFieldValue('wiz_climb_rate_ms', 4.5);
+    } else if (acType === 'turboprop_regional') {
+      setFieldValue('wiz_range_km', 2000);
+      setFieldValue('wiz_cruise_altitude_m', 6000);
+      setFieldValue('wiz_cruise_speed_kmh', 450);
+      setFieldValue('wiz_v_stall_kmh', 135);
+      setFieldValue('wiz_takeoff_run_m', 700);
+      setFieldValue('wiz_climb_rate_ms', 8.5);
+    } else if (acType === 'jet_business') {
+      setFieldValue('wiz_range_km', 2400);
+      setFieldValue('wiz_cruise_altitude_m', 11000);
+      setFieldValue('wiz_cruise_speed_kmh', 680);
+      setFieldValue('wiz_v_stall_kmh', 160);
+      setFieldValue('wiz_takeoff_run_m', 950);
+      setFieldValue('wiz_climb_rate_ms', 14.0);
+    } else if (acType === 'jet_transport') {
+      setFieldValue('wiz_range_km', 5000);
+      setFieldValue('wiz_cruise_altitude_m', 11500);
+      setFieldValue('wiz_cruise_speed_kmh', 840);
+      setFieldValue('wiz_v_stall_kmh', 190);
+      setFieldValue('wiz_takeoff_run_m', 1600);
+      setFieldValue('wiz_climb_rate_ms', 12.0);
+    } else if (acType === 'uav') {
+      setFieldValue('wiz_range_km', 1500);
+      setFieldValue('wiz_cruise_altitude_m', 5000);
+      setFieldValue('wiz_cruise_speed_kmh', 140);
+      setFieldValue('wiz_v_stall_kmh', 70);
+      setFieldValue('wiz_takeoff_run_m', 180);
+      setFieldValue('wiz_climb_rate_ms', 4.0);
+    }
+  }
+}
+
+function renderWizardStep4Mechanics() {
+  const card = document.getElementById('wizFlapDidacticCard');
+  if (!card || typeof DIDACTIC_DATABASE === 'undefined') return;
+
+  const flapId = document.getElementById('wiz_flap_type')?.value || 'single_slotted';
+  const slatId = document.getElementById('wiz_slat_type')?.value || 'none';
+
+  const flap = DIDACTIC_DATABASE.flaps[flapId] || DIDACTIC_DATABASE.flaps.single_slotted;
+  const slat = DIDACTIC_DATABASE.slats[slatId] || DIDACTIC_DATABASE.slats.none;
+
+  const czClean = 1.40;
+  const totalCzLnd = +(czClean + flap.delta_cz_max + slat.delta_cz_max).toFixed(2);
+
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.4rem;">
+      <div>
+        <div style="font-size:0.75rem; font-weight:800; color:#0284c7; text-transform:uppercase;">
+          Ocena Dydaktyczna Wybranej Mechanizacji (${flap.reference})
+        </div>
+        <div style="font-size:0.95rem; font-weight:800; color:#0f172a;">
+          ${flap.name} ${slatId !== 'none' ? '+ ' + slat.name : ''}
+        </div>
+      </div>
+      <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+        <span class="badge badge-success">&Delta;Cz = +${flap.delta_cz_max.toFixed(2)}</span>
+        <span class="badge badge-warning">&Delta;Cx0 = +${flap.delta_cx0_lnd.toFixed(3)}</span>
+        <span class="badge badge-info">Szacowany Cz_max,lnd = ${totalCzLnd}</span>
+      </div>
+    </div>
+    <div class="pros-cons-grid" style="margin-bottom:0.4rem;">
+      <div class="pros-box">
+        <h5>👍 Zalety układu:</h5>
+        <ul>${flap.pros.slice(0, 2).map(p => `<li>${p}</li>`).join('')}</ul>
+      </div>
+      <div class="cons-box">
+        <h5>⚠️ Ograniczenia i kompromisy:</h5>
+        <ul>${flap.cons.slice(0, 2).map(c => `<li>${c}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="galinski-quote-box" style="font-size:0.72rem;">
+      <strong>📘 Prof. C. Galiński:</strong> „${flap.galinski_quote}”
+    </div>
+  `;
+}
+
+function renderWizardStep5Summary() {
+  const tbody = document.getElementById('wizardSummaryTableBody');
+  const auditBox = document.getElementById('wizardAuditBox');
+  if (!tbody || !auditBox) return;
+
+  const getV = (id) => document.getElementById(id)?.value || '';
+  const getN = (id) => parseFloat(document.getElementById(id)?.value || '0');
+
+  const name = getV('wiz_name');
+  const acType = getV('wiz_aircraft_type');
+  const cat = getV('wiz_category');
+  const nCrew = getN('wiz_n_crew');
+  const nPax = getN('wiz_n_pax');
+  const mCargo = getN('wiz_m_cargo');
+  const R = getN('wiz_range_km');
+  const H = getN('wiz_cruise_altitude_m');
+  const Vcr = getN('wiz_cruise_speed_kmh');
+  const Vs0 = getN('wiz_v_stall_kmh');
+  const Sto = getN('wiz_takeoff_run_m');
+  const wy = getN('wiz_climb_rate_ms');
+  const engType = getV('wiz_engine_type');
+  const engLoc = getV('wiz_engine_location');
+  const sfcVal = getN('wiz_sfc');
+  const etaP = getN('wiz_prop_efficiency');
+  const wingCfg = getV('wiz_wing_config');
+  const AR = getN('wiz_aspect_ratio');
+  const eta = getN('wiz_taper_ratio');
+  const flap = getV('wiz_flap_type');
+  const slat = getV('wiz_slat_type');
+
+  const locNames = { nose: 'Dziób kadłuba', wing: 'Gondole skrzydłowe', rear: 'Tył kadłuba / gondole ogonowe' };
+  const propSummaryText = engType === 'jet'
+    ? `Odrzutowy (Turbofan) &bull; ${locNames[engLoc] || engLoc} &bull; TSFC = ${sfcVal} 1/h`
+    : `Śmigłowy &bull; ${locNames[engLoc] || engLoc} &bull; SFC = ${sfcVal} g/(kW&bull;h), &eta;_p = ${etaP}`;
+
+  tbody.innerHTML = `
+    <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${name}</b></td><td><span class="badge badge-info">${acType.toUpperCase()}</span></td></tr>
+    <tr><td><b>Przepisy</b></td><td>Kategoria certyfikacyjna</td><td class="num"><b>CS-23 / CS-25 (${cat.toUpperCase()})</b></td><td>Wymóg przepisowy zdatności</td></tr>
+    <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Cargo</td><td class="num"><b>${nCrew} pilot(ów), ${nPax} pasażer(ów), ${mCargo} kg cargo</b></td><td>Ładunek płatny</td></tr>
+    <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
+    <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
+    <tr><td><b>Osiągi lotniskowe</b></td><td>Rozbieg Sto / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
+    <tr><td><b>Zespół Napędowy</b></td><td>Rodzaj, zabudowa i zużycie paliwa</td><td class="num"><b>${propSummaryText}</b></td><td>Zespół napędowy</td></tr>
+    <tr><td><b>Płat Nośny</b></td><td>Układ i geometria obrysu</td><td class="num"><b>${wingCfg.toUpperCase()} &bull; &Lambda; = ${AR}, &eta; = ${eta}</b></td><td>Wydłużenie i zbieżność</td></tr>
+    <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>Klapa: ${flap} &bull; Slot: ${slat}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
+  `;
+
+  // Audyt spójności
+  const issues = [];
+  if (Vs0 >= Vcr) {
+    issues.push('🛑 Błąd krytyczny: Prędkość lądowania Vs0 nie może być większa lub równa prędkości przelotowej Vcr!');
+  }
+  if (engType === 'jet' && Vcr < 400) {
+    issues.push(`⚠️ Nieoptymalny napęd: Napęd odrzutowy przy niskiej prędkości przelotowej (${Vcr} km/h) cechuje się bardzo niską sprawnością propulsywną i ogromnym zużyciem paliwa.`);
+  }
+  if (engType === 'prop' && Vcr > 620) {
+    issues.push(`⚠️ Ograniczenie ściśliwości śmigła: Przy prędkości ${Vcr} km/h końcówki łopat śmigła przekroczą krytyczną liczbę Macha (M_tip > 0.90). Zastosuj napęd odrzutowy.`);
+  }
+  if (wingCfg === 'mid' && (nPax >= 2 || mCargo >= 150)) {
+    issues.push('⚠️ Uwaga konstrukcyjna: Średniopłat przy pasażerach lub cargo wymusza przejście dźwigara przez kabinę (Rozdz. 14 prof. Galińskiego).');
+  }
+  if (wingCfg === 'braced_high' && Vcr > 240) {
+    issues.push(`⚠️ Uwaga oporowa: Górnopłat zastrzałowy przy prędkości ${Vcr} km/h generuje bardzo duży opór szkodliwy.`);
+  }
+  if (slat === 'fixed_slot' && Vcr > 210) {
+    issues.push('⚠️ Stałe przedskrzydło (slot) przy prędkości > 200 km/h generuje nieakceptowalny opór przelotowy.');
+  }
+
+  if (issues.length === 0) {
+    auditBox.className = 'wizard-audit-box success';
+    auditBox.innerHTML = `
+      <strong>✅ Konfiguracja w pełni poprawna i spójna merytorycznie!</strong><br>
+      Wszystkie parametry spełniają normy projektowania MEiL PW. Kliknij poniższy zielony przycisk, aby uruchomić pełny ciąg obliczeniowy P1–P6 i wygenerować dokumentację CAD A3Z.
+    `;
+  } else {
+    auditBox.className = 'wizard-audit-box warning';
+    auditBox.innerHTML = `
+      <strong>⚠️ Zidentyfikowano zalecenia do skorygowania:</strong>
+      <ul style="margin:4px 0 0 16px; padding:0;">
+        ${issues.map(it => `<li>${it}</li>`).join('')}
+      </ul>
+      <div style="margin-top:4px; font-size:0.75rem;">Możesz cofnąć się przyciskiem <em>„Wstecz”</em> lub kontynuować mimo to.</div>
+    `;
+  }
+}
+
+function commitWizardToForm() {
+  syncWizardPropulsionUI(false);
+
+  const mappings = [
+    { wizId: 'wiz_aircraft_type', formId: 'aircraft_type' },
+    { wizId: 'wiz_category', formId: 'category' },
+    { wizId: 'wiz_n_crew', formId: 'n_crew' },
+    { wizId: 'wiz_n_pax', formId: 'n_pax' },
+    { wizId: 'wiz_m_pax', formId: 'm_pax' },
+    { wizId: 'wiz_m_cargo', formId: 'm_cargo' },
+    { wizId: 'wiz_range_km', formId: 'range_km' },
+    { wizId: 'wiz_cruise_altitude_m', formId: 'cruise_altitude_m' },
+    { wizId: 'wiz_cruise_speed_kmh', formId: 'cruise_speed_kmh' },
+    { wizId: 'wiz_v_stall_kmh', formId: 'v_stall_kmh' },
+    { wizId: 'wiz_takeoff_run_m', formId: 'takeoff_run_m' },
+    { wizId: 'wiz_climb_rate_ms', formId: 'climb_rate_ms' },
+    { wizId: 'wiz_engine_type', formId: 'engine_type' },
+    { wizId: 'wiz_engine_location', formId: 'engine_location' },
+    { wizId: 'wiz_prop_efficiency', formId: 'prop_efficiency' },
+    { wizId: 'wiz_sfc', formId: 'sfc' },
+    { wizId: 'wiz_wing_config', formId: 'wing_config' },
+    { wizId: 'wiz_aspect_ratio', formId: 'aspect_ratio' },
+    { wizId: 'wiz_taper_ratio', formId: 'taper_ratio' },
+    { wizId: 'wiz_sweep_quarter_deg', formId: 'sweep_quarter_deg' },
+    { wizId: 'wiz_flap_type', formId: 'flap_type' },
+    { wizId: 'wiz_slat_type', formId: 'slat_type' }
+  ];
+
+  mappings.forEach(m => {
+    const wEl = document.getElementById(m.wizId);
+    const fEl = document.getElementById(m.formId);
+    if (wEl && fEl) {
+      fEl.value = wEl.value;
+    }
+  });
+
+  const wizNameEl = document.getElementById('wiz_name');
+  const projName = (wizNameEl && wizNameEl.value.trim()) ? wizNameEl.value.trim() : 'Mój Samolot BIPOL';
+
+  const projNameEl = document.getElementById('projectNameDisplay');
+  if (projNameEl) {
+    projNameEl.textContent = projName;
+  }
+
+  // Zaktualizuj karty dydaktyczne i pola napędowe w głównym formularzu
+  syncFormPropulsionUI(false);
+  renderWingConfigDidacticCard();
+  renderFlapDidacticCard(false);
+  updateAccordionPills();
+
+  // Zamknij wizard
+  closeWizard();
+
+  // Zapisz w Systemie Projektów
+  if (wizardProjectMode === 'create') {
+    const newId = 'proj_' + Date.now();
+    const newProject = {
+      id: newId,
+      name: projName,
+      aircraft_type: document.getElementById('aircraft_type')?.value || 'piston_ga',
+      category: document.getElementById('category')?.value || 'normal',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      params: collectFormData(),
+      summary: {}
+    };
+    saveProject(newProject);
+    setActiveProjectId(newId);
+    renderProjectSwitcher();
+    flashSaveStatus(`Utworzono projekt: ${projName}`);
+  } else {
+    const active = getActiveProject();
+    if (active) {
+      active.name = projName;
+      active.aircraft_type = document.getElementById('aircraft_type')?.value || 'piston_ga';
+      active.category = document.getElementById('category')?.value || 'normal';
+      active.params = collectFormData();
+      saveProject(active);
+      renderProjectSwitcher();
+      flashSaveStatus(`Zaktualizowano projekt: ${projName}`);
+    }
+  }
+
+  // Uruchom obliczenia i przejdź do widoku CAD
+  performCalculation();
+
+  // Przełącz na zakładkę CAD
+  const cadTab = document.querySelector('.bipol-tab[data-target="tab-cad"]');
+  if (cadTab) cadTab.click();
+}
+
+// =========================================================================
+// SYSTEM DWU-PORTALOWY (WERSJA 1: CAŁOŚCIOWA vs WERSJA 2: PROJEKTY P1-P6)
+// =========================================================================
+const PORTAL_MODE_KEY = 'bipol_portal_mode';
+const ACTIVE_SEMESTER_P_KEY = 'bipol_active_semester_p';
+const SEMESTER_CHECKLIST_KEY = 'bipol_semester_checklist_v1';
+
+let currentPortalMode = 'holistic';
+let currentSemesterProject = 'p1';
+
+// Definicja wag punktowych dla wszystkich 19 podpunktów P1–P6 wg regulaminu MEiL PW
+const SEMESTER_RUBRIC = {
+  p1: [
+    { id: 'chk_p1_1', pts: 3, type: 'obow' },
+    { id: 'chk_p1_2', pts: 2, type: 'opcj' }
+  ],
+  p2: [
+    { id: 'chk_p2_1', pts: 5, type: 'obow' },
+    { id: 'chk_p2_2', pts: 3, type: 'opcj' },
+    { id: 'chk_p2_3', pts: 2, type: 'opcj' },
+    { id: 'chk_p2_4', pts: 5, type: 'obow' },
+    { id: 'chk_p2_5', pts: 3, type: 'obow' }
+  ],
+  p3: [
+    { id: 'chk_p3_1', pts: 15, type: 'obow' },
+    { id: 'chk_p3_2', pts: 5, type: 'obow' },
+    { id: 'chk_p3_3', pts: 2, type: 'obow' },
+    { id: 'chk_p3_4', pts: 5, type: 'opcj' }
+  ],
+  p4: [
+    { id: 'chk_p4_1', pts: 5, type: 'obow' },
+    { id: 'chk_p4_2', pts: 3, type: 'opcj' },
+    { id: 'chk_p4_3', pts: 5, type: 'opcj' },
+    { id: 'chk_p4_4', pts: 2, type: 'opcj' }
+  ],
+  p5: [
+    { id: 'chk_p5_1', pts: 5, type: 'opcj' },
+    { id: 'chk_p5_2', pts: 4, type: 'opcj' },
+    { id: 'chk_p5_3', pts: 4, type: 'opcj' },
+    { id: 'chk_p5_4', pts: 2, type: 'obow' }
+  ],
+  p6: [
+    { id: 'chk_p6_1', pts: 15, type: 'obow' },
+    { id: 'chk_p6_2', pts: 5, type: 'opcj' }
+  ]
+};
+
+function initDualPortalSystem() {
+  // 1. Odtwórz stany checklisty punktacji z localStorage
+  try {
+    const savedRaw = localStorage.getItem(SEMESTER_CHECKLIST_KEY);
+    if (savedRaw) {
+      const savedMap = JSON.parse(savedRaw);
+      Object.entries(savedMap).forEach(([chkId, isChecked]) => {
+        const el = document.getElementById(chkId);
+        if (el) el.checked = Boolean(isChecked);
+      });
+    }
+  } catch (e) {
+    console.warn('Nie udało się odczytać checklisty semestralnej:', e);
+  }
+
+  updateSemesterScores(false);
+
+  // 2. Odtwórz aktywny projekt semestralny (p1..p6)
+  const savedP = localStorage.getItem(ACTIVE_SEMESTER_P_KEY);
+  if (savedP && ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].includes(savedP)) {
+    currentSemesterProject = savedP;
+  }
+
+  // 3. Ustal początkowy tryb portalu (z URL Flask lub localStorage)
+  const urlMode = (typeof window.INITIAL_PORTAL_MODE === 'string' && window.INITIAL_PORTAL_MODE.trim())
+    ? window.INITIAL_PORTAL_MODE.trim()
+    : null;
+  const storedMode = localStorage.getItem(PORTAL_MODE_KEY);
+  const initialMode = urlMode || storedMode || 'holistic';
+
+  setPortalMode(initialMode === 'projects' ? 'projects' : 'holistic');
+}
+
+function setPortalMode(mode) {
+  currentPortalMode = (mode === 'projects') ? 'projects' : 'holistic';
+  try {
+    localStorage.setItem(PORTAL_MODE_KEY, currentPortalMode);
+  } catch (e) {}
+
+  const btnHolistic = document.getElementById('btnModeHolistic');
+  const btnProjects = document.getElementById('btnModeProjects');
+  const holisticWs = document.getElementById('holisticWorkspace');
+  const semesterBar = document.getElementById('semesterProjectBar');
+  const semesterWs = document.getElementById('semesterWorkstation');
+
+  if (currentPortalMode === 'projects') {
+    if (btnHolistic) btnHolistic.classList.remove('active');
+    if (btnProjects) btnProjects.classList.add('projects-active');
+    if (holisticWs) holisticWs.style.display = 'none';
+    if (semesterBar) semesterBar.style.display = 'block';
+    if (semesterWs) semesterWs.style.display = 'block';
+
+    selectSemesterProject(currentSemesterProject || 'p1');
+  } else {
+    if (btnHolistic) btnHolistic.classList.add('active');
+    if (btnProjects) btnProjects.classList.remove('projects-active');
+    if (holisticWs) holisticWs.style.display = 'block';
+    if (semesterBar) semesterBar.style.display = 'none';
+    if (semesterWs) semesterWs.style.display = 'none';
+
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab && currentResults) {
+      renderTabVisuals(activeTab.id);
+    }
+  }
+}
+
+function selectSemesterProject(pId) {
+  if (!['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].includes(pId)) pId = 'p1';
+  currentSemesterProject = pId;
+  try {
+    localStorage.setItem(ACTIVE_SEMESTER_P_KEY, pId);
+  } catch (e) {}
+
+  // 1. Zaktualizuj aktywną pigułkę P1–P6
+  document.querySelectorAll('.semester-project-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.getAttribute('data-project') === pId);
+  });
+
+  // 2. Przełącz widoczny panel roboczy projektu
+  ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].forEach(id => {
+    const panel = document.getElementById(`panel-${id}`);
+    if (panel) {
+      panel.style.display = (id === pId) ? 'block' : 'none';
+    }
+  });
+
+  // 2b. Zaktualizuj tytuł projektu na podglądzie 1:1 Strony Tytułowej (Rys. 2)
+  const r2TitleMap = {
+    p1: ['Projekt 1', 'Projekt Koncepcyjny'],
+    p2: ['Projekt 2', 'Studium Wykonalności'],
+    p3: ['Projekt 3', 'Projekt Wstępny i Analiza Masowa'],
+    p4: ['Projekt 4', 'Charakterystyki aerodynamiczne samolotu'],
+    p5: ['Projekt 5', 'Osiągi Samolotu'],
+    p6: ['Projekt 6', 'Obwiednia Obciążeń Dopuszczalnych']
+  };
+  const r2Lines = r2TitleMap[pId] || ['Projekt 1', 'Projekt Koncepcyjny'];
+  const l1El = document.getElementById('prev_r2_line1');
+  const l2El = document.getElementById('prev_r2_line2');
+  if (l1El) l1El.textContent = r2Lines[0];
+  if (l2El) l2El.textContent = r2Lines[1];
+
+  // 3. Dopasuj otwarty moduł parametrów w lewym pasku bocznym do tematyki projektu
+  const sidebarMapping = {
+    p1: ['mod1'],
+    p2: ['mod1', 'mod2'],
+    p3: ['mod2', 'mod4'],
+    p4: ['mod3'],
+    p5: ['mod1'],
+    p6: ['mod1', 'mod4']
+  };
+  const activeMods = sidebarMapping[pId] || ['mod1'];
+  ['mod1', 'mod2', 'mod3', 'mod4'].forEach(modKey => {
+    const header = document.querySelector(`.module-header[onclick*="${modKey}"]`);
+    const body = document.getElementById(`body_${modKey}`);
+    const chev = document.getElementById(`chev_${modKey}`);
+    if (body) {
+      if (activeMods.includes(modKey)) {
+        body.classList.remove('collapsed');
+        if (header) header.classList.add('active');
+        if (chev) chev.style.transform = 'rotate(0deg)';
+      } else {
+        body.classList.add('collapsed');
+        if (header) header.classList.remove('active');
+        if (chev) chev.style.transform = 'rotate(-90deg)';
+      }
+    }
+  });
+
+  // 4. Przerysuj wykresy dedykowane dla wybranego projektu semestralnego
+  if (currentResults) {
+    renderSemesterProjectCharts(pId, currentResults);
+  }
+}
+
+function renderSemesterProjectCharts(pId, res) {
+  if (!res) return;
+  setTimeout(() => {
+    switch (pId) {
+      case 'p2':
+        if (typeof drawMatchingChart === 'function' && res.sizing) {
+          drawMatchingChart('chartMatchingP2', res.sizing);
+        }
+        break;
+      case 'p3':
+        if (typeof drawSchrenkChart === 'function' && res.geometry?.schrenk) {
+          drawSchrenkChart('chartSchrenkP3', res.geometry.schrenk);
+        }
+        break;
+      case 'p4':
+        if (typeof drawPolarChart === 'function' && res.aerodynamics) {
+          drawPolarChart('chartPolarP4', res.aerodynamics);
+        }
+        break;
+      case 'p6':
+        if (typeof drawVnEnvelope === 'function' && res.envelope) {
+          drawVnEnvelope('chartVnP6', res.envelope);
+        }
+        break;
+    }
+  }, 50);
+}
+
+function updateSemesterScores(persist = true) {
+  let totalObow = 0;
+  let totalOpcj = 0;
+  const stateMap = {};
+
+  Object.entries(SEMESTER_RUBRIC).forEach(([pKey, items]) => {
+    let projScore = 0;
+    items.forEach(item => {
+      const el = document.getElementById(item.id);
+      const checked = el ? el.checked : true;
+      stateMap[item.id] = checked;
+      if (checked) {
+        projScore += item.pts;
+        if (item.type === 'obow') totalObow += item.pts;
+        else totalOpcj += item.pts;
+      }
+    });
+    const projDisplay = document.getElementById(`score_${pKey}_display`);
+    if (projDisplay) projDisplay.textContent = projScore;
+  });
+
+  const totalScore = totalObow + totalOpcj;
+
+  const elTotal = document.getElementById('semTotalPointsDisplay');
+  if (elTotal) elTotal.textContent = `${totalScore} / 100 pkt`;
+
+  const elObow = document.getElementById('semObligatoryPointsDisplay');
+  if (elObow) elObow.textContent = `${totalObow} / 60 pkt`;
+
+  const elOpcj = document.getElementById('semOptionalPointsDisplay');
+  if (elOpcj) elOpcj.textContent = `${totalOpcj} / 40 pkt`;
+
+  const elStatus = document.getElementById('semStatusBadge');
+  if (elStatus) {
+    if (totalScore >= 50) {
+      elStatus.className = 'score-badge success';
+      elStatus.innerHTML = `✅ Zaliczenie: <strong>Spełnione (${totalScore} &ge; 50 pkt)</strong>`;
+    } else {
+      elStatus.className = 'score-badge warn';
+      elStatus.innerHTML = `⚠️ Brakuje do zaliczenia: <strong>${50 - totalScore} pkt</strong>`;
+    }
+  }
+
+  if (persist) {
+    try {
+      localStorage.setItem(SEMESTER_CHECKLIST_KEY, JSON.stringify(stateMap));
+    } catch (e) {}
+  }
+}
+
+function hydrateSemesterProjectsData(res) {
+  const bp = res?.bipol_projects;
+  if (!bp) return;
+
+  const isJet = (res?.sizing?.design_point?.engine_type || document.getElementById('engine_type')?.value) === 'jet';
+
+  // --- PROJEKT 1: PROJEKT KONCEPCYJNY ---
+  if (bp.p1) {
+    const p1 = bp.p1;
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.textContent = val;
+    };
+    setTxt('p1_concept_text', p1.concept_description);
+    setTxt('p1_swet_ratio', `${p1.swet_over_s} (Swet = ${p1.s_wet_m2} m²)`);
+    setTxt('p1_kmax_est', p1.k_max_est);
+    if (p1.engine_type === 'jet' || isJet) {
+      setTxt('p1_preq_label', 'Wstępny ciąg do lotu T_req:');
+      setTxt('p1_preq_est', `${p1.t_req_est_kn} kN (P_eff = ${p1.p_req_est_kw} kW)`);
+      setTxt('p1_sim_power_th', 'Ciąg T₀ [kN]');
+    } else {
+      setTxt('p1_preq_label', 'Wstępna moc do lotu P_req:');
+      setTxt('p1_preq_est', `${p1.p_req_est_kw} kW`);
+      setTxt('p1_sim_power_th', 'Moc [kW]');
+    }
+    setTxt('p1_we_trend', p1.trend_analysis?.we_wo_trend);
+    setTxt('p1_we_actual', p1.trend_analysis?.we_wo_actual);
+
+    const simTbody = document.getElementById('p1_similar_tbody');
+    if (simTbody && Array.isArray(p1.trend_analysis?.similar_aircraft)) {
+      simTbody.innerHTML = p1.trend_analysis.similar_aircraft.map(a => {
+        const powerOrThrust = (a.engine_type === 'jet' || (p1.engine_type === 'jet' && a.t_kn !== undefined))
+          ? `${a.t_kn} kN`
+          : `${a.p_kw} kW`;
+        return `
+        <tr>
+          <td><b>${escapeHtml(a.model)}</b></td>
+          <td>${a.m0}</td>
+          <td>${a.me}</td>
+          <td>${a.s}</td>
+          <td>${powerOrThrust}</td>
+          <td>${a.v_max}</td>
+          <td>${a.ar}</td>
+        </tr>
+      `;
+      }).join('');
+    }
+  }
+
+  // --- PROJEKT 2: STUDIUM WYKONALNOŚCI ---
+  if (bp.p2) {
+    const p2 = bp.p2;
+    const missTbody = document.getElementById('p2_mission_tbody');
+    if (missTbody && Array.isArray(p2.mission_profile)) {
+      missTbody.innerHTML = p2.mission_profile.map(m => `
+        <tr>
+          <td>${escapeHtml(m.phase)}</td>
+          <td><b>${m.fraction}</b></td>
+          <td>${m.mass_end_kg} kg</td>
+        </tr>
+      `).join('');
+    }
+
+    const afSel = p2.airfoil_selection || {};
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.textContent = val;
+    };
+    setTxt('p2_re_val', afSel.reynolds_cruise?.toLocaleString('pl-PL'));
+    setTxt('p2_mach_val', afSel.mach_max);
+    setTxt('p2_catalog_val', afSel.recommended_catalog);
+    setTxt('p2_czproj_val', afSel.cz_proj);
+
+    const afTbody = document.getElementById('p2_airfoil_tbody');
+    if (afTbody && Array.isArray(afSel.candidates)) {
+      afTbody.innerHTML = afSel.candidates.map(c => `
+        <tr style="${c.recommended ? 'background:#ecfdf5;' : ''}">
+          <td><b>${escapeHtml(c.name)}</b></td>
+          <td>${c.cx_min}</td>
+          <td>${c.cx_cz_proj}</td>
+          <td>${c.cz_max}</td>
+          <td>${c.k_max}</td>
+          <td>${escapeHtml(c.stall)}</td>
+          <td><span class="badge ${c.recommended ? 'badge-success' : 'badge-info'}">${c.recommended ? '✓ Wybrany' : 'Alternatywa'}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    const sensTbody = document.getElementById('p2_sensitivity_tbody');
+    if (sensTbody && Array.isArray(p2.sensitivity?.table)) {
+      sensTbody.innerHTML = p2.sensitivity.table.map(s => `
+        <tr>
+          <td><b>${escapeHtml(s.var)}</b></td>
+          <td>${s.delta}</td>
+          <td><b>${s.d_mtow_kg > 0 ? '+' : ''}${s.d_mtow_kg} kg</b></td>
+          <td>${s.pct_change > 0 ? '+' : ''}${s.pct_change}%</td>
+        </tr>
+      `).join('');
+    }
+
+    const mcs = p2.matching_chart_summary || {};
+    setTxt('p2_ws_pt', mcs.ws_design);
+    const pwTwBox = document.getElementById('p2_pw_tw_box');
+    if (pwTwBox) {
+      if (mcs.engine_type === 'jet' || mcs.tw_design != null) {
+        pwTwBox.innerHTML = `Ciąg do ciężaru: <b>T/W = <span id="p2_pw_pt">${mcs.tw_design}</span> [-]</b> ${mcs.thrust_kn != null ? `(T₀ = <b>${mcs.thrust_kn} kN</b>)` : ''}`;
+      } else {
+        pwTwBox.innerHTML = `Moc do ciężaru: <b>P/W = <span id="p2_pw_pt">${mcs.pw_design}</span> W/N</b> ${mcs.power_kw != null ? `(P₀ = <b>${mcs.power_kw} kW</b>)` : ''}`;
+      }
+    }
+    setTxt('p2_s_pt', mcs.s_wing_m2);
+
+    const costs = p2.cost_analysis || {};
+    setTxt('p2_rdte_hours', costs.rdte_hours?.toLocaleString('pl-PL'));
+    setTxt('p2_labor_hours', costs.manufacturing_hours_total?.toLocaleString('pl-PL'));
+    setTxt('p2_qc_hours', costs.quality_control_hours?.toLocaleString('pl-PL'));
+    setTxt('p2_unit_cost', `$${(costs.unit_cost_usd || 0).toLocaleString('pl-PL')} USD`);
+    setTxt('p2_selling_price', `${(costs.selling_price_pln || 0).toLocaleString('pl-PL')} PLN ($${(costs.selling_price_usd || 0).toLocaleString('pl-PL')} USD)`);
+  }
+
+  // --- PROJEKT 3: PROJEKT WSTĘPNY I ANALIZA MASOWA ---
+  if (bp.p3) {
+    const p3 = bp.p3;
+    const bchk = p3.blueprint_checks || {};
+    const chkMachEl = document.getElementById('p3_chk_prop_mach');
+    const chkClearEl = document.getElementById('p3_chk_prop_clear');
+    if (bchk.engine_type === 'jet' || isJet) {
+      if (chkMachEl) chkMachEl.innerHTML = `<li>Przekrój wlotowy sprężarki / wentylatora (<b>M_fan ≈ ${bchk.fan_intake_mach ?? 0.55} &lt; 0.65</b>)</li>`;
+      if (chkClearEl) chkClearEl.innerHTML = `<li>Prześwit gondoli silnikowych od ziemi (<b>Δh_nac = ${bchk.nacelle_ground_clearance_m ?? 0.45} m ≥ 0.40 m</b> — ochrona przed FOD)</li>`;
+    } else {
+      if (chkMachEl) chkMachEl.innerHTML = `<li>Średnica śmigła z warunku prędkości obwodowej końcówek (<b>M_tip = ${bchk.propeller_tip_mach ?? 0.82} ≤ 0.85</b>)</li>`;
+      if (chkClearEl) chkClearEl.innerHTML = `<li>Prześwit śmigła od ziemi (<b>Δh_prop = ${bchk.prop_ground_clearance_m ?? 0.25} m ≥ 0.23 m</b> wg CS-23.925)</li>`;
+    }
+    const afDescEl = document.getElementById('p3_airfoil_desc');
+    const selAfName = bp.p2?.airfoil_selection?.selected_airfoil || 'NACA 2412 / Wortmann FX';
+    if (afDescEl) {
+      afDescEl.innerHTML = `Zgodnie z instrukcją BIPOL (Rozdz. 3.1), poniżej zamieszczono rzędne profilu <b>${escapeHtml(selAfName)}</b> przeskalowane do cięciwy odniesienia <b>c = 200 mm</b> do wklejenia na arkusz rysunkowy:`;
+    }
+
+    const coordsTbody = document.getElementById('p3_airfoil_coords_tbody');
+    if (coordsTbody && Array.isArray(p3.airfoil_200mm_table)) {
+      coordsTbody.innerHTML = p3.airfoil_200mm_table.map(pt => `
+        <tr>
+          <td>${pt.xc_pct}%</td>
+          <td><b>${pt.x_mm}</b></td>
+          <td>${pt.y_upper_mm}</td>
+          <td>${pt.y_lower_mm}</td>
+          <td>${pt.thick_mm}</td>
+        </tr>
+      `).join('');
+    }
+
+    const t31Tbody = document.getElementById('p3_table31_tbody');
+    if (t31Tbody && Array.isArray(p3.table_3_1_components)) {
+      t31Tbody.innerHTML = p3.table_3_1_components.map(c => `
+        <tr>
+          <td>${escapeHtml(c.item)}</td>
+          <td><b>${c.mass_kg}</b></td>
+          <td>${c.x_m}</td>
+          <td>${c.y_m}</td>
+          <td>${c.z_m}</td>
+        </tr>
+      `).join('');
+    }
+
+    const loadTbody = document.getElementById('p3_loading_tbody');
+    if (loadTbody && Array.isArray(p3.table_3_2_loading_states)) {
+      loadTbody.innerHTML = p3.table_3_2_loading_states.map(st => {
+        const ok = st.xcg_mac_pct >= 18.0 && st.xcg_mac_pct <= 38.0;
+        return `
+          <tr>
+            <td><b>${escapeHtml(st.name)}</b></td>
+            <td>${st.mass_kg}</td>
+            <td>${st.xcg_m}</td>
+            <td><b>${st.xcg_mac_pct}% ŚDA</b></td>
+            <td><span class="badge ${ok ? 'badge-success' : 'badge-danger'}">${ok ? '✓ W zakresie' : '⚠️ Poza zakresem'}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    const im = p3.inertia_moments || {};
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.textContent = val;
+    };
+    setTxt('p3_jx', im.jx_cg_kgm2);
+    setTxt('p3_jy', im.jy_cg_kgm2);
+    setTxt('p3_jz', im.jz_cg_kgm2);
+    setTxt('p3_jy_steiner', im.jy_quarter_mac_kgm2);
+    setTxt('p3_jz_steiner', im.jz_quarter_mac_kgm2);
+
+    const iwa = p3.isolated_wing_aero || {};
+    setTxt('p3_aw_deg', iwa.cz_alpha_deg);
+    setTxt('p3_aw_paturski_rad', iwa.cz_alpha_paturski_rad);
+    setTxt('p3_tau_glauert', iwa.tau_glauert);
+    setTxt('p3_delta_glauert', iwa.delta_glauert);
+    setTxt('p3_re1_stall', iwa.re_1_stall ? Number(iwa.re_1_stall).toLocaleString('pl-PL') : '—');
+    setTxt('p3_cxmin2', iwa.cx_min_2_corrected);
+    setTxt('p3_dcx_tech', iwa.delta_cx_tech);
+    setTxt('p3_ca_paturski', iwa.ca_paturski_m);
+    setTxt('p3_xn_paturski', iwa.xn_mac_m);
+    setTxt('p3_cm0_wing', iwa.cm_0_wing);
+    setTxt('p3_cx0_wing', iwa.cx_0_wing);
+    setTxt('p3_czmax_wing', p3.schrenk_summary?.cz_max_wing_est);
+  }
+
+  // --- PROJEKT 4: CHARAKTERYSTYKI AERODYNAMICZNE ---
+  if (bp.p4) {
+    const p4 = bp.p4;
+    const dragTbody = document.getElementById('p4_drag_tbody');
+    if (dragTbody && Array.isArray(p4.drag_breakdown)) {
+      dragTbody.innerHTML = p4.drag_breakdown.map(d => `
+        <tr>
+          <td><b>${escapeHtml(d.component)}</b></td>
+          <td class="num">${d.re ? Number(d.re).toLocaleString('pl-PL') : '—'}</td>
+          <td class="num">${d.cf ? Number(d.cf).toFixed(5) : '—'}</td>
+          <td class="num">${d.ff ? Number(d.ff).toFixed(3) : '—'}</td>
+          <td class="num">${d.q ? Number(d.q).toFixed(2) : '—'}</td>
+          <td class="num">${d.swet_m2 ? Number(d.swet_m2).toFixed(2) : '—'}</td>
+          <td class="num"><b>${Number(d.cx0_i || 0).toFixed(5)}</b></td>
+          <td class="num">${d.share_pct}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Podsumowanie Projektu nr 3 Z. Paturskiego, Tabele A, B, C oraz Tabela 2.2
+    const pa = p4.paturski_aero || {};
+    const abc = pa.statistical_benchmarks_abc || {};
+    const aeroSumEl = document.getElementById('p4_paturski_aero_summary');
+    if (aeroSumEl && pa.analytical_polar_fit) {
+      const af = pa.analytical_polar_fit;
+      const ht = pa.horizontal_tail_trim || {};
+      const fus = pa.fuselage || {};
+      const sb = abc.summary || {};
+      aeroSumEl.innerHTML = `
+        <b>Metodyka Z. Paturskiego (Projekty nr 2 i 3 ML):</b>
+        Kadłub: <code>S_k = ${fus.sk_frontal_m2} m²</code>, <code>S_ck = ${fus.sck_wetted_m2} m²</code>, <code>Λ_k = ${fus.lambda_k}</code>, <code>C_xk = ${fus.cx_k_frontal}</code> &bull;
+        Usterzenie poziome (${ht.tail_airfoil || 'NACA 0012'}): <code>(V_H/V_∞)² = ${ht.vh_vinf_sq}</code>, <code>κ'_H = ${ht.kappa_h_prime}</code>, <code>Λ_eH = ${ht.lambda_eh}</code> &bull;
+        Opór szkodliwy: <code>(C_x,szk)_min = ${pa.cx_szk_min}</code>, <code>ζ = ${pa.zeta_szk}</code>, interferencja <code>K_interf = ${pa.k_interf}</code> &bull;
+        <b>Aproksymacja biegunowej analitycznej (wzór 3.11):</b> <code>C_x0 = ${af.cx0_approx}</code>, <code>ΔC_x/Δ(C_z²) = ${af.slope_d_cx_d_cz2}</code> &rArr; <b><code>Λ_e = ${af.lambda_e_approx}</code></b> (współczynnik Oswalda <b><code>e = ${af.oswald_e_approx}</code></b>).
+        ${sb.matched_a_lp ? `<div style="margin-top:0.4rem; padding-top:0.4rem; border-top:1px dashed #cbd5e1; color:#0f172a;">
+          <strong>📊 Weryfikacja statystyczna wg Tabel A, B, C:</strong>
+          Tabela A (Lp. ${sb.matched_a_lp}): <code>C_x,min = ${sb.matched_a_range}</code> vs. <strong>projekt: <code>C_x,min = ${sb.project_cx_min}</code></strong> &bull;
+          Tabela B (Lp. ${sb.matched_b_lp}): <code>C_x,szk,min = ${sb.matched_b_cx_szk_min}</code> vs. <strong>projekt: <code>${sb.project_cx_szk_min}</code></strong> &bull;
+          Wzorzec Tabeli C: <em>${sb.matched_c_archetype}</em>.
+        </div>` : ''}
+      `;
+    }
+
+    const tabCTbody = document.getElementById('p4_table_c_tbody');
+    if (tabCTbody && Array.isArray(abc.tabela_c_rows)) {
+      const colKey = abc.summary?.matched_c_col_key || '';
+      tabCTbody.innerHTML = abc.tabela_c_rows.map(r => `
+        <tr>
+          <td>${r.lp}</td>
+          <td><b>${r.component}</b></td>
+          <td class="num" style="${colKey === 'biplane_fixed_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.biplane_fixed_pct !== null ? r.biplane_fixed_pct + ' %' : '&ndash;'}</td>
+          <td class="num" style="${colKey === 'high_wing_braced_fixed_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.high_wing_braced_fixed_pct !== null ? r.high_wing_braced_fixed_pct + ' %' : '&ndash;'}</td>
+          <td class="num" style="${colKey === 'low_wing_retractable_pct' ? 'background:#eff6ff;font-weight:700;' : ''}">${r.low_wing_retractable_pct !== null ? r.low_wing_retractable_pct + ' %' : '&ndash;'}</td>
+          <td class="num"><code>${Number(r.project_delta_cx).toFixed(4)}</code></td>
+          <td class="num" style="background:#f0fdf4; font-weight:800; color:#065f46;">${Number(r.project_share_pct).toFixed(1)} %</td>
+        </tr>
+      `).join('');
+    }
+
+    const tabATbody = document.getElementById('p4_table_a_tbody');
+    if (tabATbody && Array.isArray(abc.tabela_a_rows)) {
+      tabATbody.innerHTML = abc.tabela_a_rows.map(r => `
+        <tr style="${r.is_matched ? 'background:#ecfdf5; font-weight:700;' : ''}">
+          <td>${r.lp}</td>
+          <td>${r.class_desc} ${r.is_matched ? '<span class="badge badge-success" style="font-size:0.68rem;">Twój samolot</span>' : ''}</td>
+          <td class="num"><code>${r.cx_min_range}</code></td>
+        </tr>
+      `).join('');
+    }
+
+    const tabBTbody = document.getElementById('p4_table_b_tbody');
+    if (tabBTbody && Array.isArray(abc.tabela_b_rows)) {
+      tabBTbody.innerHTML = abc.tabela_b_rows.map(r => `
+        <tr style="${r.is_matched ? 'background:#ecfdf5; font-weight:700;' : ''}">
+          <td>${r.lp}</td>
+          <td>${r.class_desc} ${r.is_matched ? '<span class="badge badge-success" style="font-size:0.68rem;">Twój samolot</span>' : ''}</td>
+          <td class="num"><code>${Number(r.cx_szk_min).toFixed(3)}</code></td>
+        </tr>
+      `).join('');
+    }
+
+    const t22Tbody = document.getElementById('p4_table22_tbody');
+    if (t22Tbody && Array.isArray(pa.table_2_2_complete)) {
+      t22Tbody.innerHTML = pa.table_2_2_complete.map(r => `
+        <tr>
+          <td>${r.lp}</td>
+          <td><b>${r.cz_inf}</b></td>
+          <td>${r.cx_inf}</td>
+          <td>${r.alpha_inf_deg}°</td>
+          <td>${r.cx_inf_prime}</td>
+          <td>${r.alpha_i_deg}°</td>
+          <td>${r.alpha_p_deg}°</td>
+          <td>${r.cx_i}</td>
+          <td>${r.cx_p_prime}</td>
+          <td>${r.cz_h}</td>
+          <td>${r.cx_h}</td>
+          <td>${r.cx_szk_prime}</td>
+          <td><b>${r.cx_total}</b></td>
+          <td>${r.delta_cz_h}</td>
+          <td><b>${r.cz_prime}</b></td>
+          <td><b>${r.k_ld}</b></td>
+          <td><b>${r.e_energy}</b></td>
+        </tr>
+      `).join('');
+    }
+
+    const gp = p4.glide_polar || {};
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.textContent = val;
+    };
+    setTxt('p4_vekon', gp.v_ekon_kmh);
+    setTxt('p4_wmin', gp.w_min_ms);
+    setTxt('p4_vopt', gp.v_opt_kmh);
+    setTxt('p4_kmax', gp.k_max);
+
+    const gCompEl = document.getElementById('p4_glide_comparison_box');
+    if (gCompEl && gp.comparison_paturski) {
+      const ex = gp.comparison_paturski.exact_from_table_4_1 || {};
+      const an = gp.comparison_paturski.analytical_eq_4_8_to_4_11 || {};
+      const ms = gp.comparison_paturski.masses_kg || {};
+      gCompEl.innerHTML = `
+        <b>Porównanie metod lotu szybowego wg Z. Paturskiego (Projekt nr 4, wzory 4.3–4.12 dla m₁ = ${ms.m1_mtow} kg):</b><br>
+        &bull; <b>Metoda dokładna (Tabela 4.1):</b> <code>V_opt = ${ex.v_opt_kmh} km/h</code>, <code>w_opt = ${ex.w_opt_ms} m/s</code> (<code>γ_min = ${ex.gamma_min_deg}°</code>) | <code>V_ek = ${ex.v_ek_kmh} km/h</code>, <code>w_ek = ${ex.w_ek_ms} m/s</code>.<br>
+        &bull; <b>Metoda przybliżona analityczna (wzory 4.8–4.12):</b> <code>V_opt = ${an.v_opt_kmh} km/h</code>, <code>w_opt = ${an.w_opt_ms} m/s</code> | <code>V_ek = ${an.v_ek_kmh} km/h</code>, <code>w_ek = ${an.w_ek_ms} m/s</code>
+        (relacje teoretyczne: <code>V_opt/V_ek = ${an.ratio_v_opt_v_ek} = 3^(1/4)</code>, <code>w_opt/w_ek = ${an.ratio_w_opt_w_ek}</code>).
+      `;
+    }
+
+    const t41Tbody = document.getElementById('p4_table41_tbody');
+    if (t41Tbody && Array.isArray(gp.table_4_1_paturski)) {
+      t41Tbody.innerHTML = gp.table_4_1_paturski.map(r => `
+        <tr>
+          <td><b>${r.cz}</b></td>
+          <td>${r.cx}</td>
+          <td>${r.term_v}</td>
+          <td>${r.term_w}</td>
+          <td>${r.gamma_deg}°</td>
+          <td><b>${r.v1_kmh}</b></td>
+          <td><b>${r.w1_ms}</b></td>
+          <td>${r.v2_kmh}</td>
+          <td>${r.w2_ms}</td>
+          <td>${r.v3_kmh}</td>
+          <td>${r.w3_ms}</td>
+        </tr>
+      `).join('');
+    }
+
+    const hl = p4.high_lift;
+    const hlTbody = document.getElementById('p4_high_lift_tbody');
+    if (hlTbody && hl) {
+      const stallLim = hl.cs23_stall_limit_kmh ?? 113.0;
+      hlTbody.innerHTML = `
+        <tr>
+          <td><b>Gładka (Clean)</b></td>
+          <td>${hl.clean.cz_max}</td>
+          <td>${hl.clean.vs_kmh} km/h</td>
+          <td>—</td>
+          <td>Konfiguracja przelotowa</td>
+        </tr>
+        <tr>
+          <td><b>Startowa (Takeoff)</b></td>
+          <td>${hl.takeoff.cz_max}</td>
+          <td>${hl.takeoff.vs_kmh} km/h</td>
+          <td>+${hl.takeoff.delta_cz}</td>
+          <td>Skrócenie rozbiegu</td>
+        </tr>
+        <tr>
+          <td><b>Do lądowania (Landing)</b></td>
+          <td><b>${hl.landing.cz_max}</b></td>
+          <td><b>${hl.landing.vs_kmh} km/h</b></td>
+          <td>+${hl.landing.delta_cz}</td>
+          <td><span class="badge ${hl.is_cs23_compliant ? 'badge-success' : 'badge-danger'}">${hl.is_cs23_compliant ? `✓ Zgodne (<= ${stallLim} km/h)` : `⚠️ Przekroczone (> ${stallLim} km/h)`}</span></td>
+        </tr>
+      `;
+    }
+
+    const p4PropTitle = document.getElementById('p4_propulsion_title');
+    const p4PropDesc = document.getElementById('p4_propulsion_desc');
+    const p4PropBox = document.getElementById('p4_paturski_propulsion_box');
+    const pp5 = p4.paturski_propulsion || {};
+    const rawSfcVal = parseFloat(document.getElementById('sfc')?.value || (isJet ? '0.62' : '265'));
+    if (isJet) {
+      const tsfcDisp = (rawSfcVal > 5.0 || rawSfcVal <= 0.05) ? 0.62 : rawSfcVal;
+      const t0Kn = res?.sizing?.design_point?.thrust_kn ?? pp5.pr0_total_kn ?? '';
+      if (p4PropTitle) p4PropTitle.textContent = '4.4. Charakterystyka Zespołu Napędowego (Silnik Odrzutowy — Tabela 5-3 Z. Paturskiego)';
+      if (p4PropDesc) {
+        p4PropDesc.innerHTML = `Zależność ciągu rozporządzalnego wg wzorów (5.18)–(5.20) Z. Paturskiego: <b>P_r*(h) = P_r0 · (ρ/ρ₀)^0.85</b>, <b>P_r(Ma, h) = P_r*(h) · (1 − K_P · Ma)</b> (ciąg statyczny <b>P_r0 = ${t0Kn} kN</b>, <b>K_P = ${pp5.kp_bypass_factor ?? 0.45}</b>) oraz jednostkowe zużycie paliwa <b>q_e (TSFC) = <span id="p4_sfc_val">${tsfcDisp} kg/(daN·h) [1/h]</span></b>.`;
+      }
+      if (p4PropBox && Array.isArray(pp5.table_5_3_jet)) {
+        p4PropBox.innerHTML = `
+          <div style="font-weight:700; color:#005691; font-size:0.82rem; margin-bottom:0.3rem;">Tabela 5-3 (Z. Paturski): Charakterystyki prędkościowo-wysokościowe zespołu napędowego Pr(Ma, h) [kN]:</div>
+          <table class="b-table" style="font-size:0.78rem;">
+            <thead>
+              <tr><th>Liczba Macha Ma</th><th>h = 0 km</th><th>h = 2 km</th><th>h = 4 km</th><th>h = 6 km</th><th>h = 8 km</th><th>h = 10 km</th><th>h = 12 km</th></tr>
+            </thead>
+            <tbody>
+              ${pp5.table_5_3_jet.map(r => `
+                <tr>
+                  <td><b>Ma = ${r.mach.toFixed(1)}</b></td>
+                  <td><b>${r.h_0km_kn} kN</b></td>
+                  <td>${r.h_2km_kn} kN</td>
+                  <td>${r.h_4km_kn} kN</td>
+                  <td>${r.h_6km_kn} kN</td>
+                  <td>${r.h_8km_kn} kN</td>
+                  <td>${r.h_10km_kn} kN</td>
+                  <td>${r.h_12km_kn} kN</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+    } else {
+      const sfcDisp = rawSfcVal <= 2.0 ? Math.round(rawSfcVal * 1000) : Math.round(rawSfcVal);
+      const etaDisp = document.getElementById('prop_efficiency')?.value || '0.82';
+      const psel = pp5.propeller_selection || {};
+      if (p4PropTitle) p4PropTitle.textContent = '4.4. Dobór Śmigła i Charakterystyka Zespołu Napędowego (Tabela 5-1 / 5-2 Z. Paturskiego)';
+      if (p4PropDesc) {
+        p4PropDesc.innerHTML = `Dobór śmigła wg Z. Paturskiego (wzory 5.1–5.5): cecha bezśrednicowa <b>C_D = ${psel.cd_dimensionless ?? '—'}</b>, posuw optymalny <b>J_opt = ${psel.j_opt ?? '—'}</b>, średnica śmigła <b>D = ${psel.diameter_m ?? '—'} m</b> (przy <b>n_s = ${psel.rpm_prop ?? 2400} obr/min</b>), liczba Macha końcówki łopaty <b>Ma_kl = ${psel.ma_tip_kl ?? '—'} ≤ 0.85</b>, sprawność max <b>η_s = <span id="p4_eta_prop">${etaDisp}</span></b>, jednostkowe zużycie paliwa <b>q_e = <span id="p4_sfc_val">${sfcDisp} g/(kW·h) (${(sfcDisp / 1000).toFixed(3)} kg/(kW·h))</span></b>.`;
+      }
+      if (p4PropBox && Array.isArray(pp5.table_5_1_variable_pitch)) {
+        p4PropBox.innerHTML = `
+          <div style="font-weight:700; color:#005691; font-size:0.82rem; margin-bottom:0.3rem;">Tabela 5-1 / 5-2 (Z. Paturski): Charakterystyka prędkościowa śmigła przestawialnego i stałego na h = 0 m:</div>
+          <table class="b-table" style="font-size:0.78rem;">
+            <thead>
+              <tr>
+                <th>L.p.</th><th>V [m/s]</th><th>V [km/h]</th><th>Posuw J = V/(n_s·D)</th>
+                <th>Kąt łopat β_s [°]</th><th>η_s (przestawialne)</th><th>N_r [kW] (przestawialne)</th>
+                <th>Obroty n_s [obr/min] (stałe)</th><th>N_r [kW] (śmigło stałe)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pp5.table_5_1_variable_pitch.map((r, i) => {
+                const fx = (pp5.table_5_2_fixed_pitch || [])[i] || {};
+                return `
+                  <tr>
+                    <td>${r.lp}</td>
+                    <td>${r.v_ms}</td>
+                    <td><b>${r.v_kmh}</b></td>
+                    <td>${r.j_advance}</td>
+                    <td>${r.beta_s_deg}°</td>
+                    <td>${r.eta_s}</td>
+                    <td><b>${r.nr_kw} kW</b></td>
+                    <td>${fx.rpm ?? '—'} ${fx.throttled ? '<span class="badge badge-warning" style="font-size:0.65rem;">dławiony n_max</span>' : ''}</td>
+                    <td>${fx.nr_kw ?? '—'} kW</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+    }
+  }
+
+  // --- PROJEKT 5: OSIĄGI SAMOLOTU ---
+  if (bp.p5) {
+    const p5 = bp.p5;
+    const cs = p5.ceiling_summary || {};
+    const p6ml = p5.paturski_p6 || {};
+    const li = p6ml.load_indicators_eq_6_1 || {};
+    const ceilBanner = document.getElementById('p5_paturski_ceiling_banner');
+    if (ceilBanner) {
+      const indStr = li.q_pr_kg_kn != null
+        ? `Wskaźnik obciążenia ciągu (wzór 6.1): <b>q_Pr = ${li.q_pr_kg_kn} kg/kN</b> ${li.power_method_valid ? '(≥ 300 kg/kN — metoda mocy dokładna)' : '(< 300 kg/kN — samolot o dużym nadmiarze ciągu)'}`
+        : `Wskaźnik obciążenia mocy (wzór 6.1): <b>q_N = ${li.q_n_kg_kw} kg/kW</b> ${li.power_method_valid ? '(≥ 6 kg/kW — metoda mocy dokładna)' : '(< 6 kg/kW — samolot o dużym nadmiarze mocy)'}`;
+      ceilBanner.innerHTML = `
+        ${indStr} &bull;
+        Pułap praktyczny (w_max = 0.5 m/s): <b>h_p = ${cs.hp_service_m ?? '—'} m</b> &bull;
+        Pułap teoretyczny (w_max = 0): <b>h_t = ${cs.ht_theoretical_m ?? '—'} m</b> &bull;
+        Czas wznoszenia na pułap praktyczny (wzór 6.12): <b>t_hp = ${cs.thp_min ?? '—'} min (${cs.thp_s ?? '—'} s)</b>.
+      `;
+    }
+
+    const offerTbody = document.getElementById('p5_offer_tbody');
+    if (offerTbody && Array.isArray(p5.offer_chart)) {
+      offerTbody.innerHTML = p5.offer_chart.map(r => `
+        <tr>
+          <td><b>${r.h_m} m</b></td>
+          <td>${r.v_min_kmh}</td>
+          <td><b>${r.v_max_kmh}</b></td>
+          <td><b>${r.wy_max_ms}</b></td>
+          <td>${r.v_wy_kmh}</td>
+          <td>${r.gamma_max_deg}°</td>
+          <td>${r.v_gamma_kmh ?? r.v_wy_kmh}</td>
+          <td>${r.inv_wy_sm != null ? r.inv_wy_sm : '—'}</td>
+          <td>${r.time_to_climb_min != null ? `${r.time_to_climb_min} min (${r.time_to_climb_s ?? Math.round(r.time_to_climb_min * 60)} s)` : '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    const rngTbody = document.getElementById('p5_range_tbody');
+    if (rngTbody && Array.isArray(p5.range_endurance_comparison)) {
+      rngTbody.innerHTML = p5.range_endurance_comparison.map(m => `
+        <tr>
+          <td>${escapeHtml(m.method)}</td>
+          <td><b>${m.range_km} km</b></td>
+          <td><b>${m.endurance_h} h</b></td>
+        </tr>
+      `).join('');
+    }
+
+    const re65 = p6ml.range_endurance_6_5 || {};
+    const rngSumEl = document.getElementById('p5_paturski_range_summary');
+    if (rngSumEl && re65.t_max_h != null) {
+      rngSumEl.innerHTML = `
+        <b>Wyniki z Tabeli 6.3 Z. Paturskiego (na wysokości H = ${re65.h_cruise_m} m, masa obliczeniowa m_obl = ${re65.m_obl_avg_kg} kg, paliwo przelotowe m_p = ${re65.mp_cruise_fuel_kg} kg, q_e = ${re65.qe_paturski} ${re65.qe_unit}):</b><br>
+        &bull; Maksymalna długotrwałość lotu: <b>T_max = ${re65.t_max_h} h</b> dla prędkości ekonomicznej <b>V_T = ${re65.v_t_max_kmh} km/h</b> &bull;
+        Maksymalny zasięg lotu: <b>L_max = ${re65.l_max_km} km</b> dla prędkości optymalnej <b>V_L = ${re65.v_l_max_kmh} km/h</b>.
+      `;
+    }
+    const t63EnergyTh = document.getElementById('p5_t63_col_energy');
+    if (t63EnergyTh) {
+      t63EnergyTh.textContent = isJet ? 'Cz^(1/2)/Cx' : 'Cz^(3/2)/Cx';
+    }
+    const t63Tbody = document.getElementById('p5_table63_tbody');
+    if (t63Tbody && Array.isArray(re65.table_6_3)) {
+      t63Tbody.innerHTML = re65.table_6_3.map(r => `
+        <tr>
+          <td>${r.lp}</td>
+          <td><b>${r.cz}</b></td>
+          <td>${r.cx}</td>
+          <td>${isJet ? r.cz12_cx : r.cz32_cx}</td>
+          <td>${r.cz_cx}</td>
+          <td><b>${r.v_kmh}</b></td>
+          <td><b>${r.t_breguet_h} h</b></td>
+          <td><b>${r.l_breguet_km} km</b></td>
+          <td>${r.t_const_v_h} h</td>
+          <td>${r.l_const_v_km} km</td>
+        </tr>
+      `).join('');
+    }
+
+    const tl = p5.takeoff_landing || {};
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val !== undefined && val !== null) el.textContent = val;
+    };
+    setTxt('p5_sto_ground', `${tl.ground_roll_m} m`);
+    setTxt('p5_sto_15m', `${tl.takeoff_to_15m_m} m`);
+    setTxt('p5_slnd_ground', `${tl.landing_ground_roll_m} m`);
+    setTxt('p5_slnd_15m', `${tl.landing_from_15m_m} m`);
+
+    const critTbody = document.getElementById('p5_critical_tbody');
+    if (critTbody && Array.isArray(p5.critical_evaluation_table_5_1)) {
+      critTbody.innerHTML = p5.critical_evaluation_table_5_1.map(c => `
+        <tr>
+          <td><b>${escapeHtml(c.param)}</b></td>
+          <td>${c.project_assumed}</td>
+          <td><b>${c.actual_calc}</b></td>
+          <td>${escapeHtml(c.comment)}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // --- PROJEKT 6: OBWIEDNIA OBCIĄŻEŃ DOPUSZCZALNYCH ---
+  if (bp.p6) {
+    const p6 = bp.p6;
+    const ptsTbody = document.getElementById('p6_points_tbody');
+    if (ptsTbody && Array.isArray(p6.points_table)) {
+      ptsTbody.innerHTML = p6.points_table.map(pt => `
+        <tr>
+          <td><b>${escapeHtml(pt.point)}</b></td>
+          <td>${pt.v_kmh} km/h</td>
+          <td><b>${pt.n}</b></td>
+          <td>${escapeHtml(pt.type)}</td>
+        </tr>
+      `).join('');
+    }
+
+    const vfEl = document.getElementById('p6_vf_val');
+    if (vfEl && p6.v_f_kmh != null) vfEl.textContent = p6.v_f_kmh;
+
+    const flapLoopTbody = document.getElementById('p6_flap_loop_tbody');
+    if (flapLoopTbody && Array.isArray(p6.flap_envelope_loop)) {
+      flapLoopTbody.innerHTML = p6.flap_envelope_loop.map(fl => `
+        <tr>
+          <td><b>${escapeHtml(fl.point)}</b></td>
+          <td>${fl.v_kmh} km/h</td>
+          <td><b>${fl.n}</b></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Jeśli aktualnie jesteśmy w trybie Projektów Semestralnych, przerysuj aktywny wykres
+  if (currentPortalMode === 'projects') {
+    renderSemesterProjectCharts(currentSemesterProject, res);
+  }
+}
+
+function toggleAirfoilCoordsTable() {
+  const box = document.getElementById('airfoilCoordsBox');
+  if (!box) return;
+  box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+}
+
+function toggleMassTable31() {
+  const box = document.getElementById('massTable31Box');
+  if (!box) return;
+  box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+}
+
+function syncStudentDesignerFields(source) {
+  let s = 'Jan Kowalski';
+  let a = 'Nr Albumu';
+  let g = 'A – czwartek 8:15-9:00';
+  let p = 'M.Figat';
+  let d = '14.12.2026';
+  let y = '2026/27';
+
+  if (source === 'workstation') {
+    s = document.getElementById('ws_student_name')?.value ?? s;
+    a = document.getElementById('ws_album_no')?.value ?? a;
+    g = document.getElementById('ws_group_no')?.value ?? g;
+    p = document.getElementById('ws_supervisor')?.value ?? p;
+    d = document.getElementById('ws_submission_date')?.value ?? d;
+    y = document.getElementById('ws_academic_year')?.value ?? y;
+  } else if (source === 'wizard') {
+    s = document.getElementById('wiz_student_name')?.value ?? s;
+    a = document.getElementById('wiz_album_no')?.value ?? a;
+    g = document.getElementById('wiz_group_no')?.value ?? g;
+    p = document.getElementById('wiz_supervisor')?.value ?? p;
+    d = document.getElementById('submission_date')?.value ?? d;
+    y = document.getElementById('academic_year')?.value ?? y;
+  } else {
+    s = document.getElementById('student_name')?.value ?? s;
+    a = document.getElementById('album_no')?.value ?? a;
+    g = document.getElementById('group_no')?.value ?? g;
+    p = document.getElementById('supervisor')?.value ?? p;
+    d = document.getElementById('submission_date')?.value ?? d;
+    y = document.getElementById('academic_year')?.value ?? y;
+  }
+
+  const setVal = (id, v) => {
+    const el = document.getElementById(id);
+    if (el && el.value !== v) el.value = v;
+  };
+  setVal('student_name', s);
+  setVal('album_no', a);
+  setVal('group_no', g);
+  setVal('supervisor', p);
+  setVal('submission_date', d);
+  setVal('academic_year', y);
+
+  setVal('ws_student_name', s);
+  setVal('ws_album_no', a);
+  setVal('ws_group_no', g);
+  setVal('ws_supervisor', p);
+  setVal('ws_submission_date', d);
+  setVal('ws_academic_year', y);
+
+  setVal('wiz_student_name', s);
+  setVal('wiz_album_no', a);
+  setVal('wiz_group_no', g);
+  setVal('wiz_supervisor', p);
+
+  const setTxt = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  };
+  setTxt('prev_r2_student', s);
+  setTxt('prev_r2_album', a);
+  setTxt('prev_r2_group', g);
+  setTxt('prev_r2_supervisor', p);
+  setTxt('prev_r2_date', d);
+
+  setTxt('prev_r1_student', s);
+  setTxt('prev_r1_album', a);
+  setTxt('prev_r1_year', y);
+
+  const activeProj = typeof getActiveProject === 'function' ? getActiveProject() : null;
+  if (activeProj?.name) {
+    setTxt('prev_r1_project', activeProj.name);
+  }
+
+  const pillMod0 = document.getElementById('pill_mod0');
+  if (pillMod0) {
+    pillMod0.textContent = `${s.split(' ').slice(-1)[0] || 'Student'} • ${a}`;
+  }
+
+  try {
+    localStorage.setItem('bipol_student_designer_info', JSON.stringify({
+      student_name: s,
+      album_no: a,
+      group_no: g,
+      supervisor: p,
+      submission_date: d,
+      academic_year: y
+    }));
+  } catch (e) {}
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('bipol_student_designer_info') || 'null');
+    if (saved) {
+      const setVal = (id, v) => {
+        const el = document.getElementById(id);
+        if (el && v) el.value = v;
+      };
+      setVal('student_name', saved.student_name);
+      setVal('album_no', saved.album_no);
+      setVal('group_no', saved.group_no);
+      setVal('supervisor', saved.supervisor);
+      setVal('submission_date', saved.submission_date);
+      setVal('academic_year', saved.academic_year);
+      syncStudentDesignerFields('sidebar');
+    }
+  } catch (e) {}
+});
+
+function openIndividualProjectReport(pId) {
+  const presetKey = document.getElementById('presetSelect')?.value || 'pzl_kos';
+  const currentParams = collectFormData();
+  try {
+    localStorage.setItem('bipol_custom_report_data', JSON.stringify({
+      res: currentResults,
+      params: currentParams
+    }));
+  } catch (e) {}
+  const q = new URLSearchParams({
+    preset: presetKey,
+    student: currentParams.student_name || 'Jan Kowalski',
+    album: currentParams.album_no || 'Nr Albumu',
+    group: currentParams.group_no || 'A – czwartek 8:15-9:00',
+    supervisor: currentParams.supervisor || 'M.Figat',
+    date: currentParams.submission_date || '14.12.2026',
+    academic_year: currentParams.academic_year || '2026/27',
+    params_json: JSON.stringify(currentParams)
+  });
+  const url = `/report/project/${encodeURIComponent(pId)}?${q.toString()}`;
+  window.open(url, '_blank');
+}
+
+function openFolderCoverReport() {
+  openIndividualProjectReport('folder_cover');
+}
+
+// Udostępnij funkcje globalnie dla atrybutów onclick w HTML
+window.setPortalMode = setPortalMode;
+window.selectSemesterProject = selectSemesterProject;
+window.updateSemesterScores = updateSemesterScores;
+window.toggleAirfoilCoordsTable = toggleAirfoilCoordsTable;
+window.toggleMassTable31 = toggleMassTable31;
+window.openIndividualProjectReport = openIndividualProjectReport;
+window.openFolderCoverReport = openFolderCoverReport;
+window.syncStudentDesignerFields = syncStudentDesignerFields;
+

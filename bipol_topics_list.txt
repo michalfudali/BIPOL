@@ -1,0 +1,224 @@
+Lp. temat imię i nazwisko
+1
+Motoszybowiec jednomiejscowy, rozpiętość 13,5m, zespół napędowy stały, ciągnący
+2
+Motoszybowiec jednomiejscowy, rozpiętość 13,5m, zespół napędowy stały, pchający
+3
+Motoszybowiec jednomiejscowy, rozpiętość 13,5m, zespół napędowy chowany
+4
+Motoszybowiec jednomiejscowy, rozpiętość 15m, zespół napędowy stały, ciągnący
+5
+Motoszybowiec jednomiejscowy, rozpiętość 15m, zespół napędowy stały, pchający
+6
+Motoszybowiec jednomiejscowy, rozpiętość 15m, zespół napędowy chowany
+7
+Motoszybowiec jednomiejscowy, rozpiętość dowolna, większa niż 20m, zespół napędowy stały, ciągnący
+8
+Motoszybowiec jednomiejscowy, rozpiętość dowolna, większa niż 20m, zespół napędowy chowany
+9
+Motoszybowiec dwumiejscowy, miejsca w tandem rozpiętość dowolna, zespół napędowy stały, ciągnący
+10
+Motoszybowiec dwumiejscowy, miejsca w tandem rozpiętość dowolna, zespół napędowy stały, pchający
+11
+Motoszybowiec dwumiejscowy, miejsca w tandem rozpiętość dowolna, zespół napędowy chowany
+12
+Motoszybowiec dwumiejscowy, miejsca obok siebie rozpiętość dowolna, zespół napędowy stały, ciągnący
+13
+Motoszybowiec dwumiejscowy, miejsca obok siebie rozpiętość dowolna, zespół napędowy stały, pchający
+14
+Motoszybowiec dwumiejscowy, miejsca obok siebie rozpiętość dowolna, zespół napędowy chowany
+15
+Samolot ultralekki jednomiejscowy, górnopłat
+16
+Samolot ultralekki jednomiejscowy, dolnopłat
+17
+Samolot ultralekki dwumiejscowy, miejsca obok siebie, górnopłat
+18
+Samolot ultralekki dwumiejscowy, miejsca w tandem, dolnopłat
+19
+Samolot ultralekki dwumiejscowy, miejsca w tandem, górnopłat
+20
+Jednomiejscowy odrzutowy samolot rekreacyjny
+21
+Dwumiejscowy odrzutowy samolot rekreacyjny, miejsca obok siebie
+22
+Dwumiejscowy odrzutowy samolot rekreacyjny, miejsca w tandem
+23
+Samolot wyścigowy, jednomiejscowy, formuły 1 (regulamin na stronie www.airrace.org/indexJS.php)
+24
+Samolot wyścigowy , jednomiejscowy, bez ograniczeń                                        S||S
+25
+Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca w tandem,                   S||S
+26
+Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca obok siebie,                S||S
+27
+Samolot wyścigowo – akrobacyjny, jednomiejscowy (do zawodów Red Bull)
+28
+Samolot akrobacyjny, jednomiejscowy
+29
+Samolot akrobacyjny dwumiejscowy
+30
+Samolot klubowy, 6Smiejscowy (5spadochroniarzy), STOL, holowanie szybowców
+31
+Samolot do holowania szybowców (1 miejscowy)
+32
+Samolot szkolny, dwumiejscowy, miejsca w tandem, moc silnika do 100 kW
+33
+Samolot szkolny, dwumiejscowy, miejsca obok siebie, moc silnika do 100 kW
+34
+Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, moc silnika do 200 kW
+35
+Samolot szkolnoStreningowy, dwumiejscowy, miejsca obok siebie, moc silnika do 200 kW
+36
+Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd śmigłowy, moc b/o
+37
+Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (1 silnik)
+38
+Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (2 silniki)
+39
+Samolot dwumiejscowy do dalekiej turystyki
+40
+Samolot czteromiejscowy do dalekiej turystyki, jednosilnikowy, napęd tłokowy
+41
+Samolot dwumiejscowy STOL
+42
+Samolot czteromiejscowy STOL, jednosilnikowy
+43
+Samolot medyczny (pilot, lekarz, 1 leżący chory), STOL, jednosilnikowy
+44
+Samolot medyczny (pilot, lekarz, 1 leżący chory), dwusilnikowy
+45
+Samolot dyspozycyjny, 4Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500km
+46
+Samolot dyspozycyjny, 4Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000km
+47
+Samolot dyspozycyjny, 4Smiejscowy, napęd turbośmigłowy, zasięg do 500km
+48
+Samolot dyspozycyjny, 4Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+49
+Samolot dyspozycyjny, 4Smiejscowy, napęd odrzutowy, zasięg do 500km
+50
+Samolot dyspozycyjny, 4Smiejscowy, napęd odrzutowy, zasięg do 1000km
+51
+Samolot dyspozycyjny, 6Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500km
+52
+Samolot dyspozycyjny, 6Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000km
+53
+Samolot dyspozycyjny, 6Smiejscowy, napęd odrzutowy, zasięg do 500km
+54
+Samolot dyspozycyjny, 6Smiejscowy, napęd odrzutowy, zasięg do 1000km
+55
+Samolot dyspozycyjny, 8Smiejscowy, napęd tłokowy, zasięg do 1000km
+56
+Samolot dyspozycyjny, 8Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+57
+Samolot dyspozycyjny, 8Smiejscowy, napęd odrzutowy, zasięg do 500km
+58
+Samolot dyspozycyjny, 8Smiejscowy, napęd odrzutowy, zasięg do 1000km
+59
+Samolot dyspozycyjny, 10Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+60
+Samolot dyspozycyjny, 10Smiejscowy, napęd turbośmigłowy, zasięg do 1500km
+61
+Samolot dyspozycyjny, 10Smiejscowy, napęd odrzutowy
+62
+Samolot dyspozycyjny, 15Smiejscowy, napęd turbośmigłowy, zasięg do 2000km
+63
+Samolot dyspozycyjny, 15Smiejscowy, napęd turbośmigłowy, zasięg do 3000km
+64
+Samolot dyspozycyjny, 15Smiejscowy, napęd odrzutowy, zasięg do 2000km
+65
+Samolot dyspozycyjny, 20Smiejscowy, napęd turbośmigłowy, zasięg do 3000km
+66
+Samolot transportowy, STOL, ładunek użyteczny 1300kg (kontener LDS2)
+67
+Samolot transportowy, STOL, ładunek użyteczny 1800kg (kontener LDS3)
+68
+Samolot transportowy, STOL, ładunek użyteczny 2300kg (Honker), z rampą z tyłu kadłuba
+69
+Samolot transportowy, STOL, ładunek użyteczny 5500kg (Honker+LDS4), z rampą z tyłu kadłuba
+70
+Samolot transportowy, STOL, ładunek użyteczny 11000kg (BRDM2+2*LDS4), z rampą z tyłu kadłuba
+71
+Samolot transportowy, STOL, ładunek użyteczny 23000kg (BWPS1 lub Rosomak), z rampą z tyłu kadłuba
+72
+Samolot transportowy, ładunek użyteczny 5500kg (Honker+LDS4), z rampą z tyłu kadłuba
+73
+Samolot transportowy, ładunek użyteczny 11000kg (BRDM2+2*LDS4), z rampą z tyłu kadłuba
+74
+Samolot transportowy, ładunek użyteczny 23000kg (BWPS1 lub Rosomak), z rampą z tyłu kadłuba
+75
+Samolot pasażerski 40 miejscowy, turbośmigłowy, dolnopłatowy
+76
+Samolot pasażerski 40 miejscowy, turbośmigłowy, górnopłatowy
+77
+Samolot pasażerski 40 miejscowy, turbośmigłowy, górnopłatowy, STOL
+78
+Samolot pasażerski 40 miejscowy, odrzutowy, dolnopłatowy
+79
+Samolot pasażerski 40 miejscowy, odrzutowy, górnopłatowy
+80
+Samolot pasażerski 40 miejscowy, odrzutowy, górnopłatowy, STOL
+81
+Samolot pasażerski 70 miejscowy, turbośmigłowy, górnopłatowy
+82
+Samolot pasażerski 70 miejscowy, turbośmigłowy, górnopłatowy, STOL
+83
+Samolot pasażerski 70 miejscowy, odrzutowy, dolnopłatowy
+84
+Samolot pasażerski 70 miejscowy, odrzutowy, górnopłatowy
+85
+Samolot pasażerski 70 miejscowy, odrzutowy, górnopłatowy, STOL
+86
+Samolot rolniczy, udźwig do 500kg
+87
+Samolot rolniczy, udźwig do 1000kg
+88
+Samolot rolniczy, udźwig do 1500kg
+89
+Samolot rolniczy, udźwig do 2000kg
+90
+Samolot rolniczy, udźwig do 2500kg
+91
+Samolot pożarniczy, udźwig do 3000kg
+92
+Samolot pożarniczy, udźwig do 4000kg
+93
+Wodnosamolot pożarniczy, udźwig do 2000kg
+94
+Wodnosamolot pożarniczy, udźwig do 4000kg
+95
+Turystyczna łódź latająca, czteromiejscowa
+96
+Transportowa łódź latająca, ładunek płatny 1000kg
+97
+Transportowa łódź latająca, ładunek płatny 2000kg
+98
+Transportowa łódź latająca, ładunek płatny 3000kg
+99
+Samolot szturmowy, jednomiejscowy, napęd turbośmigłowy
+100
+Samolot szturmowy, jednomiejscowy, napęd odrzutowy
+101
+Samolot szturmowy, dwumiejscowy, napęd turbośmigłowy
+102
+Samolot szturmowy, dwumiejscowy, napęd odrzutowy
+103
+Dwumiejscowy odrzutowy samolot rekreacyjny, miejsca obok siebie, dwa silniki
+104
+Dwumiejscowy odrzutowy samolot rekreacyjny, miejsca w tandem, dwa silniki
+105
+Samolot pasażerski 100 miejscowy, odrzutowy, dolnopłatowy
+106
+Samolot pasażerski 200 miejscowy, odrzutowy, dolnopłatowy
+107
+Samolot pasażerski 100 miejscowy, odrzutowy, górnopłat
+108
+Samolot pasażerski 200 miejscowy, odrzutowy, górnopłat
+109
+Samolot pożarniczy, udźwig do 6000kg
+110
+Wodnosamolot pożarniczy, udźwig do 6000kg
+111
+112
+113
