@@ -68,7 +68,12 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     x_le_mac = y_mac * tan_chi0
     
     # 2. Geometria kadłuba (wstępne oszacowanie z liczby pasażerów i rozpiętości)
-    if ac_type in ["piston_ga", "uav"]:
+    if ac_type in ("glider", "motoglider"):
+        # Wstępny model smukłego kadłuba; nie stosuj proporcji samolotu
+        # komunikacyjnego do nowych typów CS-22. Wymiary wymagają weryfikacji.
+        fuselage_len = max(5.5, 0.45 * b)
+        fuselage_diam = 1.0 if ac_type == "glider" else 1.25
+    elif ac_type in ["piston_ga", "uav"]:
         fuselage_len = max(5.5, 0.72 * b)
         fuselage_diam = 1.25 if n_pax <= 4 else 1.50
     elif ac_type == "turboprop_regional":

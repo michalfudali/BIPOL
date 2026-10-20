@@ -11,6 +11,15 @@ let currentResults = null;
 let topicsData = [];
 let categoriesData = {};
 let formBaseParams = {};
+let browserStorage = null;
+try { browserStorage = window.localStorage; } catch (_) {}
+const projectStore = BipolStudio.createStore(browserStorage, () => {
+  document.dispatchEvent(new CustomEvent('bipol:storage'));
+});
+let activeProjectMemory = null;
+function safeLocalItem(key) {
+  try { return browserStorage?.getItem(key) ?? null; } catch (_) { return null; }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
@@ -78,6 +87,22 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
 
   const eng = engEl ? engEl.value : 'prop';
   const acType = acEl ? acEl.value : 'piston_ga';
+  const isGlider = eng === 'none';
+  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
+    const input = document.getElementById(field);
+    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
+  }
+  if (sfcEl) {
+    sfcEl.readOnly = isGlider;
+    sfcEl.closest('.input-group').style.display = isGlider ? 'none' : '';
+  }
+  if (isGlider) {
+    if (sfcEl) { sfcEl.value = '0'; sfcEl.min = '0'; sfcEl.max = '0'; }
+    if (propGroup) propGroup.style.display = 'none';
+    if (titleMod4) titleMod4.textContent = '4. Lot bez napędu — szybowiec';
+    return;
+  }
+
 
   if (titleMod4) {
     titleMod4.textContent = eng === 'jet'
@@ -154,7 +179,7 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
       if (engEl && engEl.value === 'none') engEl.value = 'prop';
       if (isWizard) syncWizardPropulsionUI(true);
       else syncFormPropulsionUI(true);
-    } else if (acEl?.value !== 'uav' && categoryIsUas()) {
+    } else if (acEl?.value !== 'uav' && (categoryIsUas() || catEl?.value.startsWith('cs22_'))) {
       catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
     }
   }
@@ -267,6 +292,15 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
   }
 }
 
+function syncEngineWithAircraft(isWizard = false) {
+  const prefix = isWizard ? 'wiz_' : '';
+  const engine = document.getElementById(prefix + 'engine_type');
+  const aircraft = document.getElementById(prefix + 'aircraft_type');
+  if (engine?.value === 'none') aircraft.value = 'glider';
+  else if (aircraft?.value === 'glider') aircraft.value = engine.value === 'jet' ? 'jet_business' : 'motoglider';
+  syncAircraftClassAndEASAUI(isWizard, 'aircraft');
+}
+
 function initSidebarModularity() {
   const form = document.getElementById('designForm');
   const engEl = document.getElementById('engine_type');
@@ -275,6 +309,7 @@ function initSidebarModularity() {
 
   if (engEl) {
     engEl.addEventListener('change', () => {
+      syncEngineWithAircraft(false);
       syncFormPropulsionUI(true);
       updateAccordionPills();
       performCalculation();
@@ -433,7 +468,7 @@ function updateAccordionPills() {
   const etaP = document.getElementById('prop_efficiency')?.value || '0.80';
   const pill4 = document.getElementById('pill_mod4');
   if (pill4) {
-    pill4.textContent = eng === 'jet'
+    pill4.textContent = eng === 'none' ? 'Bez napędu — szybowiec' : eng === 'jet'
       ? `Odrzutowy • TSFC=${sfc} 1/h`
       : `Śmigłowy • ${sfc} g/kWh • ηp=${etaP}`;
   }
@@ -866,6 +901,7 @@ function validateNumericFields(root) {
 }
 
 async function performCalculation() {
+  document.dispatchEvent(new CustomEvent('bipol:calculating'));
   const sequence = ++calculationSequence;
   calculationController?.abort();
   const controller = new AbortController();
@@ -873,7 +909,7 @@ async function performCalculation() {
   const projectId = getActiveProjectId();
   const btn = document.getElementById('calcBtn');
   const reportBtn = document.getElementById('openReportBtn');
-  if (reportBtn) reportBtn.setAttribute('aria-disabled', 'true');
+  if (reportBtn) reportBtn.setAttribute('data-results-stale', 'true');
   try {
     validateNumericFields(document.getElementById('designForm'));
     const formData = collectFormData();
@@ -896,8 +932,9 @@ async function performCalculation() {
     currentResults = result;
     updateUI(result);
     autoSaveActiveProject(result);
-    showCalculationStatus('Wyniki i zapis projektu są aktualne.');
-    if (reportBtn) reportBtn.setAttribute('aria-disabled', 'false');
+    showCalculationStatus(projectStore.persistent ? 'Wyniki i zapis projektu są aktualne.' : 'Wyniki są aktualne. Zapis w przeglądarce jest niedostępny — pobierz JSON przed zamknięciem karty.');
+    document.dispatchEvent(new CustomEvent('bipol:results', {detail: result}));
+    if (reportBtn) reportBtn.setAttribute('data-results-stale', 'false');
   } catch (err) {
     if (err.name !== 'AbortError' && sequence === calculationSequence) {
       showCalculationStatus('Błąd: ' + err.message + ' Wyświetlane wyniki nie zostały zaktualizowane.', true);
@@ -994,12 +1031,7 @@ function updateUI(res) {
     if (reportBtn) {
       const currentParams = res.params;
       reportBtn.href = `/report?params_json=${encodeURIComponent(JSON.stringify(currentParams))}`;
-      reportBtn.onclick = () => {
-        localStorage.setItem('bipol_custom_report_data', JSON.stringify({
-          res: currentResults,
-          params: currentParams
-        }));
-      };
+      reportBtn.onclick = null;
     }
   } catch (err) {
     console.warn('Błąd konfiguracji przycisku raportu:', err);
@@ -1619,6 +1651,7 @@ function setupTabs() {
       if (targetEl) targetEl.classList.add('active');
 
       renderTabVisuals(targetId);
+      document.dispatchEvent(new CustomEvent('bipol:tab'));
     });
   });
 
@@ -1661,31 +1694,24 @@ function escapeHtml(text) {
 }
 
 function getProjectsList() {
-  try {
-    const raw = localStorage.getItem(STORAGE_PROJECTS_KEY);
-    if (!raw) return [];
-    const list = JSON.parse(raw);
-    return Array.isArray(list) ? list : [];
-  } catch (e) {
-    console.error('Błąd odczytu projektów z localStorage:', e);
-    return [];
-  }
+  const list = projectStore.read(STORAGE_PROJECTS_KEY, []);
+  return Array.isArray(list) ? list.filter(p => p && p.id && p.params && typeof p.params === 'object') : [];
 }
 
 function saveProjectsList(list) {
-  try {
-    localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.error('Błąd zapisu projektów do localStorage:', e);
-  }
+  return projectStore.write(STORAGE_PROJECTS_KEY, list);
 }
 
 function getActiveProjectId() {
-  return localStorage.getItem(STORAGE_ACTIVE_PROJ_KEY);
+  return activeProjectMemory || safeLocalItem(STORAGE_ACTIVE_PROJ_KEY);
 }
 
 function setActiveProjectId(id) {
-  localStorage.setItem(STORAGE_ACTIVE_PROJ_KEY, id);
+  activeProjectMemory = id;
+  try {
+    if (!browserStorage) throw new Error('Brak pamięci przeglądarki');
+    browserStorage.setItem(STORAGE_ACTIVE_PROJ_KEY, id);
+  } catch (_) { projectStore.write('bipol_active_project_fallback', id); }
 }
 
 function getActiveProject() {
@@ -1748,6 +1774,7 @@ function loadProjectIntoForm(project) {
     const paramsJson = encodeURIComponent(JSON.stringify(params));
     reportBtn.href = `/report?params_json=${paramsJson}&student=${encodeURIComponent(sName)}&album=${encodeURIComponent(aNo)}&group=${encodeURIComponent(gNo)}&supervisor=${encodeURIComponent(sup)}&date=${encodeURIComponent(subDate)}`;
   }
+  document.dispatchEvent(new CustomEvent('bipol:project'));
 }
 
 function renderProjectSwitcher() {
@@ -1786,9 +1813,11 @@ function switchActiveProject(projectId) {
 function flashSaveStatus(msg) {
   const statusEl = document.getElementById('projectAutoSaveStatus');
   if (!statusEl) return;
-  statusEl.innerHTML = `<span class="icon">💾</span> ${escapeHtml(msg)}`;
+  statusEl.innerHTML = projectStore.persistent
+    ? `<span class="icon">💾</span> ${escapeHtml(msg)}`
+    : 'Tylko pamięć karty — pobierz kopię JSON';
   statusEl.style.opacity = '1';
-  statusEl.style.color = '#10b981';
+  statusEl.style.color = projectStore.persistent ? '#10b981' : '#a2691c';
 }
 
 function autoSaveActiveProject(res) {
@@ -1941,7 +1970,8 @@ function importProjectFromFile(file) {
         createdAt: importedProj.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         params: importedProj.params,
-        summary: importedProj.summary || {}
+        summary: importedProj.summary || {},
+        editorial: importedProj.editorial || {}
       };
 
       const list = getProjectsList();
@@ -2049,7 +2079,7 @@ function closeSessionStarterModal() {
     backdrop.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
   }
-  sessionStorage.setItem(SESSION_INITIALIZED_KEY, 'true');
+  try { sessionStorage.setItem(SESSION_INITIALIZED_KEY, 'true'); } catch (_) {}
 }
 
 function initProjectSystem() {
@@ -2091,7 +2121,8 @@ function initProjectSystem() {
   renderProjectSwitcher();
 
   // SPRAWDZENIE POCZĄTKU NOWEJ SESJI:
-  const isSessionInitialized = sessionStorage.getItem(SESSION_INITIALIZED_KEY);
+  let isSessionInitialized = null;
+  try { isSessionInitialized = sessionStorage.getItem(SESSION_INITIALIZED_KEY); } catch (_) {}
   if (!isSessionInitialized) {
     // Na początku nowej sesji wyświetlamy modal wyboru / tworzenia z kreatora
     openSessionStarterModal();
@@ -2244,6 +2275,24 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
 
   const eng = engEl ? engEl.value : 'prop';
   const acType = acEl ? acEl.value : 'piston_ga';
+  const isGlider = eng === 'none';
+  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
+    const input = document.getElementById('wiz_' + field);
+    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
+  }
+  if (sfcEl) {
+    sfcEl.readOnly = isGlider;
+    sfcEl.closest('.input-group').style.display = isGlider ? 'none' : '';
+  }
+  if (isGlider) {
+    if (sfcEl) { sfcEl.value = '0'; sfcEl.min = '0'; sfcEl.max = '0'; }
+    const prop = document.getElementById('wiz_prop_efficiency');
+    if (prop) prop.closest('.input-group').style.display = 'none';
+    return;
+  }
+  const prop = document.getElementById('wiz_prop_efficiency');
+  if (prop) prop.closest('.input-group').style.display = eng === 'jet' ? 'none' : '';
+
 
   if (pane3Title) {
     pane3Title.textContent = eng === 'jet'
@@ -2363,6 +2412,7 @@ function initWizardSystem() {
   const wizCatSel = document.getElementById('wiz_category');
   if (wizEngSel) {
     wizEngSel.addEventListener('change', () => {
+      syncEngineWithAircraft(true);
       syncWizardPropulsionUI(true);
     });
   }
@@ -2681,7 +2731,7 @@ function renderWizardStep5Summary() {
   const slat = getV('wiz_slat_type');
 
   const locNames = { nose: 'Dziób kadłuba', wing: 'Gondole skrzydłowe', rear: 'Tył kadłuba / gondole ogonowe' };
-  const propSummaryText = engType === 'jet'
+  const propSummaryText = engType === 'none' ? 'Bez napędu — szybowiec' : engType === 'jet'
     ? `Odrzutowy (Turbofan) &bull; ${locNames[engLoc] || engLoc} &bull; TSFC = ${sfcVal} 1/h`
     : `Śmigłowy &bull; ${locNames[engLoc] || engLoc} &bull; SFC = ${sfcVal} g/(kW&bull;h), &eta;_p = ${etaP}`;
 
@@ -2693,6 +2743,7 @@ function renderWizardStep5Summary() {
     cs23_aerobatic: 'EASA CS-23 Certified for Aerobatics',
     cs_vla: 'EASA CS-VLA (MTOM ≤ 750 kg, max 2 os.)',
     cs_lsa: 'EASA CS-LSA (MTOM ≤ 600 kg, max 2 os.)',
+    cs22_glider: 'EASA CS-22 (Szybowiec)',
     cs22_motoglider: 'EASA CS-22 (TMG Motoszybowiec)',
     cs25_transport: 'EASA CS-25 (Large Aeroplanes)',
     easa_optout_ul: 'EASA Annex I Opt-out / UL-A (600 kg)',
@@ -2946,7 +2997,7 @@ function initDualPortalSystem() {
   updateSemesterScores(false);
 
   // 2. Odtwórz aktywny projekt semestralny (p1..p6)
-  const savedP = localStorage.getItem(ACTIVE_SEMESTER_P_KEY);
+  const savedP = safeLocalItem(ACTIVE_SEMESTER_P_KEY);
   if (savedP && ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'].includes(savedP)) {
     currentSemesterProject = savedP;
   }
@@ -2955,7 +3006,7 @@ function initDualPortalSystem() {
   const urlMode = (typeof window.INITIAL_PORTAL_MODE === 'string' && window.INITIAL_PORTAL_MODE.trim())
     ? window.INITIAL_PORTAL_MODE.trim()
     : null;
-  const storedMode = localStorage.getItem(PORTAL_MODE_KEY);
+  const storedMode = safeLocalItem(PORTAL_MODE_KEY);
   const initialMode = urlMode || storedMode || 'holistic';
 
   setPortalMode(initialMode === 'projects' ? 'projects' : 'holistic');
@@ -2993,6 +3044,7 @@ function setPortalMode(mode) {
       renderTabVisuals(activeTab.id);
     }
   }
+  document.dispatchEvent(new CustomEvent('bipol:mode'));
 }
 
 function selectSemesterProject(pId) {
@@ -3922,7 +3974,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('designForm');
   const markChanged = () => {
     showCalculationStatus('Parametry zostały zmienione. Oblicz projekt, aby zapisać je i odświeżyć wyniki.');
-    document.getElementById('openReportBtn')?.setAttribute('aria-disabled', 'true');
+    document.getElementById('openReportBtn')?.setAttribute('data-results-stale', 'true');
     const status = document.getElementById('projectAutoSaveStatus');
     if (status) { status.textContent = 'Zmiany oczekują na obliczenie i zapis'; status.style.color = '#92400e'; }
   };

@@ -15,7 +15,13 @@ work/venv/bin/python -m flask --app app run --port 5000
 ```
 
 Testy regresji: `work/venv/bin/python -m pytest tests -q`.
+Testy narzędzi pracowni: `node tests/studio_core.test.mjs` (bez zależności npm).
 Raporty są dokumentami HTML, które można wydrukować do PDF w przeglądarce.
+
+Pracownia zawiera kokpit z nawigacją boczną, porównanie do ośmiu zapisanych
+wariantów, eksport CSV/SVG, raport z wyborem etapów P1–P6, dane i wnioski autora
+oraz dokładną biegunową lotu szybowego. Raport można pobrać jako samodzielny HTML.
+Szczegóły integracji i testów są w `docs/INTEGRACJA_STUDIO.md`.
 
 Model służy do obliczeń dydaktycznych. Sprawdza wybrane warunki i nie stanowi
 potwierdzenia certyfikacji. Wszystkie poziomy CS-23 1–4 obejmuje limit 8618 kg

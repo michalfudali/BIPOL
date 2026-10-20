@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Raport BIPOL I - Wstępny Projekt Samolotu</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <style>{{ report_assets.css|safe }}</style>
   <style>
     body {
       background: #f1f5f9;
@@ -83,7 +83,7 @@
       font-weight: 400;
       color: #000000;
     }
-    
+
     .report-section {
       margin-bottom: 2.5rem;
     }
@@ -108,7 +108,7 @@
       margin: 1.25rem 0;
       background: #ffffff;
     }
-    
+
     @media print {
       body { background: #ffffff !important; }
       .report-sheet {
@@ -195,12 +195,14 @@
     </div>
   </div>
 
+{% if 'p1' in selected_sections or 'p2' in selected_sections %}
   <!-- STRONA 2: CZĘŚĆ P1 I P2 (Założenia, Bilans Mas, Matching Chart) -->
-  <div class="report-sheet page-break">
+  <div class="report-sheet page-break" data-report-sheet="p1,p2">
     <div class="report-section">
+      {% if 'p1' in selected_sections %}<section data-report-section="p1">
       <h2>1. Założenia taktyczno-techniczne i definicja misji (P1)</h2>
       <p>
-        Celem projektu jest wstępne wymiarowanie i analiza osiągów statku powietrznego spełniającego wymagania zdatności do lotu 
+        Celem projektu jest wstępne wymiarowanie i analiza osiągów statku powietrznego dla wybranej podstawy projektowej
         {% if res.easa_compliance %}
           specyfikacji <strong>{{ res.easa_compliance.easa_spec }}</strong> (klasa: <strong>{{ res.easa_compliance.easa_code }}</strong>, podstawa projektowa: <em>{{ res.easa_compliance.design_code }}</em>, wpis krajowy: {{ res.easa_compliance.polish_code }} wg Dz. U. 2025 poz. 1137).
         {% else %}
@@ -218,73 +220,78 @@
         {% endif %}
       </table>
 
+      </section>{% endif %}
+      {% if 'p2' in selected_sections %}<section data-report-section="p2">
       <h2>2. Wstępny bilans mas samolotu (P2)</h2>
       <p>
-        Wstępne oszacowanie maksymalnej masy startowej MTOW (\(m_0\)) wykonano metodą iteracyjną na podstawie ułamków zużycia paliwa na poszczególnych etapach misji (równanie Bregueta) oraz korelacji statystycznych Roskama/Torenbeeka dla masy pustej.
+        Wstępne oszacowanie maksymalnej masy startowej MTOW (m_0) wykonano metodą iteracyjną na podstawie ułamków zużycia paliwa na poszczególnych etapach misji (równanie Bregueta) oraz korelacji statystycznych Roskama/Torenbeeka dla masy pustej.
       </p>
-      
+
       <table class="b-table">
         <thead>
           <tr><th>Komponent bilansu</th><th>Oznaczenie</th><th>Masa [kg]</th><th>Udział w masie startowej [%]</th></tr>
         </thead>
         <tbody>
           {% if res.mass.unmanned or params.aircraft_type == 'uav' %}
-          <tr><td>Wyposażenie zadaniowe UAV (sensory / głowica)</td><td>\(m_{pl}\)</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
-          <tr><td>Załoga pokładowa (0 os. – pilot w stacji GCS)</td><td>\(m_{crew}\)</td><td><b>0.0</b></td><td>0.0%</td></tr>
+          <tr><td>Wyposażenie zadaniowe UAV (sensory / głowica)</td><td>m_{pl}</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Załoga pokładowa (0 os. – pilot w stacji GCS)</td><td>m_{crew}</td><td><b>0.0</b></td><td>0.0%</td></tr>
           {% else %}
-          <tr><td>Masa płatna (Payload)</td><td>\(m_{pl}\)</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
-          <tr><td>Załoga (Crew)</td><td>\(m_{crew}\)</td><td><b>{{ res.mass.m_crew }}</b></td><td>{{ ((res.mass.m_crew / res.mass.m0) * 100)|round(1) }}%</td></tr>
+          <tr><td>Masa płatna (Payload)</td><td>m_{pl}</td><td><b>{{ res.mass.m_payload }}</b></td><td>{{ (res.mass.payload_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Załoga (Crew)</td><td>m_{crew}</td><td><b>{{ res.mass.m_crew }}</b></td><td>{{ ((res.mass.m_crew / res.mass.m0) * 100)|round(1) }}%</td></tr>
           {% endif %}
-          <tr><td>Paliwo całkowite (Fuel)</td><td>\(m_{f}\)</td><td><b>{{ res.mass.m_fuel }}</b></td><td>{{ (res.mass.fuel_fraction * 100)|round(1) }}%</td></tr>
-          <tr><td>Masa pusta wyposażona (OEW)</td><td>\(m_{e}\)</td><td><b>{{ res.mass.m_empty }}</b></td><td>{{ (res.mass.empty_fraction * 100)|round(1) }}%</td></tr>
-          <tr style="background:#f8fafc; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td>\(m_0\)</td><td><b>{{ res.mass.m0 }}</b></td><td>100.0%</td></tr>
+          <tr><td>Paliwo całkowite (Fuel)</td><td>m_{f}</td><td><b>{{ res.mass.m_fuel }}</b></td><td>{{ (res.mass.fuel_fraction * 100)|round(1) }}%</td></tr>
+          <tr><td>Masa pusta wyposażona (OEW)</td><td>m_{e}</td><td><b>{{ res.mass.m_empty }}</b></td><td>{{ (res.mass.empty_fraction * 100)|round(1) }}%</td></tr>
+          <tr style="background:#f8fafc; font-weight:bold;"><td>Maksymalna masa startowa (MTOW)</td><td>m_0</td><td><b>{{ res.mass.m0 }}</b></td><td>100.0%</td></tr>
         </tbody>
       </table>
 
       <h3 style="margin-top:1.5rem;">Dobór obciążenia powierzchni skrzydła i napędu (Matching Chart)</h3>
       <p>
         Wyznaczono ograniczenia z warunków: prędkości przeciągnięcia, rozbiegu, wznoszenia oraz prędkości przelotowej. Wybrany punkt projektowy:
-        <strong>W/S = {{ res.sizing.design_point.ws }} N/m²</strong>, 
+        <strong>W/S = {{ res.sizing.design_point.ws }} N/m²</strong>,
         {% if res.sizing.design_point.tw %}
-        <strong>T/W = {{ res.sizing.design_point.tw }} [-]</strong> (ciąg startowy <strong>\(T_0 = {{ res.sizing.design_point.thrust_kn }}\text{ kN}\)</strong>).
+        <strong>T/W = {{ res.sizing.design_point.tw }} [-]</strong> (ciąg startowy <strong>T_0 = {{ res.sizing.design_point.thrust_kn }} kN</strong>).
         {% else %}
-        <strong>P/W = {{ res.sizing.design_point.pw }} W/N</strong> ({{ res.sizing.design_point.pw_hp_kg }} KM/kg, moc startowa <strong>\(P_0 = {{ res.sizing.design_point.power_kw }}\text{ kW}\)</strong>).
+        <strong>P/W = {{ res.sizing.design_point.pw }} W/N</strong> ({{ res.sizing.design_point.pw_hp_kg }} KM/kg, moc startowa <strong>P_0 = {{ res.sizing.design_point.power_kw }} kW</strong>).
         {% endif %}
       </p>
-      
+
       <div class="report-chart-box">
         <canvas id="repChartMatching" style="width:100%; height:260px;"></canvas>
       </div>
+      </section>{% endif %}
     </div>
   </div>
 
+{% endif %}
+{% if 'p3' in selected_sections %}
   <!-- STRONA 3: CZĘŚĆ P3 (Geometria i Rysunek Zestawieniowy) -->
-  <div class="report-sheet page-break">
+  <div class="report-sheet page-break" data-report-section="p3">
     <div class="report-section">
       <h2>3. Geometria głównych zespołów płatowca (P3)</h2>
-      
+
       <table class="b-table">
         <thead>
           <tr><th>Zespół / Element</th><th>Parametr</th><th>Wartość</th><th>Jednostka</th></tr>
         </thead>
         <tbody>
-          <tr><td rowspan="6"><b>Skrzydło</b></td><td>Powierzchnia nośna \(S\)</td><td><b>{{ res.geometry.wing.S }}</b></td><td>m²</td></tr>
-          <tr><td>Rozpiętość skrzydła \(b\)</td><td><b>{{ res.geometry.wing.b }}</b></td><td>m</td></tr>
-          <tr><td>Wydłużenie skrzydła \(\Lambda\)</td><td><b>{{ res.geometry.wing.AR }}</b></td><td>-</td></tr>
-          <tr><td>Zbieżność \(\eta = c_t/c_r\)</td><td><b>{{ res.geometry.wing.eta }}</b></td><td>-</td></tr>
-          <tr><td>Cięciwa przykadłubowa \(c_r\) / końcowa \(c_t\)</td><td><b>{{ res.geometry.wing.cr }} / {{ res.geometry.wing.ct }}</b></td><td>m</td></tr>
+          <tr><td rowspan="6"><b>Skrzydło</b></td><td>Powierzchnia nośna S</td><td><b>{{ res.geometry.wing.S }}</b></td><td>m²</td></tr>
+          <tr><td>Rozpiętość skrzydła b</td><td><b>{{ res.geometry.wing.b }}</b></td><td>m</td></tr>
+          <tr><td>Wydłużenie skrzydła Λ</td><td><b>{{ res.geometry.wing.AR }}</b></td><td>-</td></tr>
+          <tr><td>Zbieżność η = c_t/c_r</td><td><b>{{ res.geometry.wing.eta }}</b></td><td>-</td></tr>
+          <tr><td>Cięciwa przykadłubowa c_r / końcowa c_t</td><td><b>{{ res.geometry.wing.cr }} / {{ res.geometry.wing.ct }}</b></td><td>m</td></tr>
           <tr><td>Średnia Cięciwa Aerodynamiczna (ŚDA / MAC)</td><td><b>{{ res.geometry.wing.mac }}</b></td><td>m</td></tr>
 
-          <tr><td rowspan="2"><b>Kadłub</b></td><td>Długość całkowita \(L_f\)</td><td><b>{{ res.geometry.fuselage.length }}</b></td><td>m</td></tr>
-          <tr><td>Średnica / szerokość maksymalna \(D_f\)</td><td><b>{{ res.geometry.fuselage.diameter }}</b></td><td>m</td></tr>
+          <tr><td rowspan="2"><b>Kadłub</b></td><td>Długość całkowita L_f</td><td><b>{{ res.geometry.fuselage.length }}</b></td><td>m</td></tr>
+          <tr><td>Średnica / szerokość maksymalna D_f</td><td><b>{{ res.geometry.fuselage.diameter }}</b></td><td>m</td></tr>
 
-          <tr><td rowspan="3"><b>Usterzenie Poziome (UP)</b></td><td>Współczynnik objętości \(V_H\)</td><td><b>{{ res.geometry.horizontal_tail.vh_coeff }}</b></td><td>-</td></tr>
-          <tr><td>Powierzchnia \(S_H\)</td><td><b>{{ res.geometry.horizontal_tail.S_h }}</b></td><td>m²</td></tr>
-          <tr><td>Rozpiętość \(b_H\)</td><td><b>{{ res.geometry.horizontal_tail.b_h }}</b></td><td>m</td></tr>
+          <tr><td rowspan="3"><b>Usterzenie Poziome (UP)</b></td><td>Współczynnik objętości V_H</td><td><b>{{ res.geometry.horizontal_tail.vh_coeff }}</b></td><td>-</td></tr>
+          <tr><td>Powierzchnia S_H</td><td><b>{{ res.geometry.horizontal_tail.S_h }}</b></td><td>m²</td></tr>
+          <tr><td>Rozpiętość b_H</td><td><b>{{ res.geometry.horizontal_tail.b_h }}</b></td><td>m</td></tr>
 
-          <tr><td rowspan="3"><b>Usterzenie Pionowe (UV)</b></td><td>Współczynnik objętości \(V_V\)</td><td><b>{{ res.geometry.vertical_tail.vv_coeff }}</b></td><td>-</td></tr>
-          <tr><td>Powierzchnia \(S_V\)</td><td><b>{{ res.geometry.vertical_tail.S_v }}</b></td><td>m²</td></tr>
-          <tr><td>Wysokość \(h_V\)</td><td><b>{{ res.geometry.vertical_tail.h_v }}</b></td><td>m</td></tr>
+          <tr><td rowspan="3"><b>Usterzenie Pionowe (UV)</b></td><td>Współczynnik objętości V_V</td><td><b>{{ res.geometry.vertical_tail.vv_coeff }}</b></td><td>-</td></tr>
+          <tr><td>Powierzchnia S_V</td><td><b>{{ res.geometry.vertical_tail.S_v }}</b></td><td>m²</td></tr>
+          <tr><td>Wysokość h_V</td><td><b>{{ res.geometry.vertical_tail.h_v }}</b></td><td>m</td></tr>
         </tbody>
       </table>
 
@@ -293,15 +300,18 @@
     </div>
   </div>
 
+{% endif %}
+{% if 'p4' in selected_sections or 'p5' in selected_sections %}
   <!-- STRONA 4: CZĘŚĆ P4 I P5 (Aerodynamika, Mechanizacja Płata, Rozkład Schrenka, Osiągi) -->
-  <div class="report-sheet page-break">
+  <div class="report-sheet page-break" data-report-sheet="p4,p5">
     <div class="report-section">
+      {% if 'p4' in selected_sections %}<section data-report-section="p4">
       <h2>4. Charakterystyki aerodynamiczne i uzasadnienie mechanizacji płata (P4)</h2>
       <p>
         Biegunowa aerodynamiczna samolotu wyznaczona została według klasycznej zależności Lilienthala:
-        \(C_x = C_{x0} + \frac{C_z^2}{\pi \Lambda e}\).
-        Dla konfiguracji gładkiej: \(C_{x0} = {{ res.aerodynamics.cx0_clean }}\), \(e = {{ params.oswald_e }}\), co daje maksymalną doskonałość aerodynamiczną 
-        <strong>\(K_{max} = {{ res.aerodynamics.k_max }}\)</strong> przy \(C_{z,opt} = {{ res.aerodynamics.cz_opt }}\).
+        C_x = Cx₀ + (C_z^2)/(π Λ e).
+        Dla konfiguracji gładkiej: Cx₀ = {{ res.aerodynamics.cx0_clean }}, e = {{ params.oswald_e }}, co daje maksymalną doskonałość aerodynamiczną
+        <strong>Kmax = {{ res.aerodynamics.k_max }}</strong> przy Cz,opt = {{ res.aerodynamics.cz_opt }}.
       </p>
 
       <!-- Uzasadnienie dydaktyczno-konstrukcyjne wybranej mechanizacji wg prof. C. Galińskiego -->
@@ -318,6 +328,8 @@
         </div>
       </div>
 
+      </section>{% endif %}
+      {% if 'p5' in selected_sections %}<section data-report-section="p5">
       <h2>5. Osiągi samolotu (P5)</h2>
       <table class="b-table">
         <tr><th>Prędkość przeciągnięcia z klapami do lądowania Vs0</th><td><b>{{ res.performance.speeds.vs_lnd_kmh }} km/h</b></td><th>Prędkość podejścia Vapp (1.3 Vs0)</th><td><b>{{ res.performance.speeds.v_app_kmh }} km/h</b></td></tr>
@@ -332,19 +344,26 @@
         <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Krzywa prędkości wznoszenia wy(V) na poziomie morza</div>
         <canvas id="repChartClimb" style="width:100%; height:200px;"></canvas>
       </div>
+      <h3>Lot szybowy — równowaga dokładna</h3>
+      <p>Na wysokości {{ res.performance.glide.altitude_m }} m ISA, dla MTOW: minimalne opadanie {{ '%.2f'|format(res.performance.glide.minimum_sink.sink_ms) }} m/s; prędkość najlepszej doskonałości {{ '%.1f'|format(res.performance.glide.best_glide.v_kmh) }} km/h TAS.</p>
+      <div id="repGlideChart"></div>
+      <p>{{ res.performance.glide.model }}</p>
+      </section>{% endif %}
     </div>
   </div>
 
+{% endif %}
   <!-- STRONA 5: CZĘŚĆ P6 I PODSUMOWANIE (Obwiednia V-n, Wyważenie, Weryfikacja) -->
   <div class="report-sheet">
     <div class="report-section">
+      {% if 'p6' in selected_sections %}<section data-report-section="p6">
       <h2>6. Obwiednia obciążeń dopuszczalnych i wyważenie (P6)</h2>
       <p>
-        Wykres manewrowo-podmuchowy \(V-n\) został sporządzony według norm zdatności <strong>{{ res.envelope.limits.category.upper() }}</strong> oraz podręcznika <strong>prof. J. Danileckiego <em>Konstruowanie samolotów</em></strong> (rozdz. 1 i 2).
-        Dopuszczalne przeciążenia: \(n_{max} = +{{ res.envelope.limits.n_max }}\), \(n_{min} = {{ res.envelope.limits.n_min }}\).
-        Współczynnik bezpieczeństwa konstrukcji: \(\nu = {{ res.envelope.limits.safety_factor_nu }}\) (obciążenia niszczące: \(n_{ult} = +{{ res.envelope.limits.n_ult_pos }} / {{ res.envelope.limits.n_ult_neg }}\)).
-        Prędkości charakterystyczne: \(V_A = {{ res.envelope.speeds.v_a_kmh }}\) km/h, \(V_C = {{ res.envelope.speeds.v_c_kmh }}\) km/h, \(V_D = {{ res.envelope.speeds.v_d_kmh }}\) km/h.
-        Podmuch obliczeniowy: \(U_C = {{ res.envelope.gust_factors.u_c_ms }}\) m/s, cecha masowa \(\mu_g = {{ res.envelope.gust_factors.mu_g }}\), współczynnik łagodzenia \(K_g = {{ res.envelope.gust_factors.k_g }}\) (\(\Delta n_C = \pm {{ res.envelope.gust_factors.delta_n_c }}\)).
+        Wykres manewrowo-podmuchowy V-n został sporządzony według norm zdatności <strong>{{ res.envelope.limits.category.upper() }}</strong> oraz podręcznika <strong>prof. J. Danileckiego <em>Konstruowanie samolotów</em></strong> (rozdz. 1 i 2).
+        Dopuszczalne przeciążenia: n_{max} = +{{ res.envelope.limits.n_max }}, n_{min} = {{ res.envelope.limits.n_min }}.
+        Współczynnik bezpieczeństwa konstrukcji: ν = {{ res.envelope.limits.safety_factor_nu }} (obciążenia niszczące: nult = +{{ res.envelope.limits.n_ult_pos }} / {{ res.envelope.limits.n_ult_neg }}).
+        Prędkości charakterystyczne: V_A = {{ res.envelope.speeds.v_a_kmh }} km/h, V_C = {{ res.envelope.speeds.v_c_kmh }} km/h, V_D = {{ res.envelope.speeds.v_d_kmh }} km/h.
+        Podmuch obliczeniowy: U_C = {{ res.envelope.gust_factors.u_c_ms }} m/s, cecha masowa μ_g = {{ res.envelope.gust_factors.mu_g }}, współczynnik łagodzenia K_g = {{ res.envelope.gust_factors.k_g }} (Δ n_C = ± {{ res.envelope.gust_factors.delta_n_c }}).
       </p>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
@@ -362,10 +381,11 @@
       <p>
         Położenie punktu neutralnego płatowca wynosi <strong>{{ res.balance.neutral_point.x_n_mac_pct }}% ŚDA</strong>.
         Zakres wędrówki środka masy we wszystkich konfiguracjach załadowania wynosi od <strong>{{ res.balance.cg_range.forward_pct }}%</strong> do <strong>{{ res.balance.cg_range.aft_pct }}% ŚDA</strong>.
-        Zapas stateczności statycznej w najbardziej niekorzystnym tylnym położeniu ŚM wynosi 
-        <strong>\(K_n = {{ res.balance.stability.static_margin_aft_pct }}\)% ŚDA</strong> (warunek \(K_n \ge 5\%\) jest spełniony).
+        Zapas stateczności statycznej w najbardziej niekorzystnym tylnym położeniu ŚM wynosi
+        <strong>K_n = {{ res.balance.stability.static_margin_aft_pct }}% ŚDA</strong> ({% if res.balance.stability.static_margin_aft_pct >= 5 %}warunek K_n ≥ 5% jest spełniony{% else %}warunek K_n ≥ 5% nie jest spełniony{% endif %}).
       </p>
 
+      </section>{% endif %}
       <h2>7. Podsumowanie i zgodność z wymaganiami</h2>
       <table class="b-table">
         <thead>
@@ -383,6 +403,11 @@
         </tbody>
       </table>
 
+      <h2>Zakres modelu i założenia</h2>
+      <p>Raport obejmuje etapy: {{ selected_sections|join(', ')|upper }}. Obliczenia służą do wstępnego projektu dydaktycznego. Biegunowa paraboliczna, atmosfera ISA i stałe sprawności napędu są uproszczeniami. Sylwetka w kokpicie jest schematem poglądowym. Wynik nie stanowi oceny certyfikacyjnej, analizy wytrzymałości ani stateczności dynamicznej. Dokładny model szybowania nie uwzględnia oporu trymowania ani ciągu.</p>
+      {% if params.get('report_notes') %}<section id="author-notes"><h2>Wnioski autora</h2><p style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ params.report_notes }}</p></section>{% endif %}
+      {% if params.get('source_notes') %}<section id="author-sources"><h2>Źródła autora</h2><p style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ params.source_notes }}</p></section>{% endif %}
+      <h3>Materiały i metody</h3><p>BIPOL I: bilans masowy, diagram doboru, geometria, biegunowe i obwiednia; Mechanika Lotu I: metoda mocy i równowaga lotu szybowego. Parametry wymagają uzasadnienia danymi odpowiedniego samolotu oraz weryfikacji z materiałami prowadzącego.</p>
       <div style="margin-top:3rem; display:flex; justify-content:space-between; font-size:0.9rem; color:#475569;">
         <div>
           Data zatwierdzenia: ___________________
@@ -395,8 +420,10 @@
     </div>
   </div>
 
-  <script src="/static/js/didactic_data.js?v=6"></script>
-  <script src="/static/js/charts.js?v=6"></script>
+  <script>{{ report_assets.core|safe }}</script>
+  <script>{{ report_assets.visuals|safe }}</script>
+  <script>{{ report_assets.didactic|safe }}</script>
+  <script>{{ report_assets.charts|safe }}</script>
   <script>
     function applyHydratedData(res, params) {
       if (params.name) {
@@ -432,6 +459,9 @@
       drawVnEnvelope('repChartVn', resData.envelope);
       drawBalanceDiagram('repChartBalance', resData.balance);
       render3ViewBlueprint('repBlueprint', resData.geometry, resData);
+      const glideBox = document.getElementById('repGlideChart');
+      const glide = resData.performance.glide;
+      if (glideBox && glide) glideBox.innerHTML = BipolVisuals.chart({title:'Biegunowa szybowania',xLabel:'V TAS [km/h]',yLabel:'Opadanie [m/s]',series:[{name:'Równowaga dokładna',data:glide.points.filter(p=>p.v_kmh<=glide.best_glide.v_kmh*2.2).map(p=>[p.v_kmh,p.sink_ms])}]});
     });
   </script>
 </body>

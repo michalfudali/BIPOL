@@ -423,7 +423,8 @@ AIRCRAFT_TYPE_ALLOWED = {
     "cs_vla": ["piston_ga"],
     "cs_lsa": ["piston_ga"],
     "cs25_transport": ["jet_transport", "turboprop_regional", "jet_business"],
-    "cs22_motoglider": ["piston_ga"],
+    "cs22_glider": ["glider"],
+    "cs22_motoglider": ["piston_ga", "motoglider"],
     "easa_optout_ul": ["piston_ga"],
     "easa_optout_ul115": ["piston_ga"],
     "easa_uas_specific": ["uav"],
@@ -843,7 +844,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
 
     errors = [c for c in checks if c["severity"] == "error"]
     warnings = [c for c in checks if c["severity"] == "warning"]
-    suggested = cat_key if sub["unmanned"] else suggest_subcategory(m0, n_crew, n_pax, False, engine_type)
+    suggested = cat_key if sub["unmanned"] else suggest_subcategory(m0, n_crew, n_pax, False, engine_type, ac_type)
     n_pos, n_neg, n_ref = limit_load_factors(cat_key, m0)
 
 

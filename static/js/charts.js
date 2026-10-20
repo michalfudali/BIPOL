@@ -28,6 +28,14 @@ function drawMatchingChart(canvasId, sizing) {
   const c = initCanvas(canvasId);
   if (!c) return;
   const { ctx, width, height } = c;
+  if (sizing.engine_type === 'none') {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#526b77'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Szybowiec bez napędu', width / 2, height / 2 - 12);
+    ctx.fillText('Diagram doboru mocy nie ma zastosowania.', width / 2, height / 2 + 12);
+    return;
+  }
+
   
   const pad = { top: 30, right: 30, bottom: 45, left: 60 };
   const plotW = width - pad.left - pad.right;

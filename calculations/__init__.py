@@ -13,6 +13,7 @@ from calculations.bipol_projects import calculate_all_bipol_projects
 from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
 from calculations.validation import validate_parameters
+from calculations.glide import calculate_glide_polar
 
 def run_bipol_project(params: dict):
     """
@@ -64,6 +65,7 @@ def run_bipol_project(params: dict):
     
     # Etap P5: Osiągi samolotu (prędkości, wznoszenie, pułap, start, lądowanie)
     perf_res = calculate_performance(m0, geom_res, aero_res, sizing_res, params)
+    perf_res["glide"] = calculate_glide_polar(m0, geom_res, aero_res, params["cruise_altitude_m"])
     
     # Etap P6: Obwiednia obciążeń dopuszczalnych V-n
     envelope_res = calculate_vn_envelope(m0, geom_res, aero_res, perf_res, params)

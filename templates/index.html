@@ -5,13 +5,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIPOL Studio - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=13">
+  <link rel="stylesheet" href="/static/css/style.css?v=14">
+  <link rel="stylesheet" href="/static/css/studio.css?v=1">
 </head>
 <body>
+  {% include "studio_sidebar.html" %}
 
   <!-- Top Navbar -->
   <header class="bipol-navbar">
     <div class="navbar-inner">
+      <div class="studio-topbar-left"><button type="button" id="studioMenuToggle" aria-label="Otwórz nawigację" aria-expanded="false" aria-controls="studioSidebar"><span data-studio-icon="menu"></span></button><div class="studio-breadcrumb">BIPOL I / Pracownia<b id="studioBreadcrumb">Przegląd projektu</b></div></div>
+      <div class="studio-save-line"><span id="studioStorageStatus">Zapis w przeglądarce</span><span id="studioResultStatus">Oczekiwanie na obliczenia</span></div>
       <div class="brand">
         <div class="brand-logo">✈️</div>
         <div>
@@ -250,7 +254,7 @@
                   🔧 Zaawansowany
                 </button>
               </div>
-              
+
             </div>
 
             <!-- Oficjalna lista tematów wydziałowych (opcjonalnie) -->
@@ -663,6 +667,8 @@
                       <select id="engine_type">
                         <option value="prop">Śmigłowy (Tłokowy / Turboprop)</option>
                         <option value="jet">Odrzutowy (Turbofan / Turbojet)</option>
+
+                        <option value="none">Bez napędu (szybowiec)</option>
                       </select>
                       <div class="param-didactic-hint" id="hint_engine_type"></div>
                     </div>
@@ -724,7 +730,12 @@
         <div id="holisticWorkspace">
           <!-- Navigation Tabs (Moduły BIPOL I & ZPK CAD1 MEiL PW) -->
           <div class="bipol-tabs">
-          <button class="bipol-tab active" data-target="tab-cad">📐 CAD A3Z</button>
+          <button class="bipol-tab active" data-target="tab-overview">Przegląd</button>
+          <button class="bipol-tab" data-target="tab-variants">Warianty</button>
+          <button class="bipol-tab" data-target="tab-reports">Raporty</button>
+          <button class="bipol-tab" data-target="tab-glide">Lot szybowy</button>
+          <button class="bipol-tab" data-target="tab-methods">Metody</button>
+          <button class="bipol-tab" data-target="tab-cad">📐 CAD A3Z</button>
           <button class="bipol-tab" data-target="tab-p1-p2">📦 P1/P2: MTOW & Matching</button>
           <button class="bipol-tab" data-target="tab-p3">📐 P3: Wymiarowanie & Schrenk</button>
           <button class="bipol-tab" data-target="tab-p4">🦅 P4: Biegunowe & Mechanizacja</button>
@@ -736,8 +747,10 @@
           <button class="bipol-tab" data-target="tab-bipol-guide">📋 Regulamin P1–P6</button>
         </div>
 
+        {% include "studio_panels.html" %}
+
         <!-- MODUŁ CAD: RYSUNEK ZESTAWIENIOWY WG POLSKICH NORM CAD (ZPK MEiL PW / PN-EN ISO) -->
-        <div id="tab-cad" class="tab-content active">
+        <div id="tab-cad" class="tab-content">
 
           <!-- Karta Główna: Arkusz A3Z z Rysunkiem 3-Rzutowym -->
           <div class="b-card">
@@ -1531,7 +1544,7 @@
               <h3>📚 Oficjalne Wytyczne Projektów P1–P6 (dr inż. Marcin Figat)</h3>
             </div>
             <div class="b-card-body" style="font-size:0.88rem; line-height:1.6;">
-              
+
               <div style="margin-bottom:1.25rem;">
                 <h4 style="color:#005691; margin:0 0 0.25rem 0;">Projekt Nr 1: Projekt Koncepcyjny (5 pkt.)</h4>
                 <p>Wybór konfiguracji samolotu, rysunek koncepcyjny układu płatowca, analiza trendów z literatury (np. Jane's All the World's Aircraft) oraz stabelaryzowane wstępne założenia geometryczno-masowo-osiągowe.</p>
@@ -2440,7 +2453,7 @@
             <button type="button" class="btn btn-outline btn-sm" id="starterExistingProjectBtn" style="font-weight:700;">
               📂 Menedżer Zapisanych Projektów
             </button>
-            
+
           </div>
         </div>
       </div>
@@ -2486,7 +2499,7 @@
   <!-- WIZARD / KONFIGURATOR KROK PO KROKU (BIPOL I) -->
   <div id="projectWizardBackdrop" class="wizard-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="wizard-modal">
-      
+
       <!-- Wizard Header -->
       <div class="wizard-header">
         <div>
@@ -2706,7 +2719,9 @@
               <select id="wiz_engine_type">
                 <option value="prop">Śmigłowy (Tłokowy / Turboprop)</option>
                 <option value="jet">Odrzutowy (Turbofan / Turbojet)</option>
-              </select>
+
+                <option value="none">Bez napędu (szybowiec)</option>
+                      </select>
             </div>
             <div class="input-group">
               <label for="wiz_engine_location">Lokalizacja silnika na płatowcu:</label>
@@ -2866,8 +2881,11 @@
   <script>
     window.INITIAL_PORTAL_MODE = "{{ initial_portal_mode or '' }}";
   </script>
+  <script src="/static/js/studio-core.js?v=1"></script>
+  <script src="/static/js/studio-visuals.js?v=1"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=12"></script>
-  <script src="/static/js/app.js?v=12"></script>
+  <script src="/static/js/app.js?v=14"></script>
+  <script src="/static/js/studio.js?v=1"></script>
 </body>
 </html>

@@ -223,6 +223,11 @@ def calculate_mass_sizing(params: dict):
         }
     }
     shares = dict(breakdown_shares.get(ac_type, breakdown_shares["piston_ga"]))
+    if ac_type == "glider" or engine_type == "none":
+        # Brak zespołu napędowego; zachowaj względne proporcje pozostałych
+        # grup zamiast przypisywać szybowcowi fikcyjną masę silnika.
+        remaining = 1.0 - shares["propulsion"]
+        shares = {key: (0.0 if key == "propulsion" else value / remaining) for key, value in shares.items()}
     if wing_config == "braced_high":
         # Redukcja udziału masy skrzydła na rzecz kadłuba/okuć w górnopłacie zastrzałowym
         shares["wing"] = round(shares["wing"] * 0.89, 3)

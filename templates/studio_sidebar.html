@@ -1,0 +1,26 @@
+<aside id="studioSidebar" class="studio-sidebar" aria-label="Nawigacja pracowni">
+  <a href="#" class="studio-brand" data-studio-home><span data-studio-icon="plane"></span><span>BIPOL <b>STUDIO</b></span></a>
+  <p class="studio-sidebar-caption">PRACOWNIA PROJEKTOWA</p>
+  <nav aria-label="Etapy i narzędzia projektu">
+    {% for target, icon, label, number in [
+      ('tab-overview','grid','Przegląd projektu',''),
+      ('tab-p1-p2','target','Koncepcja i wykonalność','01–02'),
+      ('tab-p3','wing','Geometria samolotu','03'),
+      ('tab-p4','chart','Aerodynamika','04'),
+      ('tab-p5','clock','Osiągi samolotu','05'),
+      ('tab-glide','glider','Lot szybowy',''),
+      ('tab-p6','shield','Obwiednia i wyważenie','06'),
+      ('tab-cad','layers','Rysunek CAD',''),
+      ('tab-compliance','check','Weryfikacja założeń',''),
+      ('tab-variants','compare','Porównaj warianty',''),
+      ('tab-reports','file','Raporty i eksport',''),
+      ('tab-methods','book','Metody i źródła',''),
+      ('tab-faculty-docs','download','Materiały dydaktyczne',''),
+      ('tab-didactic-compendium','info','Kompendium',''),
+      ('tab-bipol-guide','book','Regulamin P1–P6','')
+    ] %}<button type="button" class="studio-nav-item{% if target == 'tab-overview' %} active{% endif %}" data-studio-nav="{{ target }}"><span data-studio-icon="{{ icon }}"></span><span>{{ label }}</span><small>{{ number }}</small></button>{% endfor %}
+  </nav>
+  <div class="studio-sidebar-foot"><strong>PW / MEiL</strong><p>Budowa i projektowanie<br>obiektów latających I</p><small>PRACOWNIA / MODEL DYDAKTYCZNY</small></div>
+</aside>
+<button type="button" id="studioNavBackdrop" class="studio-nav-backdrop" aria-label="Zamknij nawigację"></button>
+<div id="studioMessage" class="studio-toast" role="status" aria-live="polite" hidden></div>

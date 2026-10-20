@@ -36,6 +36,9 @@ def validate_parameters(data):
     if not isinstance(data, dict):
         raise ValueError("Parametry projektu muszą być obiektem JSON.")
     p = {**DEFAULTS, **data}
+    for key in ('report_notes', 'source_notes'):
+        if key in p and (not isinstance(p[key], str) or len(p[key]) > 15000):
+            raise ValueError(f'Pole {key}: wymagany tekst do 15000 znaków.')
     if data.get("aircraft_type") == "uav" and "m_cargo" not in data:
         p["m_cargo"] = 80
     if data.get("aircraft_type") == "glider":

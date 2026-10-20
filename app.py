@@ -5,6 +5,7 @@ Zakład Samolotów i Śmigłowców (ZSiS)
 """
 import os
 import json
+from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
 from calculations import run_bipol_project, AIRCRAFT_PRESETS
@@ -114,6 +115,11 @@ def calculate():
 
 @app.route('/report', methods=['GET', 'POST'])
 def report():
+    allowed_sections = ('p1', 'p2', 'p3', 'p4', 'p5', 'p6')
+    requested = request.args.get('sections')
+    selected_sections = list(allowed_sections) if requested is None else list(dict.fromkeys(requested.split(',')))
+    if not selected_sections or any(section not in allowed_sections for section in selected_sections):
+        raise ValueError('Wybierz poprawny zakres raportu: P1–P6.')
     params = report_parameters()
     results = run_bipol_project(params)
     params = results["params"]
@@ -133,7 +139,15 @@ def report():
         group_no=group_no,
         supervisor=supervisor,
         submission_date=submission_date,
-        academic_year=academic_year
+        academic_year=academic_year,
+        selected_sections=selected_sections,
+        report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8').replace('</script', '<\\/script') for name, path in {
+            'css': 'static/css/style.css',
+            'core': 'static/js/studio-core.js',
+            'visuals': 'static/js/studio-visuals.js',
+            'didactic': 'static/js/didactic_data.js',
+            'charts': 'static/js/charts.js',
+        }.items()},
     )
 
 @app.route('/holistic')

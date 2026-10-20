@@ -170,7 +170,9 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
     # Destabilizujący wpływ kadłuba oraz gondoli/śmigła wg wzoru Munka-Multhoppa: Delta x_ac_fus + Delta x_ac_nac
     engine_type = params.get("engine_type", "prop")
     delta_xac_fus = min(0.11, max(0.055, (0.35 * (d_f ** 2) * l_f) / (S * mac * a_w)))
-    if engine_type == "jet":
+    if engine_type == "none":
+        delta_xac_prop = 0.0
+    elif engine_type == "jet":
         delta_xac_prop = 0.015 if engine_loc == "wing" else 0.008
     else:
         delta_xac_prop = 0.030 if engine_loc in ["nose", "wing"] else 0.010
