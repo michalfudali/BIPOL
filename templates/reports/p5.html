@@ -1,0 +1,21 @@
+{% set perf=res.performance %}{% set glide=perf.glide %}
+<p>Osiągi obliczono dla masy startowej {{ res.mass.m0|reportnum(1) }} kg, w atmosferze ISA. Wykorzystano geometrię oraz biegunową uzyskane w poprzednich etapach [2, 4]. Prędkości lotu ślizgowego podano jako TAS.</p>
+<h3>Prędkości charakterystyczne</h3>
+<div class="equation"><div class="formula">\[V_S=\sqrt{\frac{2m_0g}{\rho SC_{z,max}}},\qquad V_{app}=1{,}3V_{S0}.\]</div></div>
+<table><caption>Prędkości charakterystyczne na poziomie morza</caption><thead><tr><th>Wielkość</th><th class="number">Prędkość [km/h]</th></tr></thead><tbody>{% for label,value in [('Przeciągnięcie — konfiguracja gładka',perf.speeds.vs_clean_kmh),('Przeciągnięcie — konfiguracja do lądowania',perf.speeds.vs_lnd_kmh),('Podejście do lądowania',perf.speeds.v_app_kmh)] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(1) }}</td></tr>{% endfor %}{% if doc.powered %}<tr><td>Prędkość maksymalna</td><td class="number">{{ perf.speeds.v_max_sl_kmh|reportnum(1) }}</td></tr>{% endif %}</tbody></table>
+{% if doc.powered %}
+<h3>Wznoszenie i pułap</h3>
+<p>Wznoszenie wyznaczono z nadmiaru mocy użytecznej nad mocą niezbędną. Na poziomie morza maksymalna prędkość wznoszenia wynosi {{ perf.climb.wy_max_ms|reportnum(2) }} m/s, przy prędkości {{ perf.climb.v_wy_max_kmh|reportnum(1) }} km/h.</p>
+<div class="equation"><div class="formula">\[w_y=\frac{P_{rozp}-P_{niezb}}{m_0g}.\]</div></div>
+<figure><div id="repClimb"></div><figcaption>Prędkość wznoszenia w funkcji prędkości lotu na poziomie morza.</figcaption></figure>
+<table><caption>Zmiana osiągów wraz z wysokością</caption><thead><tr><th class="number">H [m]</th><th class="number">wy,max [m/s]</th><th class="number">Vmin [km/h]</th><th class="number">Vmax [km/h]</th><th class="number">Czas wzn. [min]</th></tr></thead><tbody>{% for row in p_data.offer_chart %}<tr><td class="number">{{ row.h_m|reportnum(0) }}</td><td class="number">{{ row.wy_max_ms|reportnum(2) }}</td><td class="number">{{ row.v_min_kmh|reportnum(1) }}</td><td class="number">{{ row.v_max_kmh|reportnum(1) }}</td><td class="number">{{ row.time_to_climb_min|reportnum(1) if row.wy_max_ms > 0 else '—' }}</td></tr>{% endfor %}</tbody></table>
+<p>Pułap praktyczny, określony warunkiem \(w_y=0{,}5\) m/s, wynosi {{ perf.ceiling.service_ceiling_m|reportnum(0) }} m. Wynik ograniczają przyjęta charakterystyka napędu i zakres wysokości modelu.</p>
+<h3>Start, lądowanie i zasięg</h3>
+<table><caption>Obliczeniowe długości startu i lądowania</caption><thead><tr><th>Wielkość</th><th class="number">Droga [m]</th></tr></thead><tbody>{% for label,value in [('Rozbieg',perf.takeoff.ground_roll_m),('Start nad przeszkodę 15 m',perf.takeoff.distance_to_15m),('Dobieg',perf.landing.ground_roll_m),('Lądowanie znad przeszkody 15 m',perf.landing.distance_from_15m)] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>
+<table><caption>Porównanie modeli zasięgu i długotrwałości</caption><thead><tr><th>Założenia metody</th><th class="number">Zasięg [km]</th><th class="number">Czas [h]</th></tr></thead><tbody>{% for row in p_data.range_endurance_comparison %}<tr><td>{{ row.method }}</td><td class="number">{{ row.range_km|reportnum(1) }}</td><td class="number">{{ row.endurance_h|reportnum(2) }}</td></tr>{% endfor %}</tbody></table>
+{% endif %}
+<h3>Lot ślizgowy</h3>
+<p>Przy wysokości {{ glide.altitude_m|reportnum(0) }} m najlepszą doskonałość uzyskano przy {{ glide.best_glide.v_kmh|reportnum(1) }} km/h TAS. Minimalne opadanie wynosi {{ glide.minimum_sink.sink_ms|reportnum(2) }} m/s. Wyznaczono je z równowagi sił wzdłuż i prostopadle do toru lotu, bez założenia małego kąta ślizgu.</p>
+<div class="equation"><div class="formula">\[L=mg\cos\gamma,\qquad D=mg\sin\gamma,\qquad w=V\sin\gamma.\]</div></div>
+<figure><div id="repGlideChart"></div><figcaption>Biegunowa opadania dla masy startowej, na wysokości {{ glide.altitude_m|reportnum(0) }} m ISA.</figcaption></figure>
+{% if doc.powered %}<h3>Zakręt ustalony</h3><p>{{ perf.turn.note }}{% if perf.turn.level_sustained %} Dla prędkości {{ perf.turn.v_turn_kmh|reportnum(1) }} km/h uzyskano przeciążenie {{ perf.turn.n_sustained|reportnum(2) }}, przechylenie {{ perf.turn.bank_angle_deg|reportnum(1) }}° i promień {{ perf.turn.r_min_m|reportnum(1) }} m.{% endif %}</p>{% endif %}

@@ -1872,11 +1872,11 @@ function loadProjectIntoForm(project) {
 
   const reportBtn = document.getElementById('openReportBtn');
   if (reportBtn) {
-    const sName = params.student_name || document.getElementById('student_name')?.value || 'Jan Kowalski';
-    const aNo = params.album_no || document.getElementById('album_no')?.value || 'Nr Albumu';
-    const gNo = params.group_no || document.getElementById('group_no')?.value || 'A – czwartek 8:15-9:00';
-    const sup = params.supervisor || document.getElementById('supervisor')?.value || 'M.Figat';
-    const subDate = params.submission_date || document.getElementById('submission_date')?.value || '14.12.2026';
+    const sName = params.student_name || document.getElementById('student_name')?.value || '';
+    const aNo = params.album_no || document.getElementById('album_no')?.value || '';
+    const gNo = params.group_no || document.getElementById('group_no')?.value || '';
+    const sup = params.supervisor || document.getElementById('supervisor')?.value || '';
+    const subDate = params.submission_date || document.getElementById('submission_date')?.value || '';
     const paramsJson = encodeURIComponent(JSON.stringify(params));
     reportBtn.href = `/report?params_json=${paramsJson}&student=${encodeURIComponent(sName)}&album=${encodeURIComponent(aNo)}&group=${encodeURIComponent(gNo)}&supervisor=${encodeURIComponent(sup)}&date=${encodeURIComponent(subDate)}`;
   }
@@ -3958,12 +3958,12 @@ function toggleMassTable31() {
 }
 
 function syncStudentDesignerFields(source) {
-  let s = 'Jan Kowalski';
-  let a = 'Nr Albumu';
-  let g = 'A – czwartek 8:15-9:00';
-  let p = 'M.Figat';
-  let d = '14.12.2026';
-  let y = '2026/27';
+  let s = '';
+  let a = '';
+  let g = '';
+  let p = '';
+  let d = '';
+  let y = '';
 
   if (source === 'workstation') {
     s = document.getElementById('ws_student_name')?.value ?? s;
@@ -4079,12 +4079,12 @@ function openIndividualProjectReport(pId) {
   } catch (e) {}
   const q = new URLSearchParams({
     preset: presetKey,
-    student: currentParams.student_name || 'Jan Kowalski',
-    album: currentParams.album_no || 'Nr Albumu',
-    group: currentParams.group_no || 'A – czwartek 8:15-9:00',
-    supervisor: currentParams.supervisor || 'M.Figat',
-    date: currentParams.submission_date || '14.12.2026',
-    academic_year: currentParams.academic_year || '2026/27',
+    student: currentParams.student_name || '',
+    album: currentParams.album_no || '',
+    group: currentParams.group_no || '',
+    supervisor: currentParams.supervisor || '',
+    date: currentParams.submission_date || '',
+    academic_year: currentParams.academic_year || '',
     params_json: JSON.stringify(currentParams)
   });
   const url = `/report/project/${encodeURIComponent(pId)}?${q.toString()}`;

@@ -13,7 +13,8 @@ def test_math_assets_embed_every_font_face():
 
 def test_report_templates_do_not_contain_corrupted_tex_escape_characters():
     root = Path(__file__).resolve().parents[1] / 'templates'
-    for name in ('project_report.html', 'trend_report.html', 'report.html'):
+    for name in ['project_report.html', 'trend_report.html', 'report.html',
+                 *[str(p.relative_to(root)) for p in (root / 'reports').glob('*.html')]]:
         text = (root / name).read_text()
         assert not any(ord(c) < 32 and c not in '\n\t' for c in text), name
         assert '\night' not in text

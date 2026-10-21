@@ -65,31 +65,31 @@
                   <div class="input-row">
                     <div class="input-group">
                       <label for="student_name"><span class="label-text">Imię i Nazwisko projektanta</span></label>
-                      <input type="text" id="student_name" value="Jan Kowalski" placeholder="np. Jan Kowalski" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="student_name" value="{{ designer_defaults.student_name }}" placeholder="np. Jan Kowalski" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                     <div class="input-group">
                       <label for="album_no"><span class="label-text">Nr Albumu</span></label>
-                      <input type="text" id="album_no" value="Nr Albumu" placeholder="np. 312456" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="album_no" value="{{ designer_defaults.album_no }}" placeholder="np. 312456" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                   </div>
                   <div class="input-row">
                     <div class="input-group">
                       <label for="group_no"><span class="label-text">Grupa (wg Rys. 2)</span></label>
-                      <input type="text" id="group_no" value="A – czwartek 8:15-9:00" placeholder="A – czwartek 8:15-9:00" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="group_no" value="{{ designer_defaults.group_no }}" placeholder="A – czwartek 8:15-9:00" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                     <div class="input-group">
                       <label for="supervisor"><span class="label-text">Prowadzący (wg Rys. 2)</span></label>
-                      <input type="text" id="supervisor" value="M.Figat" placeholder="np. M.Figat" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="supervisor" value="{{ designer_defaults.supervisor }}" placeholder="np. M.Figat" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                   </div>
                   <div class="input-row">
                     <div class="input-group">
                       <label for="submission_date"><span class="label-text">Data oddania projektu</span></label>
-                      <input type="text" id="submission_date" value="14.12.2026" placeholder="np. 14.12.2026" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="submission_date" value="{{ designer_defaults.submission_date }}" placeholder="np. 14.12.2026" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                     <div class="input-group">
                       <label for="academic_year"><span class="label-text">Rok akademicki (Rys. 1)</span></label>
-                      <input type="text" id="academic_year" value="2026/27" placeholder="np. 2026/27" oninput="syncStudentDesignerFields('sidebar')">
+                      <input type="text" id="academic_year" value="{{ designer_defaults.academic_year }}" placeholder="np. 2026/27" oninput="syncStudentDesignerFields('sidebar')">
                     </div>
                   </div>
                 </div>

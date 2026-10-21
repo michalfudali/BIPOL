@@ -1025,27 +1025,27 @@
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:0.65rem;">
                 <div class="input-group" style="margin:0;">
                   <label for="ws_student_name" style="font-weight:700; color:#0f172a;">Imię i Nazwisko projektanta:</label>
-                  <input type="text" id="ws_student_name" value="Jan Kowalski" placeholder="np. Jan Kowalski" oninput="syncStudentDesignerFields('workstation')" style="font-weight:700; border-color:#0284c7;">
+                  <input type="text" id="ws_student_name" value="{{ designer_defaults.student_name }}" placeholder="np. Jan Kowalski" oninput="syncStudentDesignerFields('workstation')" style="font-weight:700; border-color:#0284c7;">
                 </div>
                 <div class="input-group" style="margin:0;">
                   <label for="ws_album_no" style="font-weight:700; color:#0f172a;">Nr Albumu:</label>
-                  <input type="text" id="ws_album_no" value="Nr Albumu" placeholder="np. 312456" oninput="syncStudentDesignerFields('workstation')" style="font-weight:700; border-color:#0284c7;">
+                  <input type="text" id="ws_album_no" value="{{ designer_defaults.album_no }}" placeholder="np. 312456" oninput="syncStudentDesignerFields('workstation')" style="font-weight:700; border-color:#0284c7;">
                 </div>
                 <div class="input-group" style="margin:0;">
                   <label for="ws_group_no" style="font-weight:700; color:#0f172a;">Grupa (np. A – czwartek 8:15-9:00):</label>
-                  <input type="text" id="ws_group_no" value="A – czwartek 8:15-9:00" oninput="syncStudentDesignerFields('workstation')">
+                  <input type="text" id="ws_group_no" value="{{ designer_defaults.group_no }}" oninput="syncStudentDesignerFields('workstation')">
                 </div>
                 <div class="input-group" style="margin:0;">
                   <label for="ws_supervisor" style="font-weight:700; color:#0f172a;">Prowadzący (np. M.Figat):</label>
-                  <input type="text" id="ws_supervisor" value="M.Figat" oninput="syncStudentDesignerFields('workstation')">
+                  <input type="text" id="ws_supervisor" value="{{ designer_defaults.supervisor }}" oninput="syncStudentDesignerFields('workstation')">
                 </div>
                 <div class="input-group" style="margin:0;">
                   <label for="ws_submission_date" style="font-weight:700; color:#0f172a;">Data oddania projektu:</label>
-                  <input type="text" id="ws_submission_date" value="14.12.2026" oninput="syncStudentDesignerFields('workstation')">
+                  <input type="text" id="ws_submission_date" value="{{ designer_defaults.submission_date }}" oninput="syncStudentDesignerFields('workstation')">
                 </div>
                 <div class="input-group" style="margin:0;">
                   <label for="ws_academic_year" style="font-weight:700; color:#0f172a;">Rok akademicki (na teczkę):</label>
-                  <input type="text" id="ws_academic_year" value="2026/27" oninput="syncStudentDesignerFields('workstation')">
+                  <input type="text" id="ws_academic_year" value="{{ designer_defaults.academic_year }}" oninput="syncStudentDesignerFields('workstation')">
                 </div>
               </div>
 
@@ -1055,17 +1055,17 @@
                 <div>
                   <div style="border:1px solid #000000; background:#ffffff; color:#000000; font-family:Calibri, 'Segoe UI', Arial, sans-serif; padding:12px 14px; min-height:360px; position:relative; box-sizing:border-box;">
                     <div style="text-align:right; font-size:0.95rem; line-height:1.35;">
-                      <div id="prev_r2_student">Jan Kowalski</div>
-                      <div id="prev_r2_album">Nr Albumu</div>
-                      <div>Grupa; <span id="prev_r2_group">A – czwartek 8:15-9:00</span></div>
-                      <div>Prowadzący: <span id="prev_r2_supervisor">M.Figat</span></div>
+                      <div id="prev_r2_student"></div>
+                      <div id="prev_r2_album"></div>
+                      <div>Grupa; <span id="prev_r2_group"></span></div>
+                      <div>Prowadzący: <span id="prev_r2_supervisor"></span></div>
                     </div>
                     <div style="margin-top:68px; text-align:center; font-size:1.45rem; line-height:1.35; font-weight:400;">
                       <div id="prev_r2_line1">Projekt 1</div>
                       <div id="prev_r2_line2">Projekt Koncepcyjny</div>
                     </div>
                     <div style="position:absolute; bottom:46px; left:14px; font-size:0.95rem;">
-                      Data oddania projektu: <span id="prev_r2_date">14.12.2026</span>
+                      Data oddania projektu: <span id="prev_r2_date"></span>
                     </div>
                     <div style="position:absolute; bottom:12px; right:14px; font-size:0.95rem;">
                       Ocena:……………….
@@ -1078,8 +1078,8 @@
                 <div>
                   <div style="border:1px solid #000000; background:#ffffff; color:#000000; font-family:Calibri, 'Segoe UI', Arial, sans-serif; padding:12px 14px; min-height:360px; position:relative; box-sizing:border-box;">
                     <div style="text-align:right; font-size:0.95rem; line-height:1.35;">
-                      <div id="prev_r1_student">Jan Kowalski</div>
-                      <div id="prev_r1_album">Nr Albumu</div>
+                      <div id="prev_r1_student"></div>
+                      <div id="prev_r1_album"></div>
                       <div id="prev_r1_project">Nazwa Projektu</div>
                     </div>
                     <div style="margin-top:36px; text-align:center; font-size:0.95rem; font-weight:700; line-height:1.35;">
@@ -1981,21 +1981,21 @@
             <div class="input-row">
               <div class="input-group">
                 <label for="wiz_student_name">Imię i Nazwisko projektanta:</label>
-                <input type="text" id="wiz_student_name" value="Jan Kowalski" oninput="syncStudentDesignerFields('wizard')" style="font-weight:700;">
+                <input type="text" id="wiz_student_name" value="{{ designer_defaults.student_name }}" oninput="syncStudentDesignerFields('wizard')" style="font-weight:700;">
               </div>
               <div class="input-group">
                 <label for="wiz_album_no">Nr Albumu:</label>
-                <input type="text" id="wiz_album_no" value="Nr Albumu" oninput="syncStudentDesignerFields('wizard')" style="font-weight:700;">
+                <input type="text" id="wiz_album_no" value="{{ designer_defaults.album_no }}" oninput="syncStudentDesignerFields('wizard')" style="font-weight:700;">
               </div>
             </div>
             <div class="input-row" style="margin-top:0.35rem;">
               <div class="input-group">
                 <label for="wiz_group_no">Grupa (np. A – czwartek 8:15-9:00):</label>
-                <input type="text" id="wiz_group_no" value="A – czwartek 8:15-9:00" oninput="syncStudentDesignerFields('wizard')">
+                <input type="text" id="wiz_group_no" value="{{ designer_defaults.group_no }}" oninput="syncStudentDesignerFields('wizard')">
               </div>
               <div class="input-group">
                 <label for="wiz_supervisor">Prowadzący (np. M.Figat):</label>
-                <input type="text" id="wiz_supervisor" value="M.Figat" oninput="syncStudentDesignerFields('wizard')">
+                <input type="text" id="wiz_supervisor" value="{{ designer_defaults.supervisor }}" oninput="syncStudentDesignerFields('wizard')">
               </div>
             </div>
           </div>

@@ -1,0 +1,15 @@
+<p>Celem tej części projektu jest określenie konfiguracji płatowca i parametrów wyjściowych do wymiarowania. Podstawę stanowią wymagania misji, zestawienie podobnych konstrukcji oraz oszacowanie własności aerodynamicznych [1, 2].</p>
+<h3>Koncepcja i wymagania misji</h3>
+<p>{{ doc.concept }}</p>
+<table><caption>Założenia wyjściowe projektu</caption><thead><tr><th>Parametr</th><th class="number">Wartość</th><th>Jednostka</th></tr></thead><tbody>
+{% for label,value,unit in [('Zasięg obliczeniowy',params.range_km,'km'),('Prędkość przelotowa',params.cruise_speed_kmh,'km/h'),('Wysokość przelotowa',params.cruise_altitude_m,'m'),('Maksymalna prędkość przeciągnięcia',params.v_stall_kmh,'km/h')] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(1) }}</td><td>{{ unit }}</td></tr>{% endfor %}
+{% if doc.powered %}<tr><td>Maksymalna droga rozbiegu</td><td class="number">{{ params.takeoff_run_m|reportnum(1) }}</td><td>m</td></tr><tr><td>Minimalna prędkość wznoszenia</td><td class="number">{{ params.climb_rate_ms|reportnum(2) }}</td><td>m/s</td></tr>{% endif %}
+<tr><td>Obrys skrzydła</td><td colspan="2">{{ res.geometry.wing.planform_name_pl }}</td></tr>
+<tr><td>Załoga / pasażerowie</td><td class="number">{{ res.mass.n_crew }} / {{ res.mass.n_pax }}</td><td>os.</td></tr>
+</tbody></table>
+<figure>{{ report_sketch(res, 'top') }}<figcaption>Schemat konfiguracji i podstawowych proporcji płatowca. Wymiary w milimetrach.</figcaption></figure>
+<h3>Wstępna ocena aerodynamiczna</h3>
+<p>Powierzchnię omywaną oszacowano z geometrii głównych zespołów. Otrzymano \(S_{wet} = {{ p_data.s_wet_m2|texnum(2) }}\) m² oraz \(S_{wet}/S = {{ p_data.swet_over_s|texnum(2) }}\). Doskonałość obliczono z tej samej biegunowej, która służy do wyznaczania osiągów:</p>
+<div class="equation"><div class="formula">\[C_x=C_{x0}+kC_z^2,\qquad K_{\max}=\frac{1}{2\sqrt{C_{x0}k}}={{ res.aerodynamics.k_max|texnum(1) }}.\]</div></div>
+<p>Przyjęto \(C_{x0}={{ res.aerodynamics.cx0_clean|texnum(4) }}\) i \(k={{ res.aerodynamics.k_clean|texnum(5) }}\). Współczynnik indukowany uwzględnia efektywne wydłużenie i kształt obrysu skrzydła. {% if doc.powered %}Dla prędkości przelotowej oszacowanie daje {% if params.engine_type == 'jet' %}ciąg niezbędny {{ p_data.t_req_est_kn|reportnum(2) }} kN{% else %}moc niezbędną {{ p_data.p_req_est_kw|reportnum(1) }} kW{% endif %}.{% endif %}</p>
+{% include 'trend_report.html' %}

@@ -1,0 +1,29 @@
+<script>
+(() => {
+  const res = {{ res|tojson }};
+  const chart = (id, options) => {
+    const box = document.getElementById(id);
+    if (box) box.innerHTML = BipolVisuals.chart(options);
+  };
+  const s=res.sizing, a=res.aerodynamics, e=res.envelope, g=res.geometry;
+  const dp=s.design_point, jet=s.engine_type==='jet';
+  chart('repMatching', {title:'Diagram doboru', xLabel:'W/S [N/m²]', yLabel:jet?'T/W [—]':'P/W [W/N]',
+    series:[['Start',s.curve_takeoff],['Wznoszenie',s.curve_climb],['Przelot',s.curve_cruise]].map(([name,ys],i)=>({name,dash:i===1,data:s.ws_values.map((x,j)=>[x,ys[j]])})),
+    vertical:[{x:s.ws_stall_max,label:'Granica VS0'}],points:[{x:dp.ws,y:jet?dp.tw:dp.pw,label:'Projekt'}]});
+  chart('repPolar',{title:'Biegunowe aerodynamiczne',xLabel:'Cx [—]',yLabel:'Cz [—]',
+    series:[['Gładka','cx_clean'],['Startowa','cx_to'],['Do lądowania','cx_lnd']].map(([name,key],i)=>({name,dash:i===1,data:a.polar_points.map(p=>[p[key],p.cz])}))});
+  chart('repSchrenk',{title:'Rozkład Schrenka',xLabel:'y [m]',yLabel:'Cięciwa zastępcza [m]',
+    series:[['Geometryczny','c_geom'],['Eliptyczny','c_ellip'],['Schrenka','c_schrenk']].map(([name,key],i)=>({name,dash:i===1,data:g.schrenk.map(p=>[p.y,p[key]])}))});
+  chart('repClimb',{title:'Prędkość wznoszenia',xLabel:'V [km/h]',yLabel:'wy [m/s]',
+    series:[{name:'Poziom morza, ISA',data:res.performance.climb.climb_curve.map(p=>[p.v_kmh,p.wy_ms])}]});
+  const glide=res.performance.glide;
+  chart('repGlideChart',{title:'Biegunowa opadania',xLabel:'V TAS [km/h]',yLabel:'Opadanie [m/s]',
+    series:[{name:'Równowaga sił',data:glide.points.filter(p=>p.v_kmh<=glide.best_glide.v_kmh*2.2).map(p=>[p.v_kmh,p.sink_ms])}],
+    points:[{x:glide.minimum_sink.v_kmh,y:glide.minimum_sink.sink_ms,label:'Min. opadanie'}]});
+  chart('repVn',{title:'Obwiednia obciążeń V–n',xLabel:'V [km/h]',yLabel:'n [—]',
+    series:[{name:'Manewrowa',data:e.maneuver_polygon.map(p=>[p.v_kmh,p.n])},
+      {name:'Podmuch dodatni',dash:true,data:e.gust_pos.map(p=>[p.v_kmh,p.n])},
+      {name:'Podmuch ujemny',dash:true,data:e.gust_neg.map(p=>[p.v_kmh,p.n])},
+      {name:'Klapy',data:res.bipol_projects.p6.flap_envelope_loop.map(p=>[p.v_kmh,p.n])}]});
+})();
+</script>

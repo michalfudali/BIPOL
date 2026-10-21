@@ -14,12 +14,23 @@ from calculations.polish_law import catalog_for_frontend
 from calculations.trends import reference_catalog, SOURCES, DATA
 from calculations.trend_report import trend_chart
 from calculations.report_assets import math_assets
+from calculations.report_document import report_document, report_number, report_metadata, tex_number
+from calculations.report_sketch import report_sketch
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 app.jinja_env.globals['trend_chart'] = trend_chart
 app.jinja_env.globals['math_assets'] = math_assets
+app.jinja_env.filters['reportnum'] = report_number
+app.jinja_env.filters['texnum'] = tex_number
 app.jinja_env.filters['trendnum'] = lambda v, digits=3: f'{v:.{digits}f}' if isinstance(v, (int, float)) else '—'
+app.jinja_env.globals['report_metadata'] = report_metadata
+app.jinja_env.globals['report_sketch'] = report_sketch
+
+
+@app.context_processor
+def designer_defaults():
+    return {'designer_defaults': {f['key']: f['value'] for f in report_metadata({})}}
 
 
 def report_parameters():
@@ -153,33 +164,20 @@ def report():
         raise ValueError('Wybierz poprawny zakres raportu: P1–P6.')
     params = report_parameters()
     results = run_bipol_project(params)
-    params = results["params"]
-    
-    student_name = request.args.get('student') or params.get('student_name') or 'Jan Kowalski'
-    album_no = request.args.get('album') or params.get('album_no') or 'Nr Albumu'
-    group_no = request.args.get('group') or params.get('group_no') or 'A – czwartek 8:15-9:00'
-    supervisor = request.args.get('supervisor') or params.get('supervisor') or 'M.Figat'
-    submission_date = request.args.get('date') or params.get('submission_date') or '14.12.2026'
-    academic_year = request.args.get('academic_year') or params.get('academic_year') or '2026/27'
-    return render_template(
-        'report.html',
-        res=results,
-        params=params,
-        student_name=student_name,
-        album_no=album_no,
-        group_no=group_no,
-        supervisor=supervisor,
-        submission_date=submission_date,
-        academic_year=academic_year,
-        selected_sections=selected_sections,
-        report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8').replace('</script', '<\\/script') for name, path in {
-            'css': 'static/css/style.css',
-            'core': 'static/js/studio-core.js',
-            'visuals': 'static/js/studio-visuals.js',
-            'didactic': 'static/js/didactic_data.js',
-            'charts': 'static/js/charts.js',
-        }.items()},
-    )
+    return render_template('report.html', **document_context(results, selected_sections))
+
+
+def document_context(results, sections, folder_cover=False):
+    assets = {
+        'css': 'static/css/report.css',
+        'core': 'static/js/studio-core.js',
+        'visuals': 'static/js/studio-visuals.js',
+        'document': 'static/js/report.js',
+    }
+    return dict(res=results, params=results['params'], selected_sections=sections,
+                doc=report_document(results, sections, request.args, folder_cover),
+                report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8')
+                               .replace('</script', '<\\/script') for name, path in assets.items()})
 
 @app.route('/holistic')
 def holistic_portal():
@@ -203,55 +201,12 @@ def projects_portal():
 
 @app.route('/report/project/<p_id>', methods=['GET', 'POST'])
 def project_report(p_id):
-    params = report_parameters()
-    results = run_bipol_project(params)
-    params = results["params"]
-    bipol_projects = results.get("bipol_projects", {})
-    
-    # Dokładne 2-wierszowe nazwy projektów wg Rys. 2 i Rozdz. 2 w BIPOL1_Opis_Projektow.pdf (dr inż. M. Figat)
-    project_titles = {
-        "p1": ("Projekt 1", "Projekt Koncepcyjny", "Wybór konfiguracji, szkic i analiza trendów (5 pkt)"),
-        "p2": ("Projekt 2", "Studium Wykonalności", "Profil misji, bilans masowy, dobór profilu i koszty (18 pkt)"),
-        "p3": ("Projekt 3", "Projekt Wstępny i Analiza Masowa", "Rysunek w 3 rzutach, wyważenie i rozkład Schrenka (27 pkt)"),
-        "p4": ("Projekt 4", "Charakterystyki aerodynamiczne samolotu", "Biegunowe, doskonałość i mechanizacja płata (15 pkt)"),
-        "p5": ("Projekt 5", "Osiągi Samolotu", "Wykres ofertowy, zasięg i krytyczna ocena osiągów (15 pkt)"),
-        "p6": ("Projekt 6", "Obwiednia Obciążeń Dopuszczalnych", "Obwiednia manewrowa, podmuchowa i pętla klapowa (20 pkt)"),
-        "folder_cover": ("Informacja na teczkę", "Budowa i Projektowanie Obiektów Latających I", "Informacja na teczkę projektową wg Rys. 1 MEiL PW")
-    }
-    
-    if p_id not in project_titles:
+    if p_id not in ('p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'folder_cover'):
         abort(404)
-    p_meta = project_titles.get(p_id, ("Projekt 1", "Projekt Koncepcyjny", "Sprawozdanie projektowe"))
-    p_data = bipol_projects.get(p_id, {})
-    
-    student_name = request.args.get('student') or params.get('student_name') or 'Jan Kowalski'
-    album_no = request.args.get('album') or params.get('album_no') or 'Nr Albumu'
-    group_no = request.args.get('group') or params.get('group_no') or 'A – czwartek 8:15-9:00'
-    supervisor = request.args.get('supervisor') or params.get('supervisor') or 'M.Figat'
-    submission_date = request.args.get('date') or params.get('submission_date') or '14.12.2026'
-    academic_year = request.args.get('academic_year') or params.get('academic_year') or '2026/27'
-    aircraft_name = params.get('name', 'Nazwa Projektu')
-    topic_id = params.get('topic_id', 33)
-    
-    return render_template(
-        'project_report.html',
-        p_id=p_id,
-        project_line_1=p_meta[0],
-        project_line_2=p_meta[1],
-        project_title=f"{p_meta[0]}: {p_meta[1]}",
-        project_subtitle=p_meta[2],
-        p_data=p_data,
-        res=results,
-        params=params,
-        student_name=student_name,
-        album_no=album_no,
-        group_no=group_no,
-        supervisor=supervisor,
-        submission_date=submission_date,
-        academic_year=academic_year,
-        aircraft_name=aircraft_name,
-        topic_id=topic_id
-    )
+    results = run_bipol_project(report_parameters())
+    sections = [] if p_id == 'folder_cover' else [p_id]
+    return render_template('project_report.html',
+                           **document_context(results, sections, p_id == 'folder_cover'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

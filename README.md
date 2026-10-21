@@ -18,6 +18,17 @@ Testy regresji: `work/venv/bin/python -m pytest tests -q`.
 Testy narzędzi pracowni: `node tests/studio_core.test.mjs` (bez zależności npm).
 Raporty są dokumentami HTML, które można wydrukować do PDF w przeglądarce.
 
+Raport zbiorczy i osobne sprawozdania P1–P6 mają wspólny skład A4: stronę
+tytułową, opis metody, wyniki, wnioski zależne od obliczeń oraz bibliografię.
+Tabele, rysunki i wzory są numerowane. Próba porównawcza trafia do załącznika.
+Dane autora uzupełnia się w widoku raportów lub przed wydrukiem; program nie
+wstawia przykładowej tożsamości. Datę i rok akademicki można zmienić.
+Wzory, fonty i wykresy pozostają dostępne w pobranym HTML bez internetu.
+
+Test wydruków i raportów offline (wymaga Chromium, `requirements-browser.txt`
+i narzędzia `pdftotext`):
+`python tests/browser_reports.py --base-url http://127.0.0.1:5000 --browser-path /usr/bin/chromium`.
+
 Pracownia zawiera kokpit z nawigacją boczną, porównanie do ośmiu zapisanych
 wariantów, eksport CSV/SVG, raport z wyborem etapów P1–P6, dane i wnioski autora
 oraz dokładną biegunową lotu szybowego. Raport można pobrać jako samodzielny HTML.
@@ -49,7 +60,7 @@ ryzyka, a nie z podziału na masy poniżej i powyżej 600 kg.
 ## 🌐 Adresy uruchomionej aplikacji
 
 - **Główny kokpit projektowy:** 👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
-- **Generator oficjalnego Raportu PDF:** 👉 **[http://127.0.0.1:5000/report](http://127.0.0.1:5000/report)**
+- **Podgląd sprawozdania i wydruk PDF:** **[http://127.0.0.1:5000/report](http://127.0.0.1:5000/report)**
 - **API oficjalnych tematów wydziałowych:** `http://127.0.0.1:5000/api/topics`
 - **API pobranych materiałów dydaktycznych:** `http://127.0.0.1:5000/api/scraped-files`
 
