@@ -64,6 +64,18 @@ def get_topics():
         "topics": ALL_TOPICS
     })
 
+@app.route('/api/constraints/suggestions', methods=['GET'])
+def get_constraint_suggestions():
+    category = request.args.get('category', 'cs23_level2')
+    aircraft_type = request.args.get('aircraft_type', 'piston_ga')
+    from calculations.constraints import get_initial_constraint_suggestions, WING_PLANFORMS, LOCKABLE_PARAMETERS
+    return jsonify({
+        'success': True,
+        'suggestions': get_initial_constraint_suggestions(category, aircraft_type),
+        'planforms': WING_PLANFORMS,
+        'lockable_parameters': LOCKABLE_PARAMETERS
+    })
+
 @app.route('/api/aircraft', methods=['GET'])
 def aircraft_catalog():
     return jsonify(reference_catalog())

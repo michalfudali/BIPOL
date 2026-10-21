@@ -249,6 +249,148 @@ const DIDACTIC_DATABASE = {
     }
   },
 
+  // 1.1 STEROWANIE POPRZECZNE - LOTKI (Rozdział 17.3, str. 195-207 prof. C. Galiński / Danilecki rozdz. 8)
+  ailerons: {
+    differential: {
+      id: "differential",
+      name: "Lotka różnicowa (Differential Aileron - standard GA)",
+      reference: "Galiński, Rozdz. 17.3.5, str. 201-203; Danilecki rozdz. 8",
+      delta_a_up_deg: 24,
+      delta_a_down_deg: 12,
+      typical_pb_2v: 0.082,
+      svg_icon: `<svg viewBox="0 0 220 70" class="flap-svg">
+        <path d="M10,32 Q80,12 140,30 L140,38 Q80,44 10,35 Z" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="140" cy="34" r="3.5" fill="#10b981"/>
+        <path d="M140,34 L188,14 L185,8 L138,28 Z" fill="#a7f3d0" stroke="#059669" stroke-width="2"/>
+        <path d="M140,34 L188,44 L185,48 L138,38 Z" stroke="#6b7280" stroke-dasharray="3,3" fill="none"/>
+        <text x="12" y="16" font-size="9" fill="#065f46" font-weight="bold">Ruch różnicowy: w górę 24° / w dół 12°</text>
+      </svg>`,
+      pros: [
+        "Skuteczna eliminacja niekorzystnego sprzężenia odchylającego (adverse yaw) dzięki większemu wychyleniu w górę niż w dół.",
+        "Lotka wychylona w górę generuje większy opór profilowy niż lotka opuszczona, co wspomaga wprowadzanie w zakręt w pożądaną stronę.",
+        "Mniejsze ryzyko przeciążenia końcówki skrzydła po stronie ze skrzydłem opadającym.",
+        "Prosta realizacja kinematyczna za pomocą niesymetrycznego orczyka lub dźwigni kątowej."
+      ],
+      cons: [
+        "Wymaga starannego trasowania cięgien lub popychaczy w celu zachowania nieliniowej charakterystyki przełożenia.",
+        "Przy dużych wychyleniach wzrasta siła na drążku sterowym (wymaga kompensacji rogowej lub klapek odciążających)."
+      ],
+      galinski_quote: "Ruch różnicowy lotek eliminuje ujemne sprzężenie kierunkowe: lotka unosząca się w górę stawia większy opór niż opuszczana w dół, redukując konieczność kompensacji sterem kierunku.",
+      typical_aircraft: "Cessna 172/182, Piper PA-28 Archer, PZL-104 Wilga, SZD-50 Puchacz.",
+      recommendation: "Zalecana jako podstawowe rozwiązanie dla wszystkich samolotów szkolnych, turystycznych i motoszybowców."
+    },
+
+    frise: {
+      id: "frise",
+      name: "Lotka Frise ze ściętym noskiem (Aerodynamic Compensation)",
+      reference: "Galiński, Rozdz. 17.3.3, Rys. 17.18, str. 198-200",
+      delta_a_up_deg: 22,
+      delta_a_down_deg: 14,
+      typical_pb_2v: 0.085,
+      svg_icon: `<svg viewBox="0 0 220 70" class="flap-svg">
+        <path d="M10,32 Q80,12 140,30 L140,38 Q80,44 10,35 Z" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="145" cy="34" r="3.5" fill="#0284c7"/>
+        <path d="M142,42 L145,34 L190,16 L187,10 L138,30 Z" fill="#bae6fd" stroke="#0284c7" stroke-width="2"/>
+        <text x="12" y="16" font-size="9" fill="#0369a1" font-weight="bold">Nosek Frise wystaje w opływ pod skrzydłem</text>
+      </svg>`,
+      pros: [
+        "Dolny zaostrzony nosek lotki wysuwa się pod skrzydło przy jej wychyleniu w górę, tworząc celowy opór aerodynamiczny.",
+        "Wyjątkowo skuteczna kompensacja momentu odchylającego bez skomplikowanych układów cięgnowych.",
+        "Kompensacja aerodynamiczna zmniejsza siły na drążku sterowym o 30–50%.",
+        "Wysoka precyzja i lekkość sterowania poprzecznego."
+      ],
+      cons: [
+        "Większy opór profilowy przy niedokładnym spasowaniu szczeliny noska.",
+        "Ryzyko wpadnięcia noska w nadmierną kompensację (nadkompensacja aerodynamiczna) przy bardzo dużych kątach natarcia."
+      ],
+      galinski_quote: "W lotce Frise oś obrotu jest cofnięta, a nosek wyprofilowany tak, że przy wychyleniu w górę wystaje poniżej dolnego zarysu profilu, generując duży opór hamujący skrzydło po wewnętrznej stronie zakrętu.",
+      typical_aircraft: "Supermarine Spitfire, PZL P.11c, Beechcraft Bonanza, samoloty akrobacyjne Extra 300.",
+      recommendation: "Idealna dla samolotów akrobacyjnych, szybkich maszyn dyspozycyjnych i zaawansowanych motoszybowców."
+    },
+
+    slotted: {
+      id: "slotted",
+      name: "Lotka szczelinowa (Slotted Aileron)",
+      reference: "Galiński, Rozdz. 17.3.4, Rys. 17.20, str. 200-201",
+      delta_a_up_deg: 20,
+      delta_a_down_deg: 18,
+      typical_pb_2v: 0.088,
+      svg_icon: `<svg viewBox="0 0 220 70" class="flap-svg">
+        <path d="M10,32 Q80,12 136,28 L134,36 Q80,44 10,35 Z" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="144" cy="40" r="3.5" fill="#f59e0b"/>
+        <path d="M140,32 L192,48 L188,54 L138,40 Z" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+        <text x="12" y="16" font-size="9" fill="#b45309" font-weight="bold">Szczelina zasilająca warstwę przyścienną</text>
+      </svg>`,
+      pros: [
+        "Szczelina doprowadza powietrze o wyższej energii z dolnej powierzchni na górną, opóźniając oderwanie strug.",
+        "Zachowuje pełną skuteczność sterowania poprzecznego przy bardzo wysokich kątach natarcia (w pobliżu przeciągnięcia).",
+        "Wysoki współczynnik zwrotności pb/(2V) w konfiguracji do lądowania."
+      ],
+      cons: [
+        "Wyższy opór szkodliwy w pozycji neutralnej (przepływ przez szczelinę).",
+        "Wymaga starannego uszczelnienia krawędzi lub profilowanych fartuchów."
+      ],
+      galinski_quote: "Szczelina przed lotką działa podobnie jak szczelina klapy jednoszczelinowej: zasilana warstwa przyścienna pozwala na sterowanie przechyleniem nawet wtedy, gdy nasada skrzydła wchodzi w przeciągnięcie.",
+      typical_aircraft: "Pilatus PC-6 Porter, Antonow An-2, samoloty STOL krótkiego startu.",
+      recommendation: "Zalecana dla samolotów operujących przy niskich prędkościach (STOL, zrzut skoczków, rolnicze)."
+    },
+
+    plain: {
+      id: "plain",
+      name: "Lotka zwykła (Plain Aileron)",
+      reference: "Galiński, Rozdz. 17.3.1, str. 196",
+      delta_a_up_deg: 20,
+      delta_a_down_deg: 18,
+      typical_pb_2v: 0.072,
+      svg_icon: `<svg viewBox="0 0 220 70" class="flap-svg">
+        <path d="M10,32 Q80,12 140,30 L140,38 Q80,44 10,35 Z" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="140" cy="34" r="3.5" fill="#64748b"/>
+        <path d="M140,34 L190,50 L186,56 L138,38 Z" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <text x="12" y="16" font-size="9" fill="#334155" font-weight="bold">Zawias liniowy bez szczeliny</text>
+      </svg>`,
+      pros: [
+        "Najprostsza konstrukcja i najniższy koszt wytworzenia.",
+        "Brak szczelin noskowych zapewnia minimalny opór profilowy w locie przelotowym.",
+        "Idealne przyleganie pokrycia skrzydła (zawias taśmowy lub elastyczny z laminatu)."
+      ],
+      cons: [
+        "Wyraźne zjawisko ujemnego sprzężenia odchylającego (wymaga koordynacji sterem kierunku).",
+        "Duże siły na drążku przy większych prędkościach lotu."
+      ],
+      galinski_quote: "Klasyczna lotka na zawiasach liniowych jest powszechnie stosowana w szybowcach i lekkich samolotach ze względu na czystość aerodynamiczną profilu w położeniu neutralnym.",
+      typical_aircraft: "PZL-102 Kos, RWD-8, SZD-9 Bocian, PW-5 Smyk.",
+      recommendation: "Zalecana dla prostych konstrukcji ultralekkich i szybowców klubowych."
+    },
+
+    flaperon: {
+      id: "flaperon",
+      name: "Klapolotka (Flaperon ze sprzężeniem)",
+      reference: "Galiński, Rozdz. 17.3.8, Rys. 17.28, str. 205-207",
+      delta_a_up_deg: 20,
+      delta_a_down_deg: 14,
+      typical_pb_2v: 0.080,
+      svg_icon: `<svg viewBox="0 0 220 70" class="flap-svg">
+        <path d="M10,28 Q75,10 132,28 L130,38 Q75,40 10,31 Z" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"/>
+        <circle cx="136" cy="33" r="3.5" fill="#7c3aed"/>
+        <path d="M136,33 L192,50 L187,56 L134,38 Z" fill="#ddd6fe" stroke="#5b21b6" stroke-width="2"/>
+        <path d="M136,33 L192,18" stroke="#7c3aed" stroke-dasharray="3,3" stroke-width="1.5"/>
+        <text x="12" y="16" font-size="9" fill="#5b21b6" font-weight="bold">Klapolotka: suma wychylenia klapowego i lotkowego</text>
+      </svg>`,
+      pros: [
+        "Pojedyncza powierzchnia sterowa łączy klapę i lotkę na całej rozpiętości skrzydła.",
+        "Maksymalne wykorzystanie powierzchni spływu pociąga za sobą niższą masę płata.",
+        "Możliwość wyginania całego spływu w górę (-3° do -5°) do lotu z wysokimi prędkościami przelotowymi."
+      ],
+      cons: [
+        "Wymaga miksera mechanicznego lub elektronicznego sterowania FBW.",
+        "Ryzyko przedwczesnego przeciągnięcia końcówki skrzydła przy jednoczesnym wychyleniu klapowym i opuszczeniu lotki."
+      ],
+      galinski_quote: "Klapolotka wymaga ograniczenia kąta wychylenia w dół na końcówce skrzydła, aby punkt początkowego oderwania strug nie przeniósł się na obszar sterowania poprzecznego.",
+      typical_aircraft: "Motoszybowiec AOS-71, Pipistrel Sinus, F-16 Fighting Falcon, Zenith CH-701.",
+      recommendation: "Doskonała dla nowoczesnych motoszybowców kompozytowych i samolotów krótkiego startu STOL."
+    }
+  },
+
   // 2. MECHANIZACJA KRAWĘDZI NATARCIA - SLOTY I KRUEGERY (Rozdział 16.4, str. 171-182)
   slats: {
     none: {
@@ -401,6 +543,39 @@ const DIDACTIC_DATABASE = {
  * co oznacza, wzór z BIPOL I, wpływ na projekt oraz typowe wartości.
  */
 const PARAMETER_ENCYCLOPEDIA = {
+  aileron_type: {
+    symbol: "Typ lotki",
+    title: "Konstrukcja i Kompensacja Lotek (Projekt P3 / P4)",
+    short_desc: "Typ powierzchni sterowania poprzecznego na zewnętrznej części rozpiętości skrzydła.",
+    full_definition: "Wybór między lotką różnicową (standard GA), Frise (ze ściętym noskiem kompensacyjnym), szczelinową, zwykłą lub klapolotką (flaperon). Decyduje o sile na drążku, eliminacji adverse yaw oraz wskaźniku zwrotności poprzecznej pb/(2V).",
+    formula: "p·b / (2V) = − (C_l,δa / C_l,p) · δa,   wymóg: ≥ 0.07 rad (GA) / ≥ 0.05 rad (motoszybowce)",
+    effect_increase: "Lotka różnicowa lub Frise zapobiega oporowi niekorzystnemu i poprawia bezpieczeństwo w zakręcie.",
+    typical_ranges: "Cięciwa: ca/c = 18–25% | Rozpiętość: ba/b = 25–35% | Wychylenie: +24° / −12°.",
+    galinski_note: "Zgodnie z zasadami prof. C. Galińskiego i Danileckiego stoisko Schrenka musi leżeć bliżej kadłuba niż wewnętrzna krawędź lotki (eta_stall < eta_lotki)."
+  },
+
+  flap_span_ratio: {
+    symbol: "b_f / b [-]",
+    title: "Część Rozpiętości Skrzydła Objęta Klapami (Projekt P3 / P4)",
+    short_desc: "Udział rozpiętości krawędzi spływu przeznaczony na klapy wysklepiające (od kadłuba do stacji zewnętrznej klapy).",
+    full_definition: "Pozostała część rozpiętości zewnętrznej jest zarezerwowana na lotki sterowania poprzecznego. W samolotach konwencjonalnych bf/b wynosi zazwyczaj 0.55 – 0.70.",
+    formula: "b_f/b = η_f,out − η_f,in,   S_flapped/S = (b_f/b) · [c_f,avg / MAC]",
+    effect_increase: "Większe bf/b daje wyższy przyrost siły nośnej ΔCz_max do lądowania, lecz pozostawia mniej miejsca na rozpiętość lotek ba/b.",
+    typical_ranges: "GA / szkolne: 0.55 – 0.68 | STOL: 0.70 – 0.75 | Klapolotki (flaperon): 0.80 – 0.90.",
+    galinski_note: "Rozdział 16.3: Klapy nie powinny sięgać zbyt blisko końcówki skrzydła, aby nie prowokować oderwania strug w rejonie lotek."
+  },
+
+  aileron_span_ratio: {
+    symbol: "b_a / b [-]",
+    title: "Część Rozpiętości Skrzydła Objęta Lotkami (Projekt P3 / P4)",
+    short_desc: "Udział rozpiętości krawędzi spływu przeznaczony na lotki sterowania poprzecznego.",
+    full_definition: "Odpowiada za zwrotność poprzeczną samolotu. Dla samolotów turystycznych wynosi 0.22 – 0.35 rozpiętości.",
+    formula: "b_a/b = η_a,out − η_a,in,   S_a/S ≈ (b_a/b) · (c_a/c)",
+    effect_increase: "Większa rozpiętość lotek zwiększa moment przechylający i prędkość kątową przechylenia p, lecz ogranicza rozpiętość klap.",
+    typical_ranges: "GA: 0.22 – 0.32 | Akrobacyjne: 0.35 – 0.50 | Szybowce: 0.30 – 0.40.",
+    galinski_note: "Rozdział 17.3: Końcówka lotki powinna kończyć się ok. 3–5% przed krawędzią skrzydła (tip clearance), aby uniknąć wpływu wiru brzegowego."
+  },
+
   aircraft_type: {
     symbol: "Klasa statku (EASA)",
     title: "Klasa konstrukcyjno-certyfikacyjna statku powietrznego",

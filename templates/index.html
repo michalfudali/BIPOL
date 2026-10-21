@@ -50,6 +50,45 @@
     </div>
   </div>
 
+  <!-- BIPOL I STEP-BY-STEP WORKFLOW STEPPER -->
+  <div class="bipol-workflow-stepper" id="bipolWorkflowStepper">
+    <div class="stepper-header-title">
+      <span class="pulse-dot"></span>
+      <span>Projektowanie Krok po Kroku (BIPOL 1–6):</span>
+    </div>
+    <div class="stepper-nodes-row">
+      <div class="step-node active" id="step_node_p1" onclick="navigateToStep('p1')" title="Krok 1: Wymagania i Misja Samolotu (BIPOL 1)">
+        <span class="node-badge">1</span>
+        <span>P1: Misja & Założenia</span>
+      </div>
+      <span class="step-separator">➔</span>
+      <div class="step-node" id="step_node_p2" onclick="navigateToStep('p2')" title="Krok 2: Studium Wykonalności i Masa Startowa MTOW (BIPOL 2)">
+        <span class="node-badge">2</span>
+        <span>P2: MTOW & Matching</span>
+      </div>
+      <span class="step-separator">➔</span>
+      <div class="step-node" id="step_node_p3" onclick="navigateToStep('p3')" title="Krok 3: Wymiarowanie Płata, Obrys i Schrenk (BIPOL 3)">
+        <span class="node-badge">3</span>
+        <span>P3: Geometria & Schrenk</span>
+      </div>
+      <span class="step-separator">➔</span>
+      <div class="step-node" id="step_node_p4" onclick="navigateToStep('p4')" title="Krok 4: Mechanizacja Płata i Biegunowe Aero (BIPOL 4)">
+        <span class="node-badge">4</span>
+        <span>P4: Mechanizacja & Aero</span>
+      </div>
+      <span class="step-separator">➔</span>
+      <div class="step-node" id="step_node_p5" onclick="navigateToStep('p5')" title="Krok 5: Osiągi Samolotu i Zespół Napędowy (BIPOL 5)">
+        <span class="node-badge">5</span>
+        <span>P5: Osiągi & Napęd</span>
+      </div>
+      <span class="step-separator">➔</span>
+      <div class="step-node" id="step_node_p6" onclick="navigateToStep('p6')" title="Krok 6: Obwiednia V-n i Wyważenie Podłużne (BIPOL 6)">
+        <span class="node-badge">6</span>
+        <span>P6: V-n & Wyważenie</span>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
 
     <!-- SEMESTER PROGRESS & BIPOL I PROJECTS SCOREBOARD BAR -->
@@ -344,6 +383,27 @@
                   </div>
                 </div>
                 <div class="module-body" id="body_mod1">
+                  <!-- SUGEROWANE OGRANICZENIA POCZĄTKOWE (BIPOL I / MEiL PW / EASA) -->
+                  <div class="initial-constraints-panel" id="initialConstraintsPanel">
+                    <div class="constraints-drawer-header" onclick="toggleConstraintsDrawer()">
+                      <div class="constraints-drawer-title">
+                        <span>💡</span>
+                        <span>Sugerowane Ograniczenia i Założenia Początkowe</span>
+                      </div>
+                      <div class="constraints-drawer-meta">
+                        <span class="badge badge-info" style="font-size:0.7rem;">MEiL PW &bull; EASA &bull; Rynek</span>
+                        <span id="constraintsDrawerChevron">▼</span>
+                      </div>
+                    </div>
+                    <div class="constraints-drawer-body" id="constraintsDrawerBody">
+                      <div style="font-size:0.75rem; color:#475569; margin-bottom:0.5rem;">
+                        Kliknij <b>+ Zastosuj i Zablokuj 🔒</b> aby natychmiast przypiąć wybrane ograniczenie (np. limit prędkości przeciągnięcia CS, rozpiętość FAI lub silnik rynkowy Rotax/Lycoming) jako stałe założenie projektowe.
+                      </div>
+                      <div class="suggestions-cards-grid" id="suggestionsCardsContainer">
+                        <!-- Generowane dynamicznie przez renderInitialSuggestions() -->
+                      </div>
+                    </div>
+                  </div>
                   <div class="input-row">
                     <div class="input-group" data-param="aircraft_type">
                       <label for="aircraft_type">
@@ -403,16 +463,29 @@
                     <div class="input-group" data-param="n_pax" id="group_n_pax">
                       <label for="n_pax">
                         <span class="label-text">Liczba pasażerów [os.] <span class="info-circle-icon" data-param="n_pax" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_n_pax" onclick="toggleParamLock('n_pax')" title="Zablokuj liczbę pasażerów">🔓</button>
                       </label>
                       <input type="number" id="n_pax" min="0" max="300" step="1" value="1">
                       <div class="param-didactic-hint" id="hint_n_pax"></div>
+                      <div class="derived-badge" id="derived_badge_n_pax" style="display:none;"></div>
                     </div>
                     <div class="input-group" data-param="m_cargo" id="group_m_cargo">
                       <label for="m_cargo">
                         <span class="label-text" id="label_m_cargo_text">Ładunek cargo [kg] <span class="info-circle-icon" data-param="m_cargo" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_m_cargo" onclick="toggleParamLock('m_cargo')" title="Zablokuj ładunek cargo">🔓</button>
                       </label>
                       <input step="any" required type="number" id="m_cargo" min="0" max="50000" value="0">
                       <div class="param-didactic-hint" id="hint_m_cargo"></div>
+                      <div class="derived-badge" id="derived_badge_m_cargo" style="display:none;"></div>
+                    </div>
+                    <div class="input-group" data-param="m_payload" id="group_m_payload">
+                      <label for="m_payload">
+                        <span class="label-text">Masa płatna łączna [kg] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="m_payload" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_m_payload" onclick="toggleParamLock('m_payload')" title="Zablokuj łączną masę płatną">🔓</button>
+                      </label>
+                      <input step="any" type="number" id="m_payload" min="0" max="50000" value="0" placeholder="0 = z pax + cargo">
+                      <div class="param-didactic-hint" id="hint_m_payload">Łączna masa płatna m_payload = n_pax · 85 + m_cargo. Zablokowanie wylicza m_cargo zależnie.</div>
+                      <div class="derived-badge" id="derived_badge_m_payload" style="display:none;"></div>
                     </div>
                   </div>
 
@@ -420,16 +493,20 @@
                     <div class="input-group" data-param="range_km">
                       <label for="range_km">
                         <span class="label-text">Zasięg obliczeniowy R [km] <span class="info-circle-icon" data-param="range_km" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_range_km" onclick="toggleParamLock('range_km')" title="Zablokuj zasięg">🔓</button>
                       </label>
                       <input step="any" required type="number" id="range_km" min="100" max="15000" value="640">
                       <div class="param-didactic-hint" id="hint_range_km"></div>
+                      <div class="derived-badge" id="derived_badge_range_km" style="display:none;"></div>
                     </div>
                     <div class="input-group" data-param="cruise_speed_kmh">
                       <label for="cruise_speed_kmh">
                         <span class="label-text">Prędkość przelotowa Vcr [km/h] <span class="info-circle-icon" data-param="cruise_speed_kmh" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_cruise_speed_kmh" onclick="toggleParamLock('cruise_speed_kmh')" title="Zablokuj prędkość przelotową">🔓</button>
                       </label>
                       <input step="any" required type="number" id="cruise_speed_kmh" min="80" max="950" value="174">
                       <div class="param-didactic-hint" id="hint_cruise_speed_kmh"></div>
+                      <div class="derived-badge" id="derived_badge_cruise_speed_kmh" style="display:none;"></div>
                     </div>
                   </div>
 
@@ -437,9 +514,11 @@
                     <div class="input-group" data-param="v_stall_kmh">
                       <label for="v_stall_kmh">
                         <span class="label-text">Prędkość przeciągnięcia VS0 [km/h] <span class="info-circle-icon" data-param="v_stall_kmh" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_v_stall_kmh" onclick="toggleParamLock('v_stall_kmh')" title="Zablokuj prędkość przeciągnięcia">🔓</button>
                       </label>
                       <input step="any" required type="number" id="v_stall_kmh" min="45" max="250" value="84">
                       <div class="param-didactic-hint" id="hint_v_stall_kmh"></div>
+                      <div class="derived-badge" id="derived_badge_v_stall_kmh" style="display:none;"></div>
                     </div>
                     <div class="input-group" data-param="cruise_altitude_m">
                       <label for="cruise_altitude_m">
@@ -502,6 +581,35 @@
                   </div>
                 </div>
                 <div class="module-body" id="body_mod2">
+                  <!-- WYBÓR OBRYSU SKRZYDŁA (PLANFORM) WG BADAŃ MEiL & DANIELECKIEGO -->
+                  <div class="input-row">
+                    <div class="input-group" data-param="wing_planform" id="group_wing_planform">
+                      <label for="wing_planform">
+                        <span class="label-text">📐 Obrys skrzydła (Planform) <span class="info-circle-icon" data-param="wing_planform" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_wing_planform" onclick="toggleParamLock('wing_planform')" title="Zablokuj obrys">🔓</button>
+                      </label>
+                      <select id="wing_planform" onchange="onWingPlanformChange()">
+                        <option value="trapezoidal" selected>1. Trapezowy (zbieżny klasyczny &bull; Danilecki)</option>
+                        <option value="rectangular">2. Prostokątny (stała cięciwa c = const)</option>
+                        <option value="compound_trapezoid">3. Prostokątno-trapezowy (centropłat prostokątny + końcówki)</option>
+                        <option value="elliptical">4. Eliptyczny (rozkład Prandtla &bull; Spitfire)</option>
+                        <option value="swept_trapezoidal">5. Skośny trapezowy (duże prędkości / skos)</option>
+                      </select>
+                      <div class="param-didactic-hint" id="hint_wing_planform">Wybierz obrys determinujący cyrkulację Schrenka i technologię żeber.</div>
+                      <div class="derived-badge" id="derived_badge_wing_planform" style="display:none;"></div>
+                    </div>
+                    <div class="input-group" data-param="break_span_ratio" id="group_break_span_ratio" style="display:none;">
+                      <label for="break_span_ratio">
+                        <span class="label-text">Centropłat y_brk/(b/2) [-] <span class="info-circle-icon" data-param="break_span_ratio" tabindex="0">i</span></span>
+                      </label>
+                      <input step="0.05" type="number" id="break_span_ratio" min="0.10" max="0.80" value="0.40">
+                      <div class="param-didactic-hint" id="hint_break_span_ratio">Udział centropłata o stałej cięciwie w rozpiętości (0.30–0.50).</div>
+                    </div>
+                  </div>
+
+                  <!-- Karta Dydaktyczna Wybranego Obrysu Skrzydła (Danilecki / Schrenk) -->
+                  <div id="wingPlanformDidacticBox" class="flap-didactic-card" style="margin-bottom:0.75rem;"></div>
+
                   <div class="input-row">
                     <div class="input-group" data-param="wing_config">
                       <label for="wing_config">
@@ -518,9 +626,11 @@
                     <div class="input-group" data-param="wingspan_m">
                       <label for="wingspan_m">
                         <span class="label-text">Rozpiętość b [m] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="wingspan_m" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_wingspan_m" onclick="toggleParamLock('wingspan_m')" title="Zablokuj rozpiętość">🔓</button>
                       </label>
                       <input step="any" required type="number" id="wingspan_m" min="0" max="80" value="0" placeholder="0 = wylicz z S·Λ">
                       <div class="param-didactic-hint" id="hint_wingspan_m"></div>
+                      <div class="derived-badge" id="derived_badge_wingspan_m" style="display:none;"></div>
                     </div>
                   </div>
 
@@ -531,9 +641,11 @@
                     <div class="input-group" data-param="aspect_ratio">
                       <label for="aspect_ratio">
                         <span class="label-text">Wydłużenie skrzydła Λ (AR) [-] <span class="info-circle-icon" data-param="aspect_ratio" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_aspect_ratio" onclick="toggleParamLock('aspect_ratio')" title="Zablokuj wydłużenie">🔓</button>
                       </label>
                       <input step="any" required type="number" id="aspect_ratio" min="3" max="32" value="7.33">
                       <div class="param-didactic-hint" id="hint_aspect_ratio"></div>
+                      <div class="derived-badge" id="derived_badge_aspect_ratio" style="display:none;"></div>
                     </div>
                     <div class="input-group" data-param="taper_ratio">
                       <label for="taper_ratio">
@@ -580,7 +692,7 @@
                   <div class="input-row">
                     <div class="input-group" data-param="flap_type">
                       <label for="flap_type" style="color:#1e40af; font-weight:700;">
-                        <span class="label-text">🔧 Wybór Klapy <span class="info-circle-icon" data-param="flap_type" tabindex="0">i</span></span>
+                        <span class="label-text">🛬 Klapa Spływu (Wewnętrzna) <span class="info-circle-icon" data-param="flap_type" tabindex="0">i</span></span>
                       </label>
                       <select id="flap_type" style="border:2px solid #2563eb; background:#eff6ff; font-weight:600;">
                         <option value="plain">1. Klapa zwykła (wysklepiająca)</option>
@@ -593,8 +705,24 @@
                       </select>
                       <div class="param-didactic-hint" id="hint_flap_type"></div>
                     </div>
+                    <div class="input-group" data-param="aileron_type">
+                      <label for="aileron_type" style="color:#047857; font-weight:700;">
+                        <span class="label-text">🔄 Lotka Poprzeczna (Zewnętrzna) <span class="info-circle-icon" data-param="aileron_type" tabindex="0">i</span></span>
+                      </label>
+                      <select id="aileron_type" style="border:2px solid #10b981; background:#f0fdf4; font-weight:600;">
+                        <option value="differential" selected>1. Lotka różnicowa (Differential - GA)</option>
+                        <option value="frise">2. Lotka Frise (ze ściętym noskiem)</option>
+                        <option value="slotted">3. Lotka szczelinowa (Slotted)</option>
+                        <option value="plain">4. Lotka zwykła (Plain)</option>
+                        <option value="flaperon">5. Klapolotka (Flaperon z mikserem)</option>
+                      </select>
+                      <div class="param-didactic-hint" id="hint_aileron_type"></div>
+                    </div>
+                  </div>
+
+                  <div class="input-row">
                     <div class="input-group" data-param="slat_type">
-                      <label for="slat_type" style="color:#1e40af; font-weight:700;">
+                      <label for="slat_type" style="color:#0284c7; font-weight:700;">
                         <span class="label-text">🌬️ Natarcie / Slot <span class="info-circle-icon" data-param="slat_type" tabindex="0">i</span></span>
                       </label>
                       <select id="slat_type" style="border:2px solid #0284c7; background:#f0f9ff; font-weight:600;">
@@ -605,10 +733,43 @@
                       </select>
                       <div class="param-didactic-hint" id="hint_slat_type"></div>
                     </div>
+                    <div class="input-group" data-param="flap_span_ratio">
+                      <label for="flap_span_ratio">
+                        <span class="label-text">Zasięg klap bf/b [-] <span class="info-circle-icon" data-param="flap_span_ratio" tabindex="0">i</span></span>
+                      </label>
+                      <input step="0.01" type="number" id="flap_span_ratio" min="0.20" max="0.85" value="0.60">
+                      <div class="param-didactic-hint" id="hint_flap_span_ratio"></div>
+                    </div>
                   </div>
 
-                  <!-- INTERAKTYWNA KARTA DYDAKTYCZNA KLAPY I SLOTU -->
+                  <!-- INTERAKTYWNA KARTA DYDAKTYCZNA KLAPY I LOTEK -->
                   <div id="flapDidacticCard" class="flap-didactic-card" style="margin-bottom:0.75rem;"></div>
+
+                  <!-- WIDGET ROZKŁADU KRAWĘDZI SPŁYWU: KLAPY I LOTKI -->
+                  <div id="trailingEdgeLayoutCard" style="margin-bottom:0.75rem; padding:0.65rem 0.85rem; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; font-size:0.82rem;">
+                    <div style="font-weight:700; color:#0f172a; margin-bottom:0.35rem; display:flex; justify-content:space-between; align-items:center;">
+                      <span>📐 Podział Krawędzi Spływu: Klapy (wewn.) &bull; Lotki (zewn.)</span>
+                      <span id="cs_layout_badge" class="badge badge-info" style="font-size:0.72rem;">Klapy + Lotki</span>
+                    </div>
+                    <div id="cs_span_bar" style="display:flex; height:18px; border-radius:4px; overflow:hidden; border:1px solid #94a3b8; font-size:0.68rem; font-weight:bold; color:#fff; text-align:center; line-height:18px; margin-bottom:0.4rem;">
+                      <div id="bar_fuselage" style="width:14%; background:#64748b;" title="Kadłub">Kadłub</div>
+                      <div id="bar_flaps" style="width:60%; background:#2563eb;" title="Klapy wysklepiające">Klapy (60%)</div>
+                      <div id="bar_gap" style="width:2%; background:#94a3b8;" title="Szczelina montażowa"></div>
+                      <div id="bar_ailerons" style="width:21%; background:#059669;" title="Lotki sterowania poprzecznego">Lotki (21%)</div>
+                      <div id="bar_tip" style="width:3%; background:#cbd5e1; color:#475569;" title="Końcówka skrzydła"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.78rem;">
+                      <div>
+                        <strong>Klapy:</strong> <span id="cs_flaps_text">bf = --- m (---% b), Sf = --- m²</span>
+                      </div>
+                      <div>
+                        <strong>Lotki:</strong> <span id="cs_ailerons_text">ba = --- m (---% b), Sa = --- m²</span>
+                      </div>
+                    </div>
+                    <div id="cs_roll_text" style="margin-top:0.3rem; font-size:0.76rem; color:#0369a1;">
+                      Skuteczność poprzeczna: <b>pb/(2V) = ---</b> &bull; Bezpieczeństwo Schrenka: <b>---</b>
+                    </div>
+                  </div>
 
                   <div class="input-row">
                     <div class="input-group" data-param="cx0">
@@ -684,6 +845,18 @@
                         <option value="retractable">Chowany w kadłubie (AOS)</option>
                       </select>
                       <div class="param-didactic-hint" id="hint_engine_location"></div>
+                    </div>
+                  </div>
+
+                  <div class="input-row">
+                    <div class="input-group" data-param="engine_power_kw" id="group_engine_power_kw">
+                      <label for="engine_power_kw">
+                        <span class="label-text">Moc silnika P_max [kW] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="engine_power_kw" tabindex="0">i</span></span>
+                        <button type="button" class="param-lock-btn" id="lock_btn_engine_power_kw" onclick="toggleParamLock('engine_power_kw')" title="Zablokuj moc silnika rynkowego">🔓</button>
+                      </label>
+                      <input step="any" required type="number" id="engine_power_kw" min="0" max="15000" value="0" placeholder="0 = z bilansu P5">
+                      <div class="param-didactic-hint" id="hint_engine_power_kw">Podaj moc silnika rynkowego (np. Rotax: 73.5 kW, Lycoming: 112 kW) lub 0 dla automatycznego doboru.</div>
+                      <div class="derived-badge" id="derived_badge_engine_power_kw" style="display:none;"></div>
                     </div>
                   </div>
 
@@ -1745,7 +1918,7 @@
                   <div style="overflow-x:auto;">
                     <table class="b-table" id="p1_similar_table">
                       <thead>
-                        <tr><th>Konstrukcja referencyjna</th><th>MTOW m0 [kg]</th><th>Masa pusta me [kg]</th><th>Powierzchnia S [m²]</th><th id="p1_sim_power_th">Moc silnika [kW]</th><th>Vmax [km/h]</th><th>Wydłużenie AR</th></tr>
+                        <tr><th>Konstrukcja referencyjna</th><th>MTOW m0 [kg]</th><th>Masa pusta me [kg]</th><th>Powierzchnia S [m²]</th><th id="p1_sim_power_th">Moc silnika [kW]</th><th>Vmax [km/h]</th><th>Wydłużenie AR</th><th>Śmigło d [m]</th></tr>
                       </thead>
                       <tbody id="p1_similar_tbody"></tbody>
                     </table>
@@ -2184,6 +2357,18 @@
                     </thead>
                     <tbody id="p4_high_lift_tbody"></tbody>
                   </table>
+
+                  <div style="margin-top:1rem;">
+                    <div style="font-weight:700; color:#0f172a; margin-bottom:0.35rem; font-size:0.84rem;">
+                      📐 Wymiary i efektywność powierzchni krawędzi spływu (Klapy i Lotki wg BIPOL I / Danilecki):
+                    </div>
+                    <table class="b-table">
+                      <thead>
+                        <tr><th>Powierzchnia sterowa</th><th>Typ i funkcja</th><th>Rozpiętość [m]</th><th>Udział rozpiętości bf/b lub ba/b</th><th>Względna cięciwa c/c</th><th>Powierzchnia [m²]</th><th>Parametr aerodynamiczny</th><th>Ocena zdatności CS-23 / CS-22</th></tr>
+                      </thead>
+                      <tbody id="p4_control_surfaces_tbody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
@@ -2795,16 +2980,28 @@
 
           <div class="input-row">
             <div class="input-group">
-              <label for="wiz_flap_type">Mechanizacja spływu (Klapa):</label>
+              <label for="wiz_flap_type">Mechanizacja spływu (Klapa wewnętrzna):</label>
               <select id="wiz_flap_type">
                 <option value="plain">Klapa zwykła (Plain Flap, &Delta;Cz = +0.45)</option>
                 <option value="split">Klapa krokodylowa (Split Flap, &Delta;Cz = +0.55)</option>
-                <option value="single_slotted">Klapa szczelinowa (Single Slotted, &Delta;Cz = +0.85)</option>
+                <option value="single_slotted" selected>Klapa szczelinowa (Single Slotted, &Delta;Cz = +0.85)</option>
                 <option value="fowler">Klapa Fowlera (Fowler Flap, &Delta;Cz = +1.35)</option>
                 <option value="junkers">Klapa zewnętrzna Junkersa (STOL, &Delta;Cz = +0.95)</option>
                 <option value="flaperon">Klapolotka (Flaperon, Motoszybowce, &Delta;Cz = +0.50)</option>
               </select>
             </div>
+            <div class="input-group">
+              <label for="wiz_aileron_type">Sterowanie poprzeczne (Lotka zewnętrzna):</label>
+              <select id="wiz_aileron_type">
+                <option value="differential" selected>Lotka różnicowa (Differential - standard GA)</option>
+                <option value="frise">Lotka Frise ze ściętym noskiem</option>
+                <option value="slotted">Lotka szczelinowa</option>
+                <option value="plain">Lotka zwykła</option>
+                <option value="flaperon">Klapolotka (Flaperon z mikserem)</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-row">
             <div class="input-group">
               <label for="wiz_slat_type">Mechanizacja natarcia (Przedskrzydło / Slot):</label>
               <select id="wiz_slat_type">
@@ -2889,6 +3086,7 @@
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=12"></script>
   <script src="/static/js/app.js?v=15"></script>
+  <script src="/static/js/constraints-ui.js?v=1"></script>
   <script src="/static/js/studio.js?v=2"></script>
   <script src="/static/js/trends.js?v=1"></script>
 </body>

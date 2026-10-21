@@ -17,10 +17,14 @@ NUMERIC_LIMITS = {
     "v_h": (0.05, 2), "v_v": (0.005, 0.3), "ar_h": (1, 12), "ar_v": (0.5, 6),
     "tc_ratio": (0.04, 0.3), "delta_cx0_flaps_to": (0, 0.5),
     "delta_cx0_flaps_lnd": (0, 0.5), "delta_cx0_gear": (0, 0.5),
+    "flap_span_ratio": (0.05, 0.98), "flap_chord_ratio": (0.05, 0.50),
+    "aileron_span_ratio": (0.05, 0.90), "aileron_chord_ratio": (0.05, 0.45),
     "vmo_kcas": (1, 1000), "mmo": (0.01, 2),
     "trend_count": (0, 716), "trend_engine_count": (0, 8),
     "trend_year_min": (0, 2100), "trend_year_max": (0, 2100),
     "fuel_reserve_factor": (1, 1.5), "mission_ld_factor": (0.5, 1),
+    "wing_area_m2": (0.5, 1000), "engine_power_kw": (0, 100000),
+    "break_span_ratio": (0.1, 0.9), "m_payload": (0, 500000),
 }
 
 DEFAULTS = {
@@ -32,6 +36,11 @@ DEFAULTS = {
     "aspect_ratio": 8, "taper_ratio": 0.55, "oswald_e": 0.8, "cx0": 0.025,
     "cz_max_clean": 1.45, "cz_max_to": 1.8, "cz_max_lnd": 2.2,
     "prop_efficiency": 0.82, "prop_eff_to": 0.65,
+    "flap_type": "single_slotted", "slat_type": "none",
+    "aileron_type": "differential",
+    "flap_span_ratio": 0.60, "flap_chord_ratio": 0.25,
+    "aileron_span_ratio": 0.28, "aileron_chord_ratio": 0.22,
+    "wing_planform": "trapezoidal", "break_span_ratio": 0.40,
 }
 
 
@@ -74,13 +83,21 @@ def validate_parameters(data):
             raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
     for key, allowed in {'trend_source': ('all', 'fast', 'cado'),
                          'trend_weighting': ('family', 'variant'),
-                         'mission_phase_model': ('standard', 'galinski')}.items():
+                         'mission_phase_model': ('standard', 'galinski'),
+                         'flap_type': ('plain', 'split', 'junkers', 'single_slotted', 'fowler', 'double_slotted', 'flaperon'),
+                         'aileron_type': ('differential', 'frise', 'slotted', 'plain', 'flaperon'),
+                         'slat_type': ('none', 'fixed_slot', 'slats_auto', 'krueger'),
+                          'wing_planform': ('trapezoidal', 'rectangular', 'compound_trapezoid', 'elliptical', 'swept_trapezoidal')}.items():
         if key in p and p[key] not in allowed:
             raise ValueError(f'Nieznana opcja: {key}.')
+    if p.get("flap_type") == "flaperon" and "aileron_type" not in data:
+        p["aileron_type"] = "flaperon"
     if p.get('trend_year_min') and p.get('trend_year_max') and p['trend_year_min'] > p['trend_year_max']:
         raise ValueError('Początkowy rok próby musi być nie większy od końcowego.')
     if 'variable_sweep' in p and not isinstance(p['variable_sweep'], bool):
         raise ValueError('Pole variable_sweep: wymagana wartość logiczna.')
+    if 'locked_params' in p and not isinstance(p['locked_params'], list):
+        raise ValueError('Pole locked_params: wymagana lista identyfikatorów parametrów.')
     if 'trend_aircraft_ids' in p:
         ids = p['trend_aircraft_ids']
         if not isinstance(ids, list) or len(ids) > 716 or any(not isinstance(i, str) for i in ids):

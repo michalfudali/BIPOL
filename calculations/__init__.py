@@ -14,6 +14,7 @@ from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
 from calculations.validation import validate_parameters
 from calculations.glide import calculate_glide_polar
+from calculations.constraints import resolve_and_lock_parameters, get_initial_constraint_suggestions, WING_PLANFORMS
 
 def run_bipol_project(params: dict):
     """
@@ -21,6 +22,7 @@ def run_bipol_project(params: dict):
     """
     # Normalizacja domeny: napęd odrzutowy nie występuje w konfiguracji ciągnącej w nosie kadłuba (GA tractor)
     params = validate_parameters(params)
+    params, param_states, constraint_warnings = resolve_and_lock_parameters(params, params.get("locked_params", []))
     if params.get("engine_type") == "jet" and params.get("engine_location") == "nose":
         params["engine_location"] = "wing" if params.get("aircraft_type") == "jet_transport" else "rear"
 
@@ -61,11 +63,11 @@ def run_bipol_project(params: dict):
             raise ValueError("Nie uzyskano zgodności masy i narzuconej rozpiętości.")
     
     # Etap P4: Charakterystyki aerodynamiczne (biegunowe, doskonałość)
-    aero_res = calculate_aerodynamics(geom_res, params)
+    aero_res = calculate_aerodynamics(geom_res, params, m0=m0)
     
     # Etap P5: Osiągi samolotu (prędkości, wznoszenie, pułap, start, lądowanie)
     perf_res = calculate_performance(m0, geom_res, aero_res, sizing_res, params)
-    perf_res["glide"] = calculate_glide_polar(m0, geom_res, aero_res, params["cruise_altitude_m"])
+    perf_res["glide"] = calculate_glide_polar(m0, geom_res, aero_res, params["cruise_altitude_m"], params=params)
     
     # Etap P6: Obwiednia obciążeń dopuszczalnych V-n
     envelope_res = calculate_vn_envelope(m0, geom_res, aero_res, perf_res, params)
@@ -148,5 +150,12 @@ def run_bipol_project(params: dict):
         "compliance_checks": checks,
         "easa_compliance": law_res,
         "polish_law": law_res,
-        "bipol_projects": bipol_projects_res
+        "bipol_projects": bipol_projects_res,
+        "constraints": {
+            "parameter_states": param_states,
+            "locked_keys": params.get("locked_params", []),
+            "initial_suggestions": get_initial_constraint_suggestions(params.get("category", "cs23_level2"), params.get("aircraft_type", "piston_ga")),
+            "available_planforms": WING_PLANFORMS,
+            "warnings": constraint_warnings
+        }
     }

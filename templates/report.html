@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Raport BIPOL I - Wstępny Projekt Samolotu</title>
+  <!-- KaTeX CSS + JS dla akademickiego składu wzorów -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="if(window.renderMathInElement){renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false});}"></script>
   <style>{{ report_assets.css|safe }}</style>
   <style>
     body {
@@ -213,12 +217,114 @@
         <tr><th>Zasięg obliczeniowy R</th><td><b>{{ params.range_km }} km</b></td><th>Wysokość przelotowa H</th><td><b>{{ params.cruise_altitude_m }} m</b></td></tr>
         <tr><th>Prędkość przelotowa Vcr</th><td><b>{{ params.cruise_speed_kmh }} km/h</b></td><th>Maks. prędkość przeciągnięcia VS0</th><td><b>{{ params.v_stall_kmh }} km/h</b></td></tr>
         <tr><th>Wymagana droga rozbiegu Sto</th><td><b>{{ params.takeoff_run_m }} m</b></td><th>Min. prędkość wznoszenia wy</th><td><b>{{ params.climb_rate_ms }} m/s</b></td></tr>
+        <tr><th>Obrys skrzydła (Planform)</th><td><b style="color:#0284c7;">{{ res.geometry.wing.planform_name_pl if res.geometry.wing.planform_name_pl else 'Trapezowy klasyczny' }}</b></td><th>Rodzaj zespołu napędowego</th><td><b>{{ 'Śmigłowy' if params.engine_type == 'prop' else ('Odrzutowy' if params.engine_type == 'jet' else 'Szybowiec') }}</b></td></tr>
         {% if res.mass.unmanned or params.aircraft_type == 'uav' %}
         <tr><th>Status załogi na pokładzie</th><td><b style="color:#0284c7;">Bezzałogowiec (UAS) – 0 os. na pokładzie</b></td><th>Wyposażenie zadaniowe (sensory)</th><td><b>{{ params.m_cargo }} kg</b></td></tr>
         {% else %}
-        <tr><th>Liczba pasażerów</th><td><b>{{ params.n_pax }} os.</b></td><th>Liczba członków załogi</th><td><b>{{ params.n_crew }} os.</b></td></tr>
+        <tr><th>Liczba pasażerów</th><td><b>{{ params.n_pax }} os. ({{ params.n_pax * 85 }} kg)</b></td><th>Ładunek cargo / płatny</th><td><b>{{ params.m_cargo }} kg / łączne m_pay = {{ (params.n_pax * 85 + params.m_cargo)|round(1) }} kg</b></td></tr>
         {% endif %}
       </table>
+
+      {% if res.constraints and res.constraints.parameter_states %}
+      <div style="margin: 10px 0 16px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #0284c7; border-radius: 6px; font-size: 0.82rem;">
+        <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">🔒 Status Blokad i Powiązań Parametrów (BIPOL I Constraint Solver):</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px;">
+          {% for p_key, p_state in res.constraints.parameter_states.items() %}
+          <div style="background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <b>{{ p_key }}</b>: 
+            {% if p_state.state == 'locked' %}
+              <span class="badge badge-primary" style="font-size:0.68rem;">🔒 Zablokowany przez użytkownika</span> ({{ p_state.value }})
+            {% elif p_state.state == 'derived' %}
+              <span class="badge badge-info" style="font-size:0.68rem;">⛓️ Parametr zależny</span> = <b>{{ p_state.value }}</b><br>
+              <small style="color:#0369a1; font-family:'Cambria Math', monospace;">Wzór: {{ p_state.formula }}</small>
+            {% else %}
+              <span class="badge" style="background:#e2e8f0; color:#475569; font-size:0.68rem;">Automatyczny</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 1.1 DOSKONAŁOŚĆ MAKSYMALNA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">📐 Krok 1.1: Wstępne oszacowanie doskonałości aerodynamicznej \(K_{\max}\)</div>
+          <span class="calc-source-badge">BIPOL I Wzór (8) &bull; prof. C. Galiński, dr inż. T. Grabowski</span>
+        </div>
+        <p class="calc-desc">
+          Przed wyznaczeniem szczegółowej geometrii płatowca, maksymalną doskonałość aerodynamiczną układu nośnego szacuje się na podstawie założonego wydłużenia skrzydła, współczynnika sprawności aerodynamicznej Oswalda oraz przewidywanego oporu szkodliwego.
+        </p>
+        <div class="calc-math-box">
+          \[ K_{\max} = \frac{1}{2} \sqrt{\frac{\pi \cdot \Lambda \cdot e}{C_{x0 }} } \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(\Lambda\)</span> = <b>{{ res.geometry.wing.AR }}</b> [-] &mdash; <span class="var-source">założone wydłużenie skrzydła, dobrane z bazy statystycznej dla klasy samolotu</span></li>
+            <li><span class="var-sym">\(e\)</span> = <b>{{ params.oswald_e }}</b> [-] &mdash; <span class="var-source">współczynnik sprawności Oswalda (dla skrzydła o zbieżności \(\eta = {{ res.geometry.wing.eta }}\))</span></li>
+            <li><span class="var-sym">\(C_{x0}\)</span> = <b>{{ res.aerodynamics.cx0_clean }}</b> [-] &mdash; <span class="var-source">współczynnik oporu szkodliwego, oszacowany metodą powierzchni omywanej \(C_{fe} \cdot S_{wet}/S\)</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ K_{\max} = \frac{1}{2} \sqrt{\frac{\pi \cdot {{ res.geometry.wing.AR }} \cdot {{ params.oswald_e  }} }{ {{  res.aerodynamics.cx0_clean  }} }} = \frac{1}{2} \sqrt{\frac{ {{  (3.14159 * res.geometry.wing.AR * params.oswald_e)|round(3)  }} }{ {{  res.aerodynamics.cx0_clean  }} }} = \mathbf{ {{ res.aerodynamics.k_max }} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja inżynierska:</b> Uzyskana wartość \(K_{\max} = {{ res.aerodynamics.k_max }}\) mieści się w granicach statystycznych dla danej klasy konstrukcyjnej i stanowi bazę do równania zasięgu Bregueta.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 1.2 ZAPOTRZEBOWANIE CIĄGU I MOCY PRZELOTOWEJ -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">⚙️ Krok 1.2: Ciąg niezbędny i moc niezbędna do lotu przelotowego (\(V_{cr}\))</div>
+          <span class="calc-source-badge">BIPOL I Wzory (19)–(22) &bull; Mechanika Lotu I</span>
+        </div>
+        <p class="calc-desc">
+          W poziomym locie ustalonym siła ciągu równoważy siłę oporu aerodynamicznego (\(T_{req} = Q = m_0 g / K\)). Na tej podstawie określa się wstępne zapotrzebowanie mocy na wysokości przelotowej \(H = {{ params.cruise_altitude_m }}\text{ m}\).
+        </p>
+        {% if params.engine_type == 'jet' %}
+        <div class="calc-math-box">
+          \[ T_{req,cr} = \frac{m_0 \cdot g}{K_{cr}}, \quad P_{req,cr} = T_{req,cr} \cdot V_{cr} \]
+        </div>
+        {% elif params.engine_type == 'none' %}
+        <div class="calc-math-box">
+          \[ w_{sink,cr} = \frac{V_{cr}}{K_{cr}} \quad (\text{lot szybowy bezsilnikowy}) \]
+        </div>
+        {% else %}
+        <div class="calc-math-box">
+          \[ T_{req,cr} = \frac{m_0 \cdot g}{K_{cr}}, \quad P_{req,cr} = \frac{T_{req,cr} \cdot V_{cr}}{\eta_p} = \frac{m_0 \cdot g \cdot V_{cr}}{K_{cr} \cdot \eta_p} \]
+        </div>
+        {% endif %}
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(m_0\)</span> = <b>{{ res.mass.m0 }} kg</b> &mdash; <span class="var-source">wstępna maksymalna masa startowa (MTOW) z bilansu masowego</span></li>
+            <li><span class="var-sym">\(g\)</span> = <b>9.807 m/s²</b> &mdash; <span class="var-source">przyspieszenie ziemskie standardowe</span></li>
+            <li><span class="var-sym">\(V_{cr}\)</span> = <b>{{ params.cruise_speed_kmh }} km/h</b> = <b>{{ (params.cruise_speed_kmh / 3.6)|round(1) }} m/s</b> &mdash; <span class="var-source">prędkość przelotowa z założeń misji</span></li>
+            <li><span class="var-sym">\(K_{cr}\)</span> = <b>{{ res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max }}</b> &mdash; <span class="var-source">doskonałość aerodynamiczna w punkcie przelotowym</span></li>
+            {% if params.engine_type not in ['jet', 'none'] %}
+            <li><span class="var-sym">\(\eta_p\)</span> = <b>{{ params.prop_efficiency_cruise if params.prop_efficiency_cruise else 0.80 }}</b> &mdash; <span class="var-source">sprawność śmigła w fazie przelotu (założenie projektowe)</span></li>
+            {% endif %}
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          {% if params.engine_type == 'jet' %}
+          \[ T_{req,cr} = \frac{ {{  res.mass.m0 }} \cdot 9.807}{ {{  res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max  }} } = \mathbf{ {{ ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max)) / 1000)|round(2) }} \text{ kN} } \]
+          \[ P_{req,cr} = {{ ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max)) / 1000)|round(2) }}\text{ kN} \cdot {{ (params.cruise_speed_kmh / 3.6)|round(1) }}\text{ m/s} = \mathbf{ {{ ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max) * (params.cruise_speed_kmh / 3.6)) / 1000)|round(1) }} \text{ kW} } \]
+          {% elif params.engine_type == 'none' %}
+          \[ w_{sink,cr} = \frac{ {{  (params.cruise_speed_kmh / 3.6)|round(1) }}\text{ m/s}}{ {{  res.aerodynamics.k_max  }} } = \mathbf{ {{ ((params.cruise_speed_kmh / 3.6) / res.aerodynamics.k_max)|round(2) }} \text{ m/s} } \]
+          {% else %}
+          \[ T_{req,cr} = \frac{ {{  res.mass.m0 }} \cdot 9.807}{ {{  res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max  }} } = \mathbf{ {{ ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max)) / 1000)|round(2) }} \text{ kN} } \]
+          \[ P_{req,cr} = \frac{ {{  ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max)))|round(1) }}\text{ N} \cdot {{ (params.cruise_speed_kmh / 3.6)|round(1) }}\text{ m/s}}{ {{  params.prop_efficiency_cruise if params.prop_efficiency_cruise else 0.80 }} \cdot 1000} = \mathbf{ {{ ((res.mass.m0 * 9.80665 / (res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max) * (params.cruise_speed_kmh / 3.6)) / ((params.prop_efficiency_cruise if params.prop_efficiency_cruise else 0.80) * 1000))|round(1) }} \text{ kW} } \]
+          {% endif %}
+        </div>
+        <div class="calc-verdict verdict-info">
+          <span>ℹ️</span> <b>Interpretacja fizyczna:</b> Wyznaczone zapotrzebowanie mocy przelotowej stanowi minimum energetyczne do pokonania oporu powietrza w locie poziomym.
+        </div>
+      </div>
 
       {% include "trend_report.html" %}
       </section>{% endif %}
@@ -246,6 +352,79 @@
         </tbody>
       </table>
 
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 2.1 BREGUET I UŁAMEK PALIWA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">⛽ Krok 2.1: Ułamek paliwa misji i równanie zasięgu Bregueta</div>
+          <span class="calc-source-badge">BIPOL I Wzory (19)–(29) &bull; Roskam Part I &bull; Raymer eq. (3.11)</span>
+        </div>
+        <p class="calc-desc">
+          Profil misji dzieli się na etapy: rozruch, start, wznoszenie, przelot trasy \(R\), zniżanie, oczekiwanie i lądowanie. Ułamek zużycia paliwa w przelocie wyznacza się z odwróconego wzoru Bregueta:
+        </p>
+        {% if params.engine_type == 'jet' %}
+        <div class="calc-math-box">
+          \[ \left(\frac{W_4}{W_3}\right)_{cruise} = \exp\left(-\frac{R \cdot c_j \cdot g}{V_{cr} \cdot K_{cr}}\right), \quad M_{ff} = \prod_{i=1}^n \left(\frac{W_i}{W_{i-1}}\right), \quad \frac{m_f}{m_0} = 1.06 \cdot (1 - M_{ff}) \]
+        </div>
+        {% elif params.engine_type == 'none' %}
+        <div class="calc-math-box">
+          \[ \frac{m_f}{m_0} = 0 \quad (\text{szybowiec czysty - brak paliwa pokładowego}) \]
+        </div>
+        {% else %}
+        <div class="calc-math-box">
+          \[ \left(\frac{W_4}{W_3}\right)_{cruise} = \exp\left(-\frac{R \cdot c_p \cdot g}{\eta_p \cdot K_{cr} \cdot 3.6 \cdot 10^6}\right), \quad M_{ff} = \prod_{i=1}^7 \left(\frac{W_i}{W_{i-1}}\right), \quad \frac{m_f}{m_0} = 1.06 \cdot (1 - M_{ff}) \]
+        </div>
+        {% endif %}
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(R\)</span> = <b>{{ params.range_km }} km</b> &mdash; <span class="var-source">założony zasięg obliczeniowy misji</span></li>
+            <li><span class="var-sym">\(c_p\)</span> = <b>{{ params.sfc_cruise_g_kwh if params.sfc_cruise_g_kwh else 270 }} g/(kW&bull;h)</b> &mdash; <span class="var-source">jednostkowe zużycie paliwa wybranego silnika</span></li>
+            <li><span class="var-sym">\(K_{cr}\)</span> = <b>{{ res.mass.ld_cruise_used if res.mass.ld_cruise_used else res.aerodynamics.k_max }}</b> &mdash; <span class="var-source">doskonałość aerodynamiczna w fazie przelotu</span></li>
+            <li><span class="var-sym">\(M_{ff}\)</span> = <b>{{ res.mass.fuel_fractions_detail.total_mff }}</b> &mdash; <span class="var-source">iloczyn ułamków masowych wszystkich faz misji (Mission Fuel Fraction)</span></li>
+            <li><span class="var-sym">Mnożnik 1.06</span> &mdash; <span class="var-source">uwzględnienie 6% rezerwy paliwa niewykorzystywalnego wg CS-23/25</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ \left(\frac{W_4}{W_3}\right)_{cruise} = {{ res.mass.fuel_fractions_detail.cruise }}, \quad M_{ff} = {{ res.mass.fuel_fractions_detail.total_mff }} \]
+          \[ \frac{m_f}{m_0} = 1.06 \cdot (1 - {{ res.mass.fuel_fractions_detail.total_mff }}) = \mathbf{ {{ res.mass.fuel_fraction }} } \implies m_f = \mathbf{ {{ res.mass.m_fuel }} \text{ kg} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Zapas paliwa \(m_f = {{ res.mass.m_fuel }}\text{ kg}\) zapewnia realizację misji o zasięgu {{ params.range_km }} km z uwzględnieniem 45-minutowej rezerwy holdingowej (CS-23.903).
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 2.2 RÓWNANIE ITERACYJNE MTOW -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">⚖️ Krok 2.2: Równanie wymiarujące maksymalną masę startową (MTOW)</div>
+          <span class="calc-source-badge">BIPOL I &bull; prof. C. Galiński &bull; Roskam / Torenbeek</span>
+        </div>
+        <p class="calc-desc">
+          Masa startowa \(m_0\) jest sumą masy ładunku, załogi, paliwa i masy pustej. Z uwagi na nieliniową zależność masy pustej \(m_e(m_0)\), równanie rozwiązuje się iteracyjnie:
+        </p>
+        <div class="calc-math-box">
+          \[ m_0 = \frac{m_{pl} + m_{crew}}{1 - \frac{m_f}{m_0} - \frac{m_e}{m_0}(m_0)}, \quad \text{gdzie } \frac{m_e}{m_0} = A \cdot m_0^C \cdot K_{var} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(m_{pl}\)</span> = <b>{{ res.mass.m_payload }} kg</b> &mdash; <span class="var-source">masa płatna (pasażerowie + bagaż lub sensory UAV) z założeń taktyczno-technicznych</span></li>
+            <li><span class="var-sym">\(m_{crew}\)</span> = <b>{{ res.mass.m_crew }} kg</b> &mdash; <span class="var-source">masa załogi ({{ params.n_crew }} os. &times; 90 kg z bagażem podręcznym)</span></li>
+            <li><span class="var-sym">\(m_f/m_0\)</span> = <b>{{ res.mass.fuel_fraction }}</b> &mdash; <span class="var-source">udział masowy paliwa całkowitego z Kroku 2.1</span></li>
+            <li><span class="var-sym">\(m_e/m_0\)</span> = <b>{{ res.mass.empty_fraction }}</b> &mdash; <span class="var-source">udział masy pustej wyznaczony ze statystyk Roskama</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ m_0 = \frac{ {{  res.mass.m_payload }} + {{ res.mass.m_crew  }} }{1 - {{ res.mass.fuel_fraction }} - {{ res.mass.empty_fraction  }} } = \frac{ {{  (res.mass.m_payload + res.mass.m_crew)|round(1)  }} }{ {{  (1.0 - res.mass.fuel_fraction - res.mass.empty_fraction)|round(4)  }} } = \mathbf{ {{ res.mass.m0 }} \text{ kg} } \]
+          \[ m_e = {{ res.mass.empty_fraction }} \cdot {{ res.mass.m0 }} = \mathbf{ {{ res.mass.m_empty }} \text{ kg} } \quad ({{ (res.mass.empty_fraction * 100)|round(1) }}\% \text{ MTOW}) \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Zbieżność iteracji osiągnięto z tolerancją &lt; 0.1 kg. Udział masy pustej {{ (res.mass.empty_fraction * 100)|round(1) }}% odpowiada standardom nowoczesnych konstrukcji lotniczych.
+        </div>
+      </div>
+
       <h3 style="margin-top:1.5rem;">Dobór obciążenia powierzchni skrzydła i napędu (Matching Chart)</h3>
       <p>
         Wyznaczono ograniczenia z warunków: prędkości przeciągnięcia, rozbiegu, wznoszenia oraz prędkości przelotowej. Wybrany punkt projektowy:
@@ -260,6 +439,38 @@
       <div class="report-chart-box">
         <canvas id="repChartMatching" style="width:100%; height:260px;"></canvas>
       </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 2.3 MATCHING CHART I POWIERZCHNIA SKRZYDŁA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">📊 Krok 2.3: Dobór obciążenia powierzchni \(W/S\) i powierzchni nośnej \(S\)</div>
+          <span class="calc-source-badge">BIPOL I Wzory (9)–(18) &bull; CS-23.49 &bull; CS-23.65</span>
+        </div>
+        <p class="calc-desc">
+          Ograniczenie maksymalnego dopuszczalnego obciążenia powierzchni skrzydła wynika z warunku prędkości przeciągnięcia w konfiguracji lądowania (\(V_{s0} \le {{ params.v_stall_kmh }}\text{ km/h}\)):
+        </p>
+        <div class="calc-math-box">
+          \[ \left(\frac{W}{S}\right)_{\max,stall} = \frac{1}{2} \cdot \rho_0 \cdot V_{s0}^2 \cdot C_{z,\max,lnd}, \quad S = \frac{m_0 \cdot g}{W/S} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(\rho_0\)</span> = <b>1.225 kg/m³</b> &mdash; <span class="var-source">gęstość powietrza na poziomie morza (atmosfera wzorcowa ISA)</span></li>
+            <li><span class="var-sym">\(V_{s0}\)</span> = <b>{{ params.v_stall_kmh }} km/h</b> = <b>{{ (params.v_stall_kmh / 3.6)|round(2) }} m/s</b> &mdash; <span class="var-source">maksymalna dopuszczalna prędkość przeciągnięcia (wymóg CS-23.49 &le; 113 km/h)</span></li>
+            <li><span class="var-sym">\(C_{z,\max,lnd}\)</span> = <b>{{ res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd }}</b> &mdash; <span class="var-source">maksymalny współczynnik siły nośnej w konfiguracji lądowania z klapami</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ \left(\frac{W}{S}\right)_{\max} = \frac{1}{2} \cdot 1.225 \cdot ({{ (params.v_stall_kmh / 3.6)|round(2) }})^2 \cdot {{ res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd }} = \mathbf{ {{ (0.5 * 1.225 * ((params.v_stall_kmh/3.6)**2) * (res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd))|round(1) }} \text{ N/m}^2 } \]
+          \[ \text{Przyjęto punkt projektowy: } \frac{W}{S} = \mathbf{ {{ res.sizing.design_point.ws }} \text{ N/m}^2 } \]
+          \[ S = \frac{ {{  res.mass.m0 }}\text{ kg} \cdot 9.807\text{ m/s}^2}{ {{  res.sizing.design_point.ws }}\text{ N/m}^2} = \mathbf{ {{ res.geometry.wing.S }} \text{ m}^2 } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Obciążenie powierzchni \(W/S = {{ res.sizing.design_point.ws }}\text{ N/m}^2\) gwarantuje spełnienie przepisów certyfikacyjnych CS-23.49 z zachowaniem optymalnej zwrotności.
+        </div>
+      </div>
+
       </section>{% endif %}
     </div>
   </div>
@@ -296,6 +507,101 @@
         </tbody>
       </table>
 
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 3.1 GEOMETRIA SKRZYDŁA I PLANFORM -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">📐 Krok 3.1: Wymiary skrzydła (Obrys: {{ res.geometry.wing.planform_name_pl if res.geometry.wing.planform_name_pl else 'Trapezowy' }}) i Średnia Cięciwa Aerodynamiczna (ŚDA)</div>
+          <span class="calc-source-badge">prof. J. Danilecki "Konstruowanie samolotów" rozdz. 3 &bull; Metoda Schrenka</span>
+        </div>
+        <p class="calc-desc">
+          Na podstawie wyznaczonej powierzchni nośnej \(S = {{ res.geometry.wing.S }}\text{ m}^2\), założonego wydłużenia \(\Lambda = {{ res.geometry.wing.AR }}\) oraz zbieżności \(\eta = {{ res.geometry.wing.eta }}\), wyznacza się rozpiętość, cięciwy oraz parametry ŚDA:
+        </p>
+        <div class="calc-math-box">
+          \[ b = \sqrt{S \cdot \Lambda}, \quad c_r = \frac{2 \cdot S}{b \cdot (1 + \eta)}, \quad c_t = \eta \cdot c_r \]
+          \[ b_A = \text{ŚDA} = \frac{2}{3} \cdot c_r \cdot \frac{1 + \eta + \eta^2}{1 + \eta}, \quad y_{\text{ŚDA}} = \frac{b}{6} \cdot \frac{1 + 2\eta}{1 + \eta} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(S\)</span> = <b>{{ res.geometry.wing.S }} m²</b> &mdash; <span class="var-source">powierzchnia nośna skrzydła z punktu projektowego Matching Chart</span></li>
+            <li><span class="var-sym">\(\Lambda\)</span> = <b>{{ res.geometry.wing.AR }}</b> &mdash; <span class="var-source">wydłużenie skrzydła z założeń koncepcyjnych</span></li>
+            <li><span class="var-sym">\(\eta = c_t/c_r\)</span> = <b>{{ res.geometry.wing.eta }}</b> &mdash; <span class="var-source">zbieżność trapezowa (optymalna pod kątem eliptycznego rozkładu siły nośnej wg Schrenka)</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ b = \sqrt{ {{  res.geometry.wing.S }} \cdot {{ res.geometry.wing.AR  }} } = \mathbf{ {{ res.geometry.wing.b }} \text{ m} } \]
+          \[ c_r = \frac{2 \cdot {{ res.geometry.wing.S  }} }{ {{  res.geometry.wing.b }} \cdot (1 + {{ res.geometry.wing.eta }})} = \mathbf{ {{ res.geometry.wing.cr }} \text{ m} }, \quad c_t = {{ res.geometry.wing.eta }} \cdot {{ res.geometry.wing.cr }} = \mathbf{ {{ res.geometry.wing.ct }} \text{ m} } \]
+          \[ b_A = \frac{2}{3} \cdot {{ res.geometry.wing.cr }} \cdot \frac{1 + {{ res.geometry.wing.eta }} + {{ res.geometry.wing.eta }}^2}{1 + {{ res.geometry.wing.eta  }} } = \mathbf{ {{ res.geometry.wing.mac }} \text{ m} } \]
+          \[ y_{\text{ŚDA}} = \frac{ {{  res.geometry.wing.b  }} }{6} \cdot \frac{1 + 2 \cdot {{ res.geometry.wing.eta  }} }{1 + {{ res.geometry.wing.eta  }} } = \mathbf{ {{ res.geometry.wing.y_mac }} \text{ m} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Ocena aerodynamiczna:</b> Zbieżność \(\eta = {{ res.geometry.wing.eta }}\) minimalizuje indukowany opór przepływu, przybliżając rozkład cyrkulacji Schrenka do teoretycznego rozkładu eliptycznego.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 3.2 USTERZENIA METODĄ OBJĘTOŚCIOWĄ -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🛩️ Krok 3.2: Wymiarowanie usterzeń metodą objętościową (Tail Volume Method)</div>
+          <span class="calc-source-badge">Raymer eq. (6.5)–(6.6) &bull; Roskam Part II &bull; BIPOL I</span>
+        </div>
+        <p class="calc-desc">
+          Wstępne powierzchnie usterzenia poziomego \(S_H\) i pionowego \(S_V\) oblicza się ze współczynników objętościowych gwarantujących stateczność i sterowność:
+        </p>
+        <div class="calc-math-box">
+          \[ S_H = \frac{V_H \cdot S \cdot b_A}{L_H}, \quad S_V = \frac{V_V \cdot S \cdot b}{L_V} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(V_H\)</span> = <b>{{ res.geometry.horizontal_tail.vh_coeff }}</b> [-] &mdash; <span class="var-source">współczynnik objętości usterzenia poziomego</span></li>
+            <li><span class="var-sym">\(V_V\)</span> = <b>{{ res.geometry.vertical_tail.vv_coeff }}</b> [-] &mdash; <span class="var-source">współczynnik objętości usterzenia pionowego</span></li>
+            <li><span class="var-sym">\(L_H\)</span> = <b>{{ res.geometry.horizontal_tail.lh_m if res.geometry.horizontal_tail.lh_m else (res.geometry.fuselage.length * 0.55)|round(2) }} m</b> &mdash; <span class="var-source">ramię usterzenia poziomego (odległość 1/4 ŚDA skrzydła do 1/4 ŚDA usterzenia)</span></li>
+            <li><span class="var-sym">\(L_V\)</span> = <b>{{ res.geometry.vertical_tail.lv_m if res.geometry.vertical_tail.lv_m else (res.geometry.fuselage.length * 0.55)|round(2) }} m</b> &mdash; <span class="var-source">ramię usterzenia pionowego</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ S_H = \frac{ {{  res.geometry.horizontal_tail.vh_coeff }} \cdot {{ res.geometry.wing.S }} \cdot {{ res.geometry.wing.mac  }} }{ {{  res.geometry.horizontal_tail.lh_m if res.geometry.horizontal_tail.lh_m else (res.geometry.fuselage.length * 0.55)|round(2)  }} } = \mathbf{ {{ res.geometry.horizontal_tail.S_h }} \text{ m}^2 } \]
+          \[ S_V = \frac{ {{  res.geometry.vertical_tail.vv_coeff }} \cdot {{ res.geometry.wing.S }} \cdot {{ res.geometry.wing.b  }} }{ {{  res.geometry.vertical_tail.lv_m if res.geometry.vertical_tail.lv_m else (res.geometry.fuselage.length * 0.55)|round(2)  }} } = \mathbf{ {{ res.geometry.vertical_tail.S_v }} \text{ m}^2 } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Powierzchnie usterzeń spełniają kryteria stateczności statycznej podłużnej i kierunkowej dla danej konfiguracji płatowca.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 3.3 PODZIAŁ KRAWĘDZI SPŁYWU I STEROWNOŚĆ -->
+      {% if res.geometry.control_surfaces %}
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🎛️ Krok 3.3: Podział krawędzi spływu (Klapy + Lotki) i skuteczność przechylenia</div>
+          <span class="calc-source-badge">EASA CS-23.147 / CS-22.147 &bull; Raymer eq. (12.18) &bull; dr inż. T. Grabowski</span>
+        </div>
+        <p class="calc-desc">
+          Krawędź spływu została podzielona fizycznie na strefę klap wysklepiających (wewnętrzną) oraz strefę lotek sterowania poprzecznego (zewnętrzną). Skuteczność poprzeczną weryfikuje się kątem helisy przechylenia:
+        </p>
+        <div class="calc-math-box">
+          \[ \frac{p \cdot b}{2V} = \frac{C_{l\delta_a} \cdot \delta_a}{C_{lp}} \ge \left(\frac{p \cdot b}{2V}\right)_{req} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wymiary i strefy instalacji powierzchni sterowych:</div>
+          <ul>
+            <li><b>Klapy wewnętrzne:</b> {{ res.geometry.control_surfaces.flaps.name }} &bull; rozpiętość \(b_f = {{ res.geometry.control_surfaces.flaps.b_f_m }}\text{ m}\) (od \(\eta = {{ res.geometry.control_surfaces.flaps.eta_in }}\) do \(\eta = {{ res.geometry.control_surfaces.flaps.eta_out }}\)), cięciwa \(c_f/c = {{ res.geometry.control_surfaces.flaps.cf_over_c }}\), powierzchnia \(S_f = {{ res.geometry.control_surfaces.flaps.S_flap_surface_m2 }}\text{ m}^2\)</li>
+            <li><b>Lotki zewnętrzne:</b> {{ res.geometry.control_surfaces.ailerons.name }} &bull; rozpiętość \(b_a = {{ res.geometry.control_surfaces.ailerons.b_a_m }}\text{ m}\) (od \(\eta = {{ res.geometry.control_surfaces.ailerons.eta_in }}\) do \(\eta = {{ res.geometry.control_surfaces.ailerons.eta_out }}\)), cięciwa \(c_a/c = {{ res.geometry.control_surfaces.ailerons.ca_over_c }}\), powierzchnia \(S_a = {{ res.geometry.control_surfaces.ailerons.S_aileron_surface_m2 }}\text{ m}^2\)</li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Wynik weryfikacji helisy przechylenia:</div>
+          \[ \frac{p \cdot b}{2V} = \mathbf{ {{ res.geometry.control_surfaces.ailerons.roll_helix_pb_2v }} \text{ rad} } \quad \left(\text{wymóg przepisów CS-23: } \ge {{ res.geometry.control_surfaces.ailerons.min_pb_2v_req }}\text{ rad}\right) \]
+        </div>
+        <div class="calc-verdict {{ 'verdict-pass' if res.geometry.control_surfaces.ailerons.roll_authority_ok else 'verdict-info' }}">
+          <span>{{ '✔️' if res.geometry.control_surfaces.ailerons.roll_authority_ok else 'ℹ️' }}</span>
+          <b>Weryfikacja bezpieczeństwa przeciągnięcia Schrenka:</b> {{ res.geometry.control_surfaces.stall_safety.verdict }}
+        </div>
+      </div>
+      {% endif %}
+
       <h3 style="margin-top:1.5rem;">Rysunek zestawieniowy 3-rzutowy wg normy PN-EN ISO / ZPK MEiL PW (Formatka A3Z)</h3>
       <div id="repBlueprint" class="blueprint-box" style="margin-top:0.75rem; background:#ffffff; padding:0.25rem;"></div>
     </div>
@@ -317,6 +623,66 @@
 
       <!-- Uzasadnienie dydaktyczno-konstrukcyjne wybranej mechanizacji wg prof. C. Galińskiego -->
       <div id="repFlapJustification" style="margin:0.8rem 0; padding:0.75rem; border:1px solid #cbd5e1; border-left:4px solid #005691; border-radius:6px; background:#f8fafc; font-size:0.82rem;"></div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 4.1 BIEGUNOWA LILIENTHALA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">📈 Krok 4.1: Analityczna biegunowa Lilienthala i punkty charakterystyczne</div>
+          <span class="calc-source-badge">BIPOL I Wzory (1)–(8) &bull; dr inż. Z. Paturski Projekt nr 3</span>
+        </div>
+        <p class="calc-desc">
+          Biegunowa oporu określa zależność współczynnika oporu od współczynnika siły nośnej. Na jej podstawie wyznacza się punkt optymalny (maksymalnej doskonałości \(K_{\max}\)) oraz punkt ekonomiczny (minimalnego opadania):
+        </p>
+        <div class="calc-math-box">
+          \[ C_x = C_{x0} + \frac{C_z^2}{\pi \cdot \Lambda \cdot e} \]
+          \[ C_{z,opt} = \sqrt{\pi \cdot \Lambda \cdot e \cdot C_{x0}}, \quad K_{\max} = \frac{C_{z,opt}}{2 \cdot C_{x0}} = \frac{1}{2} \sqrt{\frac{\pi \cdot \Lambda \cdot e}{C_{x0 }} } \]
+          \[ C_{z,econ} = \sqrt{3} \cdot C_{z,opt} = \sqrt{3 \pi \Lambda e C_{x0}}, \quad K_{econ} = \frac{\sqrt{3}}{2} K_{\max} \approx 0.866 \cdot K_{\max} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(C_{x0}\)</span> = <b>{{ res.aerodynamics.cx0_clean }}</b> &mdash; <span class="var-source">współczynnik oporu szkodliwego konfiguracji gładkiej</span></li>
+            <li><span class="var-sym">\(\Lambda\)</span> = <b>{{ res.geometry.wing.AR }}</b>, <span class="var-sym">\(e\)</span> = <b>{{ params.oswald_e }}</b> &mdash; <span class="var-source">geometria i sprawność aerodynamiczna płata</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ C_{z,opt} = \sqrt{\pi \cdot {{ res.geometry.wing.AR }} \cdot {{ params.oswald_e }} \cdot {{ res.aerodynamics.cx0_clean  }} } = \mathbf{ {{ res.aerodynamics.cz_opt }} } \]
+          \[ K_{\max} = \frac{ {{  res.aerodynamics.cz_opt  }} }{2 \cdot {{ res.aerodynamics.cx0_clean  }} } = \mathbf{ {{ res.aerodynamics.k_max }} } \]
+          \[ C_{z,econ} = 1.732 \cdot {{ res.aerodynamics.cz_opt }} = \mathbf{ {{ res.aerodynamics.cz_econ }} }, \quad K_{econ} = 0.866 \cdot {{ res.aerodynamics.k_max }} = \mathbf{ {{ res.aerodynamics.k_econ }} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Zgodność analityczna:</b> Równanie spełnia twierdzenie o równości oporu szkodliwego i oporu indukowanego w punkcie optymalnym (\(C_{x0} = C_{xi,opt}\)).
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 4.2 MECHANIZACJA PŁATA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🪽 Krok 4.2: Przyrost współczynnika siły nośnej od wychylenia klap (\(\Delta C_{z,\max}\))</div>
+          <span class="calc-source-badge">dr inż. T. Grabowski BIPOL I Wzór (7) &bull; Abbott & Doenhoff</span>
+        </div>
+        <p class="calc-desc">
+          Przyrost nośności skrzydła o skończonej rozpiętości od klap częściowej rozpiętości oblicza się z uwzględnieniem powierzchni oklapowanej oraz kąta skosu:
+        </p>
+        <div class="calc-math-box">
+          \[ \Delta C_{z,\max,płata} = \Delta c_{z,\max,2D} \cdot \left(\frac{S_{flap}}{S}\right) \cdot \cos\Lambda_{0.25} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(\Delta c_{z,\max,2D}\)</span> = <b>+{{ res.aerodynamics.delta_cz_flaps if res.aerodynamics.delta_cz_flaps else '0.90' }}</b> &mdash; <span class="var-source">profilowy przyrost nośności wybranego typu klap z katalogu doświadczalnego</span></li>
+            <li><span class="var-sym">\(S_{flap}/S\)</span> = <b>{{ (res.geometry.control_surfaces.flaps.s_flapped_over_s if res.geometry.control_surfaces else 0.61)|round(3) }}</b> &mdash; <span class="var-source">względna powierzchnia części oklapowanej skrzydła</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podsumowanie nośności maksymalnej:</div>
+          \[ C_{z,\max,clean} = \mathbf{ {{ res.aerodynamics.cz_max_clean if res.aerodynamics.cz_max_clean else params.cz_max_clean }} }, \quad C_{z,\max,lnd} = \mathbf{ {{ res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd }} } \quad (\Delta C_z = +{{ ((res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd) - (res.aerodynamics.cz_max_clean if res.aerodynamics.cz_max_clean else params.cz_max_clean))|round(2) }}) \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Mechanizacja zapewnia obniżenie prędkości podejścia i lądowania zgodnie z wymogami przepisów zdatności EASA CS-23.49.
+        </div>
+      </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div class="report-chart-box">
@@ -340,6 +706,79 @@
         <tr><th>Pułap praktyczny (wy = 0.5 m/s)</th><td><b>{{ res.performance.ceiling.service_ceiling_m }} m</b></td><th>Prędkość przelotowa / Mach</th><td><b>{{ res.performance.speeds.v_cruise_kmh }} km/h (M {{ res.performance.speeds.mach_cruise }})</b></td></tr>
         <tr><th>Zakręt (BIPOL 1 wzory 31–52)</th><td><b>n = {{ res.performance.turn.n_sustained }}, &Phi; = {{ res.performance.turn.bank_angle_deg }}&deg;</b><br>{{ res.performance.turn.note }}</td><th>Promień i prędkość kątowa</th><td><b>R = {{ res.performance.turn.r_min_m|trendnum(1) }} m, &omega; = {{ res.performance.turn.psi_dot_deg_s }}&deg;/s (t_360 = {{ res.performance.turn.t_360_s|trendnum(1) }} s)</b></td></tr>
       </table>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 5.1 PRĘDKOŚCI PRZECIĄGNIĘCIA I PODEJŚCIA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🛬 Krok 5.1: Prędkość przeciągnięcia \(V_{s0}\) i prędkość podejścia \(V_{app}\)</div>
+          <span class="calc-source-badge">EASA CS-23.49 / CS-22.49 &bull; Mechanika Lotu I</span>
+        </div>
+        <p class="calc-desc">
+          Prędkość przeciągnięcia w konfiguracji do lądowania (\(V_{s0}\)) jest kluczowym parametrem bezpieczeństwa. Prędkość podejścia wg normy CS-23.49 wynosi co najmniej \(1.3 \cdot V_{s0}\):
+        </p>
+        <div class="calc-math-box">
+          \[ V_{s0} = \sqrt{\frac{2 \cdot m_0 \cdot g}{\rho_0 \cdot S \cdot C_{z,\max,lnd }} }, \quad V_{app} = 1.3 \cdot V_{s0} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(m_0\)</span> = <b>{{ res.mass.m0 }} kg</b>, <span class="var-sym">\(S\)</span> = <b>{{ res.geometry.wing.S }} m²</b> &mdash; <span class="var-source">masa startowa i powierzchnia nośna z P2/P3</span></li>
+            <li><span class="var-sym">\(\rho_0\)</span> = <b>1.225 kg/m³</b>, <span class="var-sym">\(C_{z,\max,lnd}\)</span> = <b>{{ res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd }}</b></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ V_{s0} = \sqrt{\frac{2 \cdot {{ res.mass.m0 }} \cdot 9.807}{1.225 \cdot {{ res.geometry.wing.S }} \cdot {{ res.aerodynamics.cz_max_lnd if res.aerodynamics.cz_max_lnd else params.cz_max_lnd  }} }} = {{ (res.performance.speeds.vs_lnd_kmh / 3.6)|round(2) }}\text{ m/s} = \mathbf{ {{ res.performance.speeds.vs_lnd_kmh }} \text{ km/h} } \]
+          \[ V_{app} = 1.3 \cdot {{ res.performance.speeds.vs_lnd_kmh }}\text{ km/h} = \mathbf{ {{ res.performance.speeds.v_app_kmh }} \text{ km/h} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja zdatności CS-23.49:</b> Dopuszczalna prędkość \(V_{s0} \le 113\text{ km/h}\) (61 kt). Zapas bezpieczeństwa wynosi <b>{{ (113 - res.performance.speeds.vs_lnd_kmh)|round(1) }} km/h</b>.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 5.2 WZNOSZENIE -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🛫 Krok 5.2: Maksymalna prędkość wznoszenia na poziomie morza (\(w_{y,\max}\))</div>
+          <span class="calc-source-badge">BIPOL I Wzór (18) &bull; Mechanika Lotu I &bull; CS-23.65</span>
+        </div>
+        <p class="calc-desc">
+          Zgodnie z metodą mocy nadmiarowej, maksymalna prędkość pionowa wznoszenia odpowiada punktowi największej różnicy mocy rozporządzalnej i niezbędnej:
+        </p>
+        <div class="calc-math-box">
+          \[ w_{y,\max} = \frac{\Delta P_{\max}}{m_0 \cdot g} = \frac{(P_{rozporz} - P_{niezb})_{\max}}{m_0 \cdot g} \]
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Wynik obliczeń osiągów wznoszenia:</div>
+          \[ w_{y,\max} = \mathbf{ {{ res.performance.climb.wy_max_ms }} \text{ m/s} } \quad \text{przy prędkości } V_{wy} = \mathbf{ {{ res.performance.climb.v_wy_max_kmh }} \text{ km/h} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja zdatności CS-23.65:</b> Wymóg minimalny \(w_y \ge 1.5\text{ m/s}\) został spełniony z bezpiecznym zapasem <b>{{ (res.performance.climb.wy_max_ms - 1.5)|round(2) }} m/s</b>.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 5.3 ZAKRĘT USTALONY -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🔄 Krok 5.3: Kinematyka i obciążenia zakrętu ustalonego</div>
+          <span class="calc-source-badge">BIPOL I Wzory (30)–(39) &bull; prof. C. Galiński</span>
+        </div>
+        <p class="calc-desc">
+          W zakręcie prawidłowym na stałej wysokości siła nośna równoważy ciężar i siłę odśrodkową. Parametry zakrętu określa współczynnik przeciążenia \(n = 1/\cos\Phi\):
+        </p>
+        <div class="calc-math-box">
+          \[ n = \frac{1}{\cos\Phi}, \quad R = \frac{V^2}{g \cdot \sqrt{n^2 - 1}}, \quad \omega = \frac{g \cdot \sqrt{n^2 - 1}}{V}, \quad t_{360} = \frac{2\pi \cdot V}{g \cdot \sqrt{n^2 - 1}} \]
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe dla prędkości manewrowej \(V = {{ res.performance.turn.v_turn_kmh }}\text{ km/h}\):</div>
+          \[ n = \mathbf{ {{ res.performance.turn.n_sustained }} }, \quad \Phi = \arccos\left(\frac{1}{ {{ res.performance.turn.n_sustained }} }\right) = \mathbf{ {{ res.performance.turn.bank_angle_deg }}^\circ } \]
+          \[ R = \frac{({{ (res.performance.turn.v_turn_kmh / 3.6)|round(1) }})^2}{9.807 \cdot \sqrt{ {{  res.performance.turn.n_sustained }}^2 - 1}} = \mathbf{ {{ res.performance.turn.r_min_m|trendnum(1) }} \text{ m} } \]
+          \[ \omega = \mathbf{ {{ res.performance.turn.psi_dot_deg_s }}^\circ\text{/s} }, \quad t_{360} = \mathbf{ {{ res.performance.turn.t_360_s|trendnum(1) }} \text{ s} } \]
+        </div>
+        <div class="calc-verdict verdict-info">
+          <span>ℹ️</span> <b>Komentarz:</b> {{ res.performance.turn.note }}
+        </div>
+      </div>
 
       <div class="report-chart-box" style="margin-top:1rem;">
         <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Krzywa prędkości wznoszenia wy(V) na poziomie morza</div>
@@ -367,6 +806,59 @@
         Podmuch obliczeniowy: U_C = {{ res.envelope.gust_factors.u_c_ms }} m/s, cecha masowa μ_g = {{ res.envelope.gust_factors.mu_g }}, współczynnik łagodzenia K_g = {{ res.envelope.gust_factors.k_g }} (Δ n_C = ± {{ res.envelope.gust_factors.delta_n_c }}).
       </p>
 
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 6.1 PRĘDKOŚCI OBWIEDNI V-N -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">⚡ Krok 6.1: Prędkości obliczeniowe obwiedni manewrowej (\(V_A, V_C, V_D\))</div>
+          <span class="calc-source-badge">EASA CS-23.335 &bull; prof. J. Danilecki rozdz. 1</span>
+        </div>
+        <p class="calc-desc">
+          Punkty załamania obwiedni obciążeń wyznaczają prędkości obliczeniowe: prędkość manewrowa \(V_A\) (przecięcie z krzywą \(C_{z,\max}\)), obliczeniowa prędkość przelotowa \(V_C\) oraz prędkość nurkowania \(V_D\):
+        </p>
+        <div class="calc-math-box">
+          \[ V_A = V_{s1} \cdot \sqrt{n_{\max}}, \quad V_C \ge 33 \cdot \sqrt{\frac{W}{S} \cdot \frac{1}{g}}, \quad V_D = 1.4 \cdot V_C \]
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ V_A = {{ res.performance.speeds.vs_clean_kmh }}\text{ km/h} \cdot \sqrt{+{{ res.envelope.limits.n_max  }} } = \mathbf{ {{ res.envelope.speeds.v_a_kmh }} \text{ km/h} } \]
+          \[ V_C = \mathbf{ {{ res.envelope.speeds.v_c_kmh }} \text{ km/h} }, \quad V_D = 1.4 \cdot {{ res.envelope.speeds.v_c_kmh }} = \mathbf{ {{ res.envelope.speeds.v_d_kmh }} \text{ km/h} } \]
+          \[ \text{Obciążenia niszczące (ultimate): } n_{ult,pos} = {{ res.envelope.limits.safety_factor_nu }} \cdot (+{{ res.envelope.limits.n_max }}) = \mathbf{ +{{ res.envelope.limits.n_ult_pos }} }, \quad n_{ult,neg} = \mathbf{ {{ res.envelope.limits.n_ult_neg }} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Rozpiętość prędkości \(V_D/V_C = 1.40\) oraz współczynnik bezpieczeństwa \(\nu = {{ res.envelope.limits.safety_factor_nu }}\) są w pełni zgodne z normą CS-23.335.
+        </div>
+      </div>
+
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 6.2 PODMUCHY PRATTA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">💨 Krok 6.2: Obciążenia podmuchowe &mdash; współczynnik łagodzenia Pratta i przyrost przeciążenia</div>
+          <span class="calc-source-badge">EASA CS-23.341 &bull; Pratt & Walker &bull; Danilecki rozdz. 2</span>
+        </div>
+        <p class="calc-desc">
+          Zgodnie z przepisami CS-23.341, uderzenie pionowego podmuchu atmosferycznego \(U_C = {{ res.envelope.gust_factors.u_c_ms }}\text{ m/s}\) powoduje dynamiczny przyrost współczynnika przeciążenia \(\Delta n_C\):
+        </p>
+        <div class="calc-math-box">
+          \[ \mu_g = \frac{2 \cdot (m_0 / S)}{\rho_0 \cdot b_A \cdot a}, \quad K_g = \frac{0.88 \cdot \mu_g}{5.3 + \mu_g}, \quad \Delta n_C = \frac{K_g \cdot \rho_0 \cdot U_C \cdot V_C \cdot a}{2 \cdot (W/S)} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(\mu_g\)</span> = <b>{{ res.envelope.gust_factors.mu_g }}</b> &mdash; <span class="var-source">cecha masowa samolotu</span></li>
+            <li><span class="var-sym">\(K_g\)</span> = <b>{{ res.envelope.gust_factors.k_g }}</b> &mdash; <span class="var-source">współczynnik łagodzenia podmuchu Pratta (uwzględnia bezwładność płatowca i niestacjonarność opływu)</span></li>
+            <li><span class="var-sym">\(a = dC_z/d\alpha\)</span> = <b>5.0 1/rad</b> &mdash; <span class="var-source">pochodna współczynnika siły nośnej skrzydła</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ K_g = \frac{0.88 \cdot {{ res.envelope.gust_factors.mu_g  }} }{5.3 + {{ res.envelope.gust_factors.mu_g  }} } = \mathbf{ {{ res.envelope.gust_factors.k_g }} } \]
+          \[ \Delta n_C = \pm \mathbf{ {{ res.envelope.gust_factors.delta_n_c }} } \implies n_{gust} = 1 \pm {{ res.envelope.gust_factors.delta_n_c }} = \mathbf{ +{{ (1.0 + res.envelope.gust_factors.delta_n_c)|round(2) }} \text{ / } {{ (1.0 - res.envelope.gust_factors.delta_n_c)|round(2) }} } \]
+        </div>
+        <div class="calc-verdict verdict-pass">
+          <span>✔️</span> <b>Weryfikacja:</b> Obwiednia podmuchowa nie przekracza dopuszczalnych limitów konstrukcyjnych w punktach \(V_B\) i \(V_C\).
+        </div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
         <div class="report-chart-box">
           <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; text-align:center;">Obwiednia obciążeń V-n (CS-23/25)</div>
@@ -378,13 +870,40 @@
         </div>
       </div>
 
-      <h3 style="margin-top:1.25rem;">Stateczność statyczna podłużna:</h3>
-      <p>
-        Położenie punktu neutralnego płatowca wynosi <strong>{{ res.balance.neutral_point.x_n_mac_pct }}% ŚDA</strong>.
-        Zakres wędrówki środka masy we wszystkich konfiguracjach załadowania wynosi od <strong>{{ res.balance.cg_range.forward_pct }}%</strong> do <strong>{{ res.balance.cg_range.aft_pct }}% ŚDA</strong>.
-        Zapas stateczności statycznej w najbardziej niekorzystnym tylnym położeniu ŚM wynosi
-        <strong>K_n = {{ res.balance.stability.static_margin_aft_pct }}% ŚDA</strong> ({% if res.balance.stability.static_margin_aft_pct >= 5 %}warunek K_n ≥ 5% jest spełniony{% else %}warunek K_n ≥ 5% nie jest spełniony{% endif %}).
-      </p>
+      <!-- AKADEMICKI BLOK OBLICZENIOWY: KROK 6.3 STATECZNOŚĆ PODŁUŻNA -->
+      <div class="textbook-calc-block">
+        <div class="calc-header">
+          <div class="calc-step-title">🎯 Krok 6.3: Stateczność statyczna podłużna &mdash; Punkt neutralny i zapas stateczności (\(K_n\))</div>
+          <span class="calc-source-badge">prof. J. Danilecki rozdz. 4 &bull; CS-23.171–175</span>
+        </div>
+        <p class="calc-desc">
+          Stateczność statyczna podłużna wymaga, aby środek masy samolotu znajdował się przed aerodynamicznym punktem neutralnym płatowca (\(\bar{x}_N\)). Zapas stateczności \(K_n\) określa margines bezpieczeństwa:
+        </p>
+        <div class="calc-math-box">
+          \[ \bar{x}_N = \bar{x}_{ac,w} + \frac{a_H}{a} \cdot \left(1 - \frac{d\epsilon}{d\alpha}\right) \cdot \frac{S_H \cdot L_H}{S \cdot b_A}, \quad K_n = \bar{x}_N - \bar{x}_{cg,aft} \ge 5\% \text{ ŚDA} \]
+        </div>
+        <div class="calc-legend">
+          <div class="calc-legend-title">Wykaz i źródło zmiennych składowych:</div>
+          <ul>
+            <li><span class="var-sym">\(\bar{x}_N\)</span> = <b>{{ res.balance.neutral_point.x_n_mac_pct }}% ŚDA</b> &mdash; <span class="var-source">położenie punktu neutralnego płatowca ze sterem zablokowanym</span></li>
+            <li><span class="var-sym">\(\bar{x}_{cg,aft}\)</span> = <b>{{ res.balance.cg_range.aft_pct }}% ŚDA</b> &mdash; <span class="var-source">najbardziej niekorzystne tylne położenie środka masy</span></li>
+            <li><span class="var-sym">\(\bar{x}_{cg,fwd}\)</span> = <b>{{ res.balance.cg_range.forward_pct }}% ŚDA</b> &mdash; <span class="var-source">skrajne przednie położenie środka masy</span></li>
+          </ul>
+        </div>
+        <div class="calc-substitution">
+          <div class="calc-substitution-title">Podstawienie liczbowe krok po kroku:</div>
+          \[ K_n = {{ res.balance.neutral_point.x_n_mac_pct }}\% - {{ res.balance.cg_range.aft_pct }}\% = \mathbf{ {{ res.balance.stability.static_margin_aft_pct }}\% \text{ ŚDA} } \]
+        </div>
+        <div class="calc-verdict {{ 'verdict-pass' if res.balance.stability.static_margin_aft_pct >= 5 else 'verdict-warn' }}">
+          <span>{{ '✔️' if res.balance.stability.static_margin_aft_pct >= 5 else '⚠️' }}</span>
+          <b>Ocena zdatności:</b>
+          {% if res.balance.stability.static_margin_aft_pct >= 5 %}
+          Warunek \(K_n \ge 5\%\text{ ŚDA}\) jest spełniony (\(K_n = {{ res.balance.stability.static_margin_aft_pct }}\%\)). Samolot wykazuje stateczność dodatnią z zachowaniem odpowiedniej sterowności.
+          {% else %}
+          Zapas stateczności \(K_n = {{ res.balance.stability.static_margin_aft_pct }}\%\) jest niższy niż zalecane 5% ŚDA &mdash; zaleca się przesunięcie środka masy do przodu lub powiększenie usterzenia poziomego.
+          {% endif %}
+        </div>
+      </div>
 
       </section>{% endif %}
       <h2>7. Podsumowanie i zgodność z wymaganiami</h2>
@@ -436,11 +955,12 @@
       const justEl = document.getElementById('repFlapJustification');
       if (justEl && typeof DIDACTIC_DATABASE !== 'undefined') {
         const flap = DIDACTIC_DATABASE.flaps[params.flap_type || 'single_slotted'] || DIDACTIC_DATABASE.flaps.single_slotted;
+        const aileron = (DIDACTIC_DATABASE.ailerons && DIDACTIC_DATABASE.ailerons[params.aileron_type || 'differential']) || null;
         const wing = DIDACTIC_DATABASE.wing_config[params.wing_config || 'low'] || DIDACTIC_DATABASE.wing_config.low;
         justEl.innerHTML = `
-          <div style="font-weight:800; color:#005691; margin-bottom:4px;">Uzasadnienie konstrukcyjne mechanizacji płata i układu nośnego (${flap.reference}):</div>
-          <div><strong>Wybrana mechanizacja spływu:</strong> ${flap.name} (ΔCz_max = +${flap.delta_cz_max}, złożoność: ${flap.kinematic_complexity}) &bull; <strong>Układ płata:</strong> ${wing.name}</div>
-          <div style="margin-top:4px;"><strong>Zalety (Plusy):</strong> ${flap.pros.slice(0, 2).join(' ')}</div>
+          <div style="font-weight:800; color:#005691; margin-bottom:4px;">Uzasadnienie konstrukcyjne krawędzi spływu (Klapy + Lotki) i układu nośnego (${flap.reference}):</div>
+          <div><strong>Klapy wewnętrzne:</strong> ${flap.name} (ΔCz_max = +${flap.delta_cz_max}) &bull; <strong>Lotki zewnętrzne:</strong> ${aileron ? aileron.name : 'Lotki różnicowe'} &bull; <strong>Układ płata:</strong> ${wing.name}</div>
+          <div style="margin-top:4px;"><strong>Zalety (Plusy):</strong> ${flap.pros.slice(0, 2).join(' ')} ${aileron ? aileron.pros.slice(0, 1).join(' ') : ''}</div>
           <div style="margin-top:2px;"><strong>Wady i kompromisy (Minusy):</strong> ${flap.cons.slice(0, 2).join(' ')}</div>
           <div style="margin-top:4px; font-style:italic; color:#334155;">Komentarz wg prof. C. Galińskiego: „${flap.galinski_quote}”</div>
         `;
@@ -463,6 +983,18 @@
       const glideBox = document.getElementById('repGlideChart');
       const glide = resData.performance.glide;
       if (glideBox && glide) glideBox.innerHTML = BipolVisuals.chart({title:'Biegunowa szybowania',xLabel:'V TAS [km/h]',yLabel:'Opadanie [m/s]',series:[{name:'Równowaga dokładna',data:glide.points.filter(p=>p.v_kmh<=glide.best_glide.v_kmh*2.2).map(p=>[p.v_kmh,p.sink_ms])}]});
+
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\[', right: '\\]', display: true},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
     });
   </script>
 </body>

@@ -447,8 +447,9 @@ function updateAccordionPills() {
   const pill2 = document.getElementById('pill_mod2');
   if (pill2) pill2.textContent = `${cfgNames[wingCfg] || wingCfg} • AR=${ar}`;
 
-  // Moduł 3: Mechanizacja & Cz_max
+  // Moduł 3: Mechanizacja & Cz_max (Klapy + Lotki)
   const flap = document.getElementById('flap_type')?.value || 'single_slotted';
+  const aileron = document.getElementById('aileron_type')?.value || 'differential';
   const flapShort = {
     plain: 'Zwykła',
     split: 'Krokodylowa',
@@ -460,7 +461,13 @@ function updateAccordionPills() {
   };
   const czLnd = document.getElementById('cz_max_lnd')?.value || '2.05';
   const pill3 = document.getElementById('pill_mod3');
-  if (pill3) pill3.textContent = `Klapa ${flapShort[flap] || flap} • Cz=${czLnd}`;
+  if (pill3) {
+    if (flap === 'flaperon' || aileron === 'flaperon') {
+      pill3.textContent = `Klapolotka (Flaperon) • Cz=${czLnd}`;
+    } else {
+      pill3.textContent = `Klapa ${flapShort[flap] || flap} + Lotki • Cz=${czLnd}`;
+    }
+  }
 
   // Moduł 4: Silnik & SFC
   const eng = document.getElementById('engine_type')?.value || 'prop';
@@ -552,11 +559,29 @@ function initDidacticSystem() {
     });
   }
 
-  // Obsługa wyboru Klapy i Slotu -> Karta Plusy i Minusy + przeliczenie Cz_max,lnd
+  // Obsługa wyboru Klapy, Lotki i Slotu -> Karta Plusy i Minusy + przeliczenie Cz_max,lnd
   const flapSel = document.getElementById('flap_type');
+  const aileronSel = document.getElementById('aileron_type');
   const slatSel = document.getElementById('slat_type');
+  const flapSpanInput = document.getElementById('flap_span_ratio');
   if (flapSel) {
     flapSel.addEventListener('change', () => {
+      if (flapSel.value === 'flaperon' && aileronSel) {
+        aileronSel.value = 'flaperon';
+      } else if (flapSel.value !== 'flaperon' && aileronSel && aileronSel.value === 'flaperon') {
+        aileronSel.value = 'differential';
+      }
+      renderFlapDidacticCard(true);
+      performCalculation();
+    });
+  }
+  if (aileronSel) {
+    aileronSel.addEventListener('change', () => {
+      if (aileronSel.value === 'flaperon' && flapSel) {
+        flapSel.value = 'flaperon';
+      } else if (aileronSel.value !== 'flaperon' && flapSel && flapSel.value === 'flaperon') {
+        flapSel.value = 'single_slotted';
+      }
       renderFlapDidacticCard(true);
       performCalculation();
     });
@@ -564,6 +589,11 @@ function initDidacticSystem() {
   if (slatSel) {
     slatSel.addEventListener('change', () => {
       renderFlapDidacticCard(true);
+      performCalculation();
+    });
+  }
+  if (flapSpanInput) {
+    flapSpanInput.addEventListener('change', () => {
       performCalculation();
     });
   }
@@ -649,15 +679,17 @@ function scheduleHideDidacticPopover() {
   }, 140);
 }
 
-// Renderowanie Karty Plusów i Minusów wybranej Klapy oraz Slotu (wg Rozdz. 16 prof. C. Galińskiego)
+// Renderowanie Karty Plusów i Minusów wybranej Klapy, Lotki oraz Slotu (wg Rozdz. 16 i 17 prof. C. Galińskiego)
 function renderFlapDidacticCard(autoUpdateCz = false) {
   const card = document.getElementById('flapDidacticCard');
   if (!card || typeof DIDACTIC_DATABASE === 'undefined') return;
 
   const flapId = document.getElementById('flap_type')?.value || 'single_slotted';
+  const aileronId = document.getElementById('aileron_type')?.value || 'differential';
   const slatId = document.getElementById('slat_type')?.value || 'none';
 
   const flap = DIDACTIC_DATABASE.flaps[flapId] || DIDACTIC_DATABASE.flaps.single_slotted;
+  const aileron = (DIDACTIC_DATABASE.ailerons && DIDACTIC_DATABASE.ailerons[aileronId]) || null;
   const slat = DIDACTIC_DATABASE.slats[slatId] || DIDACTIC_DATABASE.slats.none;
 
   const czClean = parseFloat(document.getElementById('cz_max_clean')?.value || 1.40);
@@ -671,49 +703,108 @@ function renderFlapDidacticCard(autoUpdateCz = false) {
     <div class="flap-card-top">
       <div>
         <div style="font-size:0.72rem; text-transform:uppercase; font-weight:800; color:#0284c7;">
-          📖 Analiza Konstrukcyjna Wybranej Mechanizacji (${flap.reference})
+          📖 Krawędź Spływu: Klapy &bull; Lotki &bull; Sloty (${flap.reference})
         </div>
         <div style="font-size:0.95rem; font-weight:800; color:#0f172a; margin-top:2px;">
-          ${flap.name} ${slatId !== 'none' ? ' + ' + slat.name : ''}
+          ${flap.name} + ${aileron ? aileron.name : 'Lotki konwencjonalne'} ${slatId !== 'none' ? '+ ' + slat.name : ''}
         </div>
         <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:0.35rem;">
           <span class="badge badge-success">ΔCz_klapy = +${flap.delta_cz_max.toFixed(2)}</span>
+          ${aileron ? `<span class="badge badge-info">Lotki: +${aileron.delta_a_up_deg}° / -${aileron.delta_a_down_deg}°</span>` : ''}
+          ${aileron ? `<span class="badge" style="background:#e0f2fe; color:#0369a1;">pb/(2V) ≈ ${aileron.typical_pb_2v}</span>` : ''}
           ${slat.delta_cz_max > 0 ? `<span class="badge badge-info">ΔCz_slotu = +${slat.delta_cz_max.toFixed(2)} (Δα_kryt +${slat.alpha_crit_inc_deg}°)</span>` : ''}
           <span class="badge badge-warning">ΔCx0_lnd = +${flap.delta_cx0_lnd.toFixed(3)}</span>
-          <span class="badge" style="background:#f1f5f9; color:#334155;">Złożoność: ${flap.kinematic_complexity}</span>
         </div>
       </div>
-      <div class="flap-svg-box" title="Schemat kinematyczny przekroju wybranej klapy">
-        ${flap.svg_icon}
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <div class="flap-svg-box" title="Schemat kinematyczny klapy">${flap.svg_icon}</div>
+        ${aileron ? `<div class="flap-svg-box" title="Schemat lotki">${aileron.svg_icon}</div>` : ''}
       </div>
     </div>
 
     <div class="pros-cons-grid">
       <div class="pros-box">
-        <h5>👍 PLUSY (Zalety konstrukcyjne i aerodynamiczne):</h5>
+        <h5>👍 PLUSY (Zalety klap i lotek):</h5>
         <ul>
-          ${flap.pros.map(p => `<li>${p}</li>`).join('')}
-          ${slatId !== 'none' ? slat.pros.map(p => `<li><strong>[Natarcie]</strong> ${p}</li>`).join('') : ''}
+          ${flap.pros.map(p => `<li><strong>[Klapa]</strong> ${p}</li>`).join('')}
+          ${aileron ? aileron.pros.map(p => `<li><strong>[Lotka]</strong> ${p}</li>`).join('') : ''}
+          ${slatId !== 'none' ? slat.pros.map(p => `<li><strong>[Slot]</strong> ${p}</li>`).join('') : ''}
         </ul>
       </div>
       <div class="cons-box">
-        <h5>⚠️ MINUSY (Wady, ograniczenia i zagrożenia):</h5>
+        <h5>⚠️ MINUSY (Wady i zagrożenia konstrukcyjne):</h5>
         <ul>
-          ${flap.cons.map(c => `<li>${c}</li>`).join('')}
-          ${slatId !== 'none' ? slat.cons.map(c => `<li><strong>[Natarcie]</strong> ${c}</li>`).join('') : ''}
+          ${flap.cons.map(c => `<li><strong>[Klapa]</strong> ${c}</li>`).join('')}
+          ${aileron ? aileron.cons.map(c => `<li><strong>[Lotka]</strong> ${c}</li>`).join('') : ''}
+          ${slatId !== 'none' ? slat.cons.map(c => `<li><strong>[Slot]</strong> ${c}</li>`).join('') : ''}
         </ul>
       </div>
     </div>
 
     <div class="galinski-quote-box">
-      <strong>📘 Monografia prof. C. Galińskiego (PW MEiL):</strong> „${flap.galinski_quote}”
-      ${slatId !== 'none' ? `<br><strong>📘 Krawędź natarcia:</strong> „${slat.galinski_quote}”` : ''}
+      <strong>📘 Prof. C. Galiński (PW MEiL):</strong> „${flap.galinski_quote}”
+      ${aileron ? `<br><strong>📘 Sterowanie poprzeczne (lotki):</strong> „${aileron.galinski_quote}”` : ''}
       <div style="margin-top:4px; font-size:0.73rem; color:#0f172a;">
-        <strong>✈️ Przykłady samolotów:</strong> ${flap.typical_aircraft} &bull;
+        <strong>✈️ Przykłady maszyn:</strong> ${flap.typical_aircraft} &bull; ${aileron ? aileron.typical_aircraft : ''} &bull;
         <strong>Wyliczony Cz_max,lnd = ${computedCzLnd}</strong>
       </div>
     </div>
   `;
+}
+
+// Widget podsumowania podziału rozpiętości krawędzi spływu (Klapy vs Lotki)
+function updateTrailingEdgeLayoutWidget(res) {
+  if (!res || !res.geometry || !res.geometry.control_surfaces) return;
+  const cs = res.geometry.control_surfaces;
+  const f = cs.flaps;
+  const a = cs.ailerons;
+  const part = cs.trailing_edge_partition;
+
+  const badge = document.getElementById('cs_layout_badge');
+  if (badge) {
+    badge.textContent = cs.is_flaperon ? 'Klapolotka (Flaperon)' : 'Klapy wewn. + Lotki zewn.';
+    badge.className = cs.is_flaperon ? 'badge badge-warning' : 'badge badge-info';
+  }
+
+  const bFus = document.getElementById('bar_fuselage');
+  const bFlaps = document.getElementById('bar_flaps');
+  const bGap = document.getElementById('bar_gap');
+  const bAil = document.getElementById('bar_ailerons');
+  const bTip = document.getElementById('bar_tip');
+
+  if (bFus && bFlaps && bGap && bAil && bTip) {
+    bFus.style.width = `${part.fuselage_gap_pct}%`;
+    bFus.title = `Kadłub (${part.fuselage_gap_pct}%)`;
+
+    bFlaps.style.width = `${part.flap_span_pct}%`;
+    bFlaps.textContent = cs.is_flaperon ? `Klapolotka (${part.flap_span_pct}%)` : `Klapy (${part.flap_span_pct}%)`;
+    bFlaps.title = `Klapy: bf=${f.b_f_m}m, Sf=${f.S_flap_surface_m2}m²`;
+
+    bGap.style.width = `${part.clearance_gap_pct}%`;
+    bGap.style.display = cs.is_flaperon ? 'none' : 'block';
+
+    bAil.style.width = `${part.aileron_span_pct}%`;
+    bAil.textContent = cs.is_flaperon ? '' : `Lotki (${part.aileron_span_pct}%)`;
+    bAil.style.display = cs.is_flaperon ? 'none' : 'block';
+    bAil.title = `Lotki: ba=${a.b_a_m}m, Sa=${a.S_aileron_surface_m2}m²`;
+
+    bTip.style.width = `${part.tip_clearance_pct}%`;
+  }
+
+  const flapsText = document.getElementById('cs_flaps_text');
+  if (flapsText) {
+    flapsText.innerHTML = `bf = <b>${f.b_f_m} m</b> (${(f.bf_over_b * 100).toFixed(1)}% b), Sf = <b>${f.S_flap_surface_m2} m²</b> (${(f.s_flapped_over_s * 100).toFixed(1)}% S)`;
+  }
+
+  const aileronsText = document.getElementById('cs_ailerons_text');
+  if (aileronsText) {
+    aileronsText.innerHTML = `ba = <b>${a.b_a_m} m</b> (${(a.ba_over_b * 100).toFixed(1)}% b), Sa = <b>${a.S_aileron_surface_m2} m²</b> (${(a.s_aileron_over_s * 100).toFixed(1)}% S)`;
+  }
+
+  const rollText = document.getElementById('cs_roll_text');
+  if (rollText) {
+    rollText.innerHTML = `Skuteczność poprzeczna: <b>pb/(2V) = ${a.roll_helix_pb_2v}</b> [${a.roll_authority_ok ? '<span style="color:#059669;">✓ Zgodne CS-23/22</span>' : '<span style="color:#d97706;">⚠️ Poniżej zalecenia</span>'}] &bull; <b>${cs.stall_safety.verdict}</b>`;
+  }
 }
 
 // Renderowanie Karty Plusów i Minusów wybranego Układu Skrzydła (Dolnopłat / Górnopłat / Zastrzałowy / Średniopłat)
@@ -825,11 +916,13 @@ function loadTopic(topicId) {
     setFieldValue('takeoff_run_m', def.aircraft_type === 'jet_transport' ? 1400 : 750);
   } else if (titleLower.includes('motoszybow')) {
     setFieldValue('flap_type', 'flaperon');
+    setFieldValue('aileron_type', 'flaperon');
     setFieldValue('slat_type', 'none');
     setFieldValue('v_stall_kmh', 72);
     setFieldValue('takeoff_run_m', 220);
   } else {
     setFieldValue('flap_type', 'single_slotted');
+    setFieldValue('aileron_type', 'differential');
     setFieldValue('slat_type', 'none');
     setFieldValue('v_stall_kmh', 90);
     setFieldValue('takeoff_run_m', 280);
@@ -876,6 +969,7 @@ function collectFormData() {
   const activeProj = typeof getActiveProject === 'function' ? getActiveProject() : null;
   const nameEl = document.getElementById('projectNameDisplay');
   data['name'] = activeProj ? activeProj.name : (nameEl ? nameEl.textContent.trim() : 'Wstępny Projekt Samolotu');
+  data['locked_params'] = Array.from(window.userLockedParams || []);
   return data;
 }
 
@@ -933,6 +1027,9 @@ async function performCalculation() {
     }
     currentResults = result;
     updateUI(result);
+    if (typeof updateDerivedUI === 'function' && result.constraints && result.constraints.parameter_states) {
+      updateDerivedUI(result.constraints.parameter_states);
+    }
     autoSaveActiveProject(result);
     showCalculationStatus(projectStore.persistent ? 'Wyniki i zapis projektu są aktualne.' : 'Wyniki są aktualne. Zapis w przeglądarce jest niedostępny — pobierz JSON przed zamknięciem karty.');
     document.dispatchEvent(new CustomEvent('bipol:results', {detail: result}));
@@ -982,6 +1079,9 @@ function updateUI(res) {
   } catch (err) {
     console.warn('Błąd renderTabVisuals:', err);
   }
+
+  // 2b. Rozkład krawędzi spływu: Klapy i Lotki
+  try { updateTrailingEdgeLayoutWidget(res); } catch (err) { console.warn('Błąd updateTrailingEdgeLayoutWidget:', err); }
 
   // 3. Moduł CAD: Wykaz Części (BOM) i Wymiary Główne
   try { populateCadTables(res); } catch (err) { console.warn('Błąd populateCadTables:', err); }
@@ -1315,42 +1415,46 @@ function populateP4Tables(res) {
   if (p4Card && typeof DIDACTIC_DATABASE !== 'undefined') {
     const fd = res.params;
     const flap = DIDACTIC_DATABASE.flaps[fd.flap_type] || DIDACTIC_DATABASE.flaps.single_slotted;
+    const aileron = (DIDACTIC_DATABASE.ailerons && DIDACTIC_DATABASE.ailerons[fd.aileron_type]) || null;
     const slat = DIDACTIC_DATABASE.slats[fd.slat_type] || DIDACTIC_DATABASE.slats.none;
     p4Card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
         <div>
           <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:#0d9488;">
-            Uzasadnienie Wyboru Mechanizacji (${flap.reference})
+            Uzasadnienie Wyboru Mechanizacji Krawędzi Spływu i Natarcia (${flap.reference})
           </div>
           <div style="font-size:1.05rem; font-weight:800; color:#0f172a;">
-            ${flap.name} ${fd.slat_type !== 'none' ? '+ ' + slat.name : ''}
+            ${flap.name} + ${aileron ? aileron.name : 'Lotki'} ${fd.slat_type !== 'none' ? '+ ' + slat.name : ''}
           </div>
         </div>
         <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
           <span class="badge badge-success">&Delta;Cz_klapy = +${flap.delta_cz_max.toFixed(2)}</span>
+          ${aileron ? `<span class="badge badge-info">pb/(2V) ≈ ${aileron.typical_pb_2v}</span>` : ''}
           ${slat.delta_cz_max > 0 ? `<span class="badge badge-info">&Delta;Cz_slotu = +${slat.delta_cz_max.toFixed(2)}</span>` : ''}
           <span class="badge badge-warning">&Delta;Cx0_lnd = +${flap.delta_cx0_lnd.toFixed(3)}</span>
-          <span class="badge" style="background:#f1f5f9; color:#334155;">Złożoność: ${flap.kinematic_complexity}</span>
         </div>
       </div>
       <div class="pros-cons-grid" style="margin-bottom:0.5rem;">
         <div class="pros-box">
           <h5>👍 Zalety konstrukcyjno-aerodynamiczne:</h5>
           <ul>
-            ${flap.pros.map(p => `<li>${p}</li>`).join('')}
+            ${flap.pros.map(p => `<li><strong>[Klapa]</strong> ${p}</li>`).join('')}
+            ${aileron ? aileron.pros.map(p => `<li><strong>[Lotka]</strong> ${p}</li>`).join('') : ''}
             ${fd.slat_type !== 'none' ? slat.pros.map(p => `<li><strong>[Slot]</strong> ${p}</li>`).join('') : ''}
           </ul>
         </div>
         <div class="cons-box">
           <h5>⚠️ Wady, ograniczenia i kompromisy:</h5>
           <ul>
-            ${flap.cons.map(c => `<li>${c}</li>`).join('')}
+            ${flap.cons.map(c => `<li><strong>[Klapa]</strong> ${c}</li>`).join('')}
+            ${aileron ? aileron.cons.map(c => `<li><strong>[Lotka]</strong> ${c}</li>`).join('') : ''}
             ${fd.slat_type !== 'none' ? slat.cons.map(c => `<li><strong>[Slot]</strong> ${c}</li>`).join('') : ''}
           </ul>
         </div>
       </div>
       <div class="galinski-quote-box">
         <strong>📘 Opinia prof. C. Galińskiego (MEiL PW):</strong> „${flap.galinski_quote}”
+        ${aileron ? `<br><strong>📘 Sterowanie poprzeczne (lotki):</strong> „${aileron.galinski_quote}”` : ''}
       </div>
     `;
   }
@@ -2867,6 +2971,7 @@ function commitWizardToForm() {
     { wizId: 'wiz_taper_ratio', formId: 'taper_ratio' },
     { wizId: 'wiz_sweep_quarter_deg', formId: 'sweep_quarter_deg' },
     { wizId: 'wiz_flap_type', formId: 'flap_type' },
+    { wizId: 'wiz_aileron_type', formId: 'aileron_type' },
     { wizId: 'wiz_slat_type', formId: 'slat_type' }
   ];
 
@@ -3253,6 +3358,7 @@ function hydrateSemesterProjectsData(res) {
           <td>${powerOrThrust}</td>
           <td>${a.v_max ?? '—'}</td>
           <td>${a.ar?.toFixed(2) ?? '—'}</td>
+          <td>${a.prop_diameter_m != null ? `${a.prop_diameter_m.toFixed(2)} m` : '—'}</td>
         </tr>
       `;
       }).join('');
@@ -3590,6 +3696,41 @@ function hydrateSemesterProjectsData(res) {
           <td><b>${hl.landing.vs_kmh} km/h</b></td>
           <td>+${hl.landing.delta_cz}</td>
           <td><span class="badge ${hl.is_cs23_compliant ? 'badge-success' : 'badge-danger'}">${hl.is_cs23_compliant ? `✓ Zgodne (<= ${stallLim} km/h)` : `⚠️ Przekroczone (> ${stallLim} km/h)`}</span></td>
+        </tr>
+      `;
+    }
+
+    const csTbody = document.getElementById('p4_control_surfaces_tbody');
+    if (csTbody && res.geometry && res.geometry.control_surfaces) {
+      const cs = res.geometry.control_surfaces;
+      const f = cs.flaps;
+      const a = cs.ailerons;
+      const dCz = (res.aerodynamics?.cz_max_lnd - res.aerodynamics?.cz_max_clean).toFixed(2);
+      csTbody.innerHTML = `
+        <tr>
+          <td><b>Klapy wysklepiające (wewnętrzne)</b></td>
+          <td>${f.name}</td>
+          <td>${f.b_f_m} m</td>
+          <td>${(f.bf_over_b * 100).toFixed(1)}% rozpiętości</td>
+          <td>${(f.cf_over_c * 100).toFixed(0)}% cięciwy</td>
+          <td>${f.S_flap_surface_m2} m² (${(f.s_flapped_over_s * 100).toFixed(1)}% S_flapped)</td>
+          <td>&Delta;Cz_max = +${dCz}</td>
+          <td><span class="badge badge-success">✓ Zgodne CS-23.49 / CS-22</span></td>
+        </tr>
+        <tr>
+          <td><b>Lotki sterowania poprzecznego (zewnętrzne)</b></td>
+          <td>${a.name}</td>
+          <td>${a.b_a_m} m</td>
+          <td>${(a.ba_over_b * 100).toFixed(1)}% rozpiętości</td>
+          <td>${(a.ca_over_c * 100).toFixed(0)}% cięciwy</td>
+          <td>${a.S_aileron_surface_m2} m² (${(a.s_aileron_over_s * 100).toFixed(1)}% S)</td>
+          <td>pb/(2V) = ${a.roll_helix_pb_2v} (kąt spiralny)</td>
+          <td><span class="badge ${a.roll_authority_ok ? 'badge-success' : 'badge-warning'}">${a.roll_authority_ok ? `✓ Zgodne (&ge; ${a.min_pb_2v_req})` : `⚠️ pb/(2V) < ${a.min_pb_2v_req}`}</span></td>
+        </tr>
+        <tr>
+          <td colspan="8" style="background:#f8fafc; font-size:0.8rem; color:#1e293b;">
+            <strong>Audyt bezpieczeństwa przeciągnięcia Schrenka:</strong> ${cs.stall_safety.verdict}
+          </td>
         </tr>
       `;
     }

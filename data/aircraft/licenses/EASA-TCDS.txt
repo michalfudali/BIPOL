@@ -1,0 +1,13 @@
+Baza Danych Motoszybowców EASA CS-22 / ULC / MEiL PW (2026)
+==============================================================
+
+Zestawienie parametrów technicznych certyfikowanych motoszybowców (Touring Motor Gliders CS-22 oraz szybowców z napędem pomocniczym) oparte o oficjalne publiczne źródła zdatności do lotu:
+
+1. Europejska Agencja Bezpieczeństwa Lotniczego (EASA):
+   - Type Certificate Data Sheets (TCDS): EASA.A.054 (Stemme), EASA.A.065 (Diamond HK36), EASA.A.249 (Grob G 109), EASA.A.098 (Scheibe SF 25), EASA.A.030 (Fournier RF), EASA.A.034 (Vivat L-13), EASA.A.301 (Ventus-2cT), EASA.A.049 (Discus-2cT), EASA.A.063 (Nimbus-4M), EASA.A.532 (Arcus M), EASA.A.212 (ASH 26 E), EASA.A.538 (ASH 31 Mi), EASA.A.599 (ASG 32 Mi), EASA.A.221 (ASK 21 Mi), EASA.A.067 (DG-808M), EASA.A.013 (DG-1001M).
+2. Urząd Lotnictwa Cywilnego (ULC) i Politechnika Warszawska (MEiL PW):
+   - PW-4 Pelikan (IOM / Świadectwo Typu), AOS-71 (Politechnika Warszawska / Politechnika Rzeszowska), SZD-45A Ogar (Szybowcowy Zakład Doświadczalny).
+3. Instrukcje użytkowania w locie (AFM / POH / IOM):
+   - Pipistrel Sinus/Taurus, Alisport Silent 2 Electro FES, Urban Air Lambada, Valentin Taifun 17E, AMS Carat.
+
+Dane obejmują parametry geometryczne (rozpiętość b, powierzchnia S, wydłużenie AR), masowe (MTOW m0, masa pusta me), napędowe (moc P [kW], średnica/rozpiętość śmigła d_prop [m], typ śmigła i silnika) oraz osiągowe (prędkość przelotowa, doskonałość K_max, opadanie minimalne w_z).

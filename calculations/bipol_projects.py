@@ -83,7 +83,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         p_req_p1_kw = round((drag_cr * v_cr_ms) / (float(params.get("prop_efficiency", 0.82)) * 1000.0), 1)
     
     # BIPOL_1, p. 1: actual reference cohort and fitted coefficients in kg.
-    trend_analysis = analyze_trends(params, m0, m_empty)
+    trend_analysis = analyze_trends(params, m0, m_empty, geom_res=geom_res)
     preliminary = preliminary_insights(params, mass_res, geom_res, aero_res)
 
     wing_cfg_pl = {
@@ -134,6 +134,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         "p_req_est_kw": p_req_p1_kw,
         "t_req_est_kn": t_req_p1_kn,
         "trend_analysis": trend_analysis,
+        "geometry_trends": trend_analysis.get("geometry_trends_analysis"),
         "preliminary": preliminary,
         "points_max": {"obligatory": 3, "optional": 2, "total": 5}
     }
@@ -384,6 +385,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     
     prop_sel = paturski_res["p5_propulsion_characteristics"].get("propeller_selection", {})
     p3_data = {
+        "geometry_trends": trend_analysis.get("geometry_trends_analysis"),
         "blueprint_checks": {
             "engine_type": engine_type,
             "pilot_vision_angle_deg": 16.5,
@@ -430,6 +432,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "stall_y_m": geom_res.get("schrenk_Pinpoint", {}).get("stall_y_m", round(0.55 * 0.5 * b, 2)),
             "cz_max_wing_est": round((cz_max_clean * 1.06) / max(1.0, geom_res.get("schrenk_Pinpoint", {}).get("max_cz1", 1.08)), 3)
         },
+        "control_surfaces": geom_res.get("control_surfaces", {}),
         "points_max": {"obligatory": 22, "optional": 5, "total": 27}
     }
     
@@ -489,7 +492,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         "takeoff": {"cz_max": aero_res["cz_max_to"], "vs_kmh": perf_res["speeds"]["vs_to_kmh"], "cx0": aero_res["cx0_to"], "delta_cz": round(aero_res["cz_max_to"] - cz_max_clean, 2)},
         "landing": {"cz_max": cz_max_lnd, "vs_kmh": perf_res["speeds"]["vs_lnd_kmh"], "cx0": aero_res["cx0_lnd"], "delta_cz": round(cz_max_lnd - cz_max_clean, 2)},
         "cs23_stall_limit_kmh": stall_limit_kmh,
-        "is_cs23_compliant": perf_res["speeds"]["vs_lnd_kmh"] <= (stall_limit_kmh + 1.0)
+        "is_cs23_compliant": perf_res["speeds"]["vs_lnd_kmh"] <= (stall_limit_kmh + 1.0),
+        "control_surfaces": geom_res.get("control_surfaces", {})
     }
     
     p4_data = {
@@ -513,118 +517,32 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # =========================================================================
     # PROJEKT 5: OSIĄGI SAMOLOTU (15 pkt) — Tabela 6.2, 6.3 wg Z. Paturskiego
     # =========================================================================
-    # 5.1 Wykres ofertowy samolotu (BIPOL_5.pdf Rys. 5.1 + Paturski Tabela 6.2)
-    alts_test = [0, 2000, 4000, 6000, 8000, 10000, 12000] if engine_type == "jet" else [0, 1000, 2000, 3000, 4000, 5000, 6000]
+    # 5.1 Wykres ofertowy samolotu z bezpośredniej metodyki dr. Paturskiego (Projekt nr 6, Tabela 6.2)
+    p6_ml = paturski_res["p6_performance_paturski"]
+    t6_2_ml = p6_ml.get("table_6_2_climb_and_ceilings", {})
+    ceilings_ml = t6_2_ml.get("ceilings", {})
+    alts_tbl_ml = t6_2_ml.get("altitudes_table", [])
+
     offer_chart_data = []
-    t_climb_accum_s = 0.0
-    prev_h = 0.0
-    prev_wy = perf_res["climb"]["wy_max_ms"]
-    dp_sizing = sizing_res["design_point"]
-    w_tot = m0 * G0
-    ws_act = w_tot / S
-    eta_prop_p5 = float(params.get("prop_efficiency", 0.82))
-    v_wy_sl_ms = float(perf_res["climb"]["v_wy_max_kmh"]) / 3.6
-    
-    for h in alts_test:
-        isa_h = isa_atmosphere(h)
-        sigma_h = isa_h["sigma"]
-        rho_h = isa_h["rho"]
-        vs_h_ms = (float(perf_res["speeds"]["vs_clean_kmh"]) / 3.6) / math.sqrt(max(0.15, sigma_h))
-        
-        def eval_wy_h(v_ms_val: float):
-            q_val = 0.5 * rho_h * (v_ms_val ** 2)
-            cz_val = ws_act / max(1.0, q_val)
-            cx_val = cx0 + k_ind * (cz_val ** 2)
-            drag_val = q_val * S * cx_val
-            if engine_type == "jet":
-                t0_av = (dp_sizing["tw"] or 0.30) * w_tot
-                t_av_h = t0_av * math.pow(sigma_h, 0.80)
-                return ((t_av_h - drag_val) * v_ms_val) / w_tot
-            else:
-                p0_av = (dp_sizing["pw"] or 12.0) * w_tot
-                p_av_h = p0_av * eta_prop_p5 * math.pow(sigma_h, 0.85)
-                return (p_av_h - drag_val * v_ms_val) / w_tot
-
-        # Dokładne wyznaczenie optymalnej prędkości najszybszego wznoszenia V_w(H) i w_max(H)
-        if engine_type == "jet":
-            t0_avail = (dp_sizing["tw"] or 0.30) * w_tot
-            ts_h = (t0_avail * math.pow(sigma_h, 0.80)) / S
-            q_wy_h = (ts_h + math.sqrt((ts_h ** 2) + 12.0 * cx0 * k_ind * (ws_act ** 2))) / (6.0 * cx0)
-            v_wy_h_ms = max(vs_h_ms * 1.05, math.sqrt((2.0 * q_wy_h) / rho_h))
-        else:
-            v_wy_h_ms = v_wy_sl_ms / math.sqrt(max(0.15, sigma_h))
-
-        wy_h = max(0.0, eval_wy_h(v_wy_h_ms))
-        if h == 0:
-            wy_h = float(perf_res["climb"]["wy_max_ms"])
-        if wy_h > 0.0 and h > 0:
-            dh = h - prev_h
-            avg_wy = max(0.2, (prev_wy + wy_h) / 2.0)
-            t_climb_accum_s += dh / avg_wy
-            
-        prev_h = h
-        prev_wy = wy_h
-        
-        # Dokładna prędkość maksymalna V_max(H) z warunku wy(V_max, H) = 0
-        if wy_h <= 0.05:
-            v_max_h_ms = v_wy_h_ms
-        else:
-            v_lo = v_wy_h_ms
-            v_hi = 380.0
-            for _ in range(35):
-                v_mid = 0.5 * (v_lo + v_hi)
-                if eval_wy_h(v_mid) > 0.0:
-                    v_lo = v_mid
-                else:
-                    v_hi = v_mid
-            v_max_h_ms = 0.5 * (v_lo + v_hi)
-
-        # Prędkość najstromszego wznoszenia V_gamma(H) i maksymalny kąt toru lotu gamma_max(H) wg Tabeli 6.2 Paturskiego
-        if wy_h > 0.05:
-            best_sin_gamma = 0.0
-            v_gamma_h_ms = v_wy_h_ms
-            for i_scan in range(25):
-                v_cand = vs_h_ms * 1.03 + (v_wy_h_ms * 1.15 - vs_h_ms * 1.03) * (i_scan / 24.0)
-                w_cand = max(0.0, eval_wy_h(v_cand))
-                sin_g = w_cand / max(1.0, v_cand)
-                if sin_g > best_sin_gamma:
-                    best_sin_gamma = sin_g
-                    v_gamma_h_ms = v_cand
-            gamma_deg = round(math.degrees(math.asin(min(0.9, best_sin_gamma))), 1)
-        else:
-            v_gamma_h_ms = v_wy_h_ms
-            gamma_deg = 0.0
-
-        v_min_h = round(vs_h_ms * 3.6, 1)
-        v_wy_h_kmh = round(v_wy_h_ms * 3.6, 1)
-        v_gamma_h_kmh = round(v_gamma_h_ms * 3.6, 1)
-        v_max_h = round(max(v_wy_h_kmh, v_max_h_ms * 3.6), 1)
-        inv_wy_sm = round(1.0 / wy_h, 3) if wy_h >= 0.1 else None
-        
+    for r in alts_tbl_ml:
         offer_chart_data.append({
-            "h_m": h,
-            "wy_max_ms": round(wy_h, 2),
-            "inv_wy_sm": inv_wy_sm,
-            "gamma_max_deg": gamma_deg,
-            "v_gamma_kmh": v_gamma_h_kmh,
-            "time_to_climb_s": round(t_climb_accum_s) if wy_h > 0.2 else None,
-            "time_to_climb_min": round(t_climb_accum_s / 60.0, 1) if wy_h > 0.2 else None,
-            "v_min_kmh": v_min_h,
-            "v_max_kmh": v_max_h,
-            "v_wy_kmh": v_wy_h_kmh
+            "h_m": r["h_m"],
+            "wy_max_ms": r["w_max_ms"],
+            "inv_wy_sm": r["inv_w_max_s_m"],
+            "gamma_max_deg": r["gamma_max_deg"],
+            "v_gamma_kmh": r["v_gamma_kmh"],
+            "time_to_climb_s": r["th_s"],
+            "time_to_climb_min": r["th_min"],
+            "v_min_kmh": r["v_min_kmh"],
+            "v_max_kmh": r["v_max_kmh"],
+            "v_wy_kmh": r["v_w_kmh"]
         })
 
     # Pułap praktyczny h_p (w_max = 0.5 m/s), teoretyczny h_t (w_max = 0) i czas wznoszenia t_hp wg wzoru (6.12)
-    hp_service_m = float(perf_res["ceiling"]["service_ceiling_m"])
-    w0_sl = max(0.01, float(perf_res["climb"]["wy_max_ms"]))
-    if hp_service_m <= 0.0 or w0_sl <= 0.05 or engine_type == "none":
-        ht_theoretical_m = 0.0
-        thp_analytical_s = 0.0
-        thp_analytical_min = 0.0
-    else:
-        ht_theoretical_m = round(hp_service_m / max(0.05, 1.0 - (0.5 / max(0.51, w0_sl))), -1)
-        thp_analytical_s = (ht_theoretical_m / max(0.51, w0_sl)) * math.log(1.0 / max(0.02, 1.0 - (hp_service_m / max(1.0, ht_theoretical_m))))
-        thp_analytical_min = round(thp_analytical_s / 60.0, 1)
+    hp_service_m = ceilings_ml.get("h_p_practical_m", float(perf_res["ceiling"]["service_ceiling_m"]))
+    ht_theoretical_m = ceilings_ml.get("h_t_theoretical_m", float(perf_res["ceiling"]["absolute_ceiling_m"]))
+    thp_analytical_s = ceilings_ml.get("t_hp_climb_to_practical_ceiling_s", 0.0)
+    thp_analytical_min = ceilings_ml.get("t_hp_climb_to_practical_ceiling_min", 0.0)
         
     # 5.2 Zasięg i długotrwałość 3 metodami (BIPOL_5.pdf wzory 5.10 - 5.16 + Paturski wzory 6.29 - 6.38)
     e_oswald = float(params.get("oswald_e", 0.80))

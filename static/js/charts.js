@@ -747,6 +747,33 @@ function render3ViewBlueprint(containerId, geom, fullResults = null) {
   const xNoseGear = xNose + lPx * 0.14;
   const xMainGear = xNoseGear + wheelbasePx;
 
+  // Geometria powierzchni sterowych spływu: Klapy (Flaps) i Lotki (Ailerons)
+  const cs = (geom && geom.control_surfaces) ? geom.control_surfaces : null;
+  const isFlaperon = cs ? Boolean(cs.is_flaperon) : false;
+  const eta_f_in = cs ? Number(cs.flaps.eta_in) : Math.max(0.08, d / b);
+  const eta_f_out = cs ? Number(cs.flaps.eta_out) : 0.70;
+  const cf_c = cs ? Number(cs.flaps.cf_over_c) : 0.25;
+
+  const eta_a_in = cs ? Number(cs.ailerons.eta_in) : (eta_f_out + 0.015);
+  const eta_a_out = cs ? Number(cs.ailerons.eta_out) : 0.96;
+  const ca_c = cs ? Number(cs.ailerons.ca_over_c) : 0.22;
+
+  function wLE_X(etaVal) {
+    return xNose + xWingLE + etaVal * sweepOffsetPx;
+  }
+  function wChord(etaVal) {
+    return crPx + etaVal * (ctPx - crPx);
+  }
+  function wTE_X(etaVal) {
+    return wLE_X(etaVal) + wChord(etaVal);
+  }
+  function flapH_X(etaVal) {
+    return wLE_X(etaVal) + (1.0 - cf_c) * wChord(etaVal);
+  }
+  function aileronH_X(etaVal) {
+    return wLE_X(etaVal) + (1.0 - ca_c) * wChord(etaVal);
+  }
+
   // Środek Ciężkości (ŚM) z bilansu masowego
   const xCgRel = (fullResults && fullResults.balance && fullResults.balance.x_lemac_m)
     ? (fullResults.balance.x_lemac_m - (fullResults.balance.x_le_wing_m || 0) + mac * 0.28) * pxPerMeter
@@ -1015,22 +1042,48 @@ function render3ViewBlueprint(containerId, geom, fullResults = null) {
       <line x1="${xNose + xWingLE + crPx * 0.25}" y1="${yTopAxis + bPx / 2}"
             x2="${xNose + xWingLE + sweepOffsetPx + ctPx * 0.25}" y2="${yTopAxis + bPx / 2}" stroke="#000" stroke-width="0.8" stroke-dasharray="6,3"/>
 
-      <!-- Mechanizacja skrzydła: Klapy wewnętrzne i lotki zewnętrzne (linie cienkie 0.9 px) -->
-      <!-- Prawa strona -->
-      <line x1="${xNose + xWingLE + crPx * 0.74}" y1="${yTopAxis - dPx * 0.48}"
-            x2="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65) * 0.74}" y2="${yTopAxis - bPx * 0.325}" stroke="#000" stroke-width="0.9"/>
-      <line x1="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65) * 0.74}" y1="${yTopAxis - bPx * 0.325}"
-            x2="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65)}" y2="${yTopAxis - bPx * 0.325}" stroke="#000" stroke-width="0.9"/>
-      <line x1="${xNose + xWingLE + sweepOffsetPx * 0.68 + (crPx + (ctPx - crPx) * 0.68) * 0.76}" y1="${yTopAxis - bPx * 0.34}"
-            x2="${xNose + xWingLE + sweepOffsetPx + ctPx * 0.76}" y2="${yTopAxis - bPx / 2}" stroke="#000" stroke-width="0.9"/>
+      <!-- Mechanizacja krawędzi spływu: Klapy wewnętrzne i lotki zewnętrzne (PN-EN ISO 128 linie cienkie 0.9 px) -->
+      <!-- Prawe skrzydło (góra) -->
+      <!-- 1. Klapa wewnętrzna (od kadłuba eta_f_in do eta_f_out) -->
+      <line x1="${flapH_X(eta_f_in).toFixed(1)}" y1="${(yTopAxis - eta_f_in * bPx / 2).toFixed(1)}"
+            x2="${flapH_X(eta_f_out).toFixed(1)}" y2="${(yTopAxis - eta_f_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="1.0"/>
+      <line x1="${flapH_X(eta_f_in).toFixed(1)}" y1="${(yTopAxis - eta_f_in * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_f_in).toFixed(1)}" y2="${(yTopAxis - eta_f_in * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+      <line x1="${flapH_X(eta_f_out).toFixed(1)}" y1="${(yTopAxis - eta_f_out * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_f_out).toFixed(1)}" y2="${(yTopAxis - eta_f_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
 
-      <!-- Lewa strona -->
-      <line x1="${xNose + xWingLE + crPx * 0.74}" y1="${yTopAxis + dPx * 0.48}"
-            x2="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65) * 0.74}" y2="${yTopAxis + bPx * 0.325}" stroke="#000" stroke-width="0.9"/>
-      <line x1="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65) * 0.74}" y1="${yTopAxis + bPx * 0.325}"
-            x2="${xNose + xWingLE + sweepOffsetPx * 0.65 + (crPx + (ctPx - crPx) * 0.65)}" y2="${yTopAxis + bPx * 0.325}" stroke="#000" stroke-width="0.9"/>
-      <line x1="${xNose + xWingLE + sweepOffsetPx * 0.68 + (crPx + (ctPx - crPx) * 0.68) * 0.76}" y1="${yTopAxis + bPx * 0.34}"
-            x2="${xNose + xWingLE + sweepOffsetPx + ctPx * 0.76}" y2="${yTopAxis + bPx / 2}" stroke="#000" stroke-width="0.9"/>
+      <!-- 2. Lotka zewnętrzna (od eta_a_in do eta_a_out) -->
+      <line x1="${aileronH_X(eta_a_in).toFixed(1)}" y1="${(yTopAxis - eta_a_in * bPx / 2).toFixed(1)}"
+            x2="${aileronH_X(eta_a_out).toFixed(1)}" y2="${(yTopAxis - eta_a_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="1.0"/>
+      <line x1="${aileronH_X(eta_a_in).toFixed(1)}" y1="${(yTopAxis - eta_a_in * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_a_in).toFixed(1)}" y2="${(yTopAxis - eta_a_in * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+      <line x1="${aileronH_X(eta_a_out).toFixed(1)}" y1="${(yTopAxis - eta_a_out * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_a_out).toFixed(1)}" y2="${(yTopAxis - eta_a_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+
+      <!-- Napisy techniczne na prawym skrzydle -->
+      ${!isFlaperon ? `
+        <text x="${((flapH_X(eta_f_in) + flapH_X(eta_f_out))/2 + 6).toFixed(1)}" y="${(yTopAxis - (eta_f_in + eta_f_out) * bPx / 4 + 3).toFixed(1)}" font-size="7.5" font-style="italic" fill="#0f172a" text-anchor="middle">Klapa</text>
+        <text x="${((aileronH_X(eta_a_in) + aileronH_X(eta_a_out))/2 + 6).toFixed(1)}" y="${(yTopAxis - (eta_a_in + eta_a_out) * bPx / 4 + 3).toFixed(1)}" font-size="7.5" font-style="italic" fill="#0f172a" text-anchor="middle">Lotka</text>
+      ` : `
+        <text x="${((flapH_X(eta_f_in) + flapH_X(eta_f_out))/2 + 6).toFixed(1)}" y="${(yTopAxis - (eta_f_in + eta_f_out) * bPx / 4 + 3).toFixed(1)}" font-size="7.5" font-style="italic" fill="#5b21b6" text-anchor="middle">Klapolotka (Flaperon)</text>
+      `}
+
+      <!-- Lewe skrzydło (dół - symetria) -->
+      <!-- 1. Klapa wewnętrzna -->
+      <line x1="${flapH_X(eta_f_in).toFixed(1)}" y1="${(yTopAxis + eta_f_in * bPx / 2).toFixed(1)}"
+            x2="${flapH_X(eta_f_out).toFixed(1)}" y2="${(yTopAxis + eta_f_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="1.0"/>
+      <line x1="${flapH_X(eta_f_in).toFixed(1)}" y1="${(yTopAxis + eta_f_in * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_f_in).toFixed(1)}" y2="${(yTopAxis + eta_f_in * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+      <line x1="${flapH_X(eta_f_out).toFixed(1)}" y1="${(yTopAxis + eta_f_out * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_f_out).toFixed(1)}" y2="${(yTopAxis + eta_f_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+
+      <!-- 2. Lotka zewnętrzna -->
+      <line x1="${aileronH_X(eta_a_in).toFixed(1)}" y1="${(yTopAxis + eta_a_in * bPx / 2).toFixed(1)}"
+            x2="${aileronH_X(eta_a_out).toFixed(1)}" y2="${(yTopAxis + eta_a_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="1.0"/>
+      <line x1="${aileronH_X(eta_a_in).toFixed(1)}" y1="${(yTopAxis + eta_a_in * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_a_in).toFixed(1)}" y2="${(yTopAxis + eta_a_in * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
+      <line x1="${aileronH_X(eta_a_out).toFixed(1)}" y1="${(yTopAxis + eta_a_out * bPx / 2).toFixed(1)}"
+            x2="${wTE_X(eta_a_out).toFixed(1)}" y2="${(yTopAxis + eta_a_out * bPx / 2).toFixed(1)}" stroke="#000" stroke-width="0.9"/>
 
       <!-- Wyznaczenie Średniej Cięciwy Aerodynamicznej (ŚDA / MAC) na lewym skrzydle -->
       <g>
@@ -1242,7 +1295,7 @@ function render3ViewBlueprint(containerId, geom, fullResults = null) {
 
         <!-- Poz. 1 (y: 105..126) -->
         <text x="14.25" y="120" text-anchor="middle">1</text>
-        <text x="34" y="120">Skrzydło z mechanizacją płata</text>
+        <text x="34" y="120">Skrzydło (klapy wewn. + lotki zewn.)</text>
         <text x="192.75" y="120" text-anchor="middle">-</text>
         <text x="251.25" y="120" text-anchor="middle">BIPOL-I-01.01</text>
         <text x="313.5" y="120" text-anchor="middle">1 kpl.</text>

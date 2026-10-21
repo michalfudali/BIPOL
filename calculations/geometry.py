@@ -1,27 +1,19 @@
 """
-Moduł geometrii płatowca i rozkładu Schrenka (BIPOL I)
-Wymiarowanie skrzydła, Średniej Cięciwy Aerodynamicznej (ŚDA / MAC),
-usterzeń metodą współczynników objętościowych (VH, VV), kadłuba
-oraz wyznaczanie rozkładu obciążenia wzdłuż rozpiętości metodą Schrenka.
+Moduł wymiarowania geometrycznego zespołów płatowca (Projekt P3).
+Implementuje:
+- 5 obrysów skrzydła: trapezowy, prostokątny, prostokątno-trapezowy, eliptyczny, skośny trapezowy
+- Rozkład obciążenia aerodynamicznego Schrenka wzdłuż półrozpiętości (Danilecki rozdz. 7)
+- Wymiarowanie usterzeń poziomego i pionowego metodą współczynników objętościowych VH i VV
+- Powierzchnie omywane (Raymer rozdz. 12 / Torenbeek)
+- Mechanizację krawędzi spływu: klapy i lotki (prof. C. Galiński rozdz. 16, Danilecki rozdz. 8)
+- Kąt wzniosu, skos, podwozie i wyznaczenie przekroju krytycznego przeciągnięcia
 """
 import math
 from calculations.atmosphere import G0
 
 def calculate_geometry(m0: float, ws: float, params: dict):
     """
-    Parametry wejściowe:
-      - m0: masa startowa [kg]
-      - ws: wybrane obciążenie powierzchni W/S [N/m^2]
-      - aspect_ratio: wydłużenie skrzydła Lambda (np. 8.0)
-      - taper_ratio: zbieżność skrzydła eta = ct / cr (np. 0.55)
-      - sweep_quarter_deg: skos w 25% cięciwy [deg] (np. 0 - 25)
-      - dihedral_deg: wznos skrzydła Gamma [deg] (np. 3.0)
-      - n_pax: liczba pasażerów
-      - ac_type: typ samolotu
-      - v_h: współczynnik objętości usterzenia poziomego V_H (np. 0.70)
-      - v_v: współczynnik objętości usterzenia pionowego V_V (np. 0.05)
-      - ar_h: wydłużenie usterzenia poziomego (np. 4.0)
-      - ar_v: wydłużenie usterzenia pionowego (np. 1.5)
+    Wymiarowanie geometryczne zespołów płatowca na podstawie obciążenia powierzchni i masy startowej.
     """
     AR = float(params.get("aspect_ratio", 8.0))
     eta = float(params.get("taper_ratio", 0.55))
@@ -30,10 +22,9 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     n_pax = int(params.get("n_pax", 4))
     ac_type = params.get("aircraft_type", "piston_ga")
     
-    # 1. Geometria skrzydła
+    # 1. Geometria skrzydła i wybór obrysu płata
     weight_n = m0 * G0
-    S = weight_n / ws
-    eta = max(0.1, min(1.0, float(params.get("taper_ratio", 0.55))))
+    S = float(params.get("wing_area_m2")) if params.get("wing_area_m2") else (weight_n / ws)
     AR = max(2.0, min(35.0, float(params.get("aspect_ratio", 8.0))))
 
     req_span = params.get("wingspan_m") or params.get("span_limit")
@@ -48,29 +39,92 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     else:
         b = max(1.0, math.sqrt(S * AR))
 
+    half_span = b / 2.0
     wing_config = params.get("wing_config", "low") # 'low', 'high', 'mid'
-    
-    # Cięciwa przykadłubowa i końcowa (dla skrzydła trapezowego)
-    # S = (cr + ct)/2 * b = cr * (1 + eta)/2 * b
-    cr = (2.0 * S) / (b * (1.0 + eta))
-    ct = eta * cr
-    
-    # Średnia Cięciwa Aerodynamiczna (ŚDA / MAC)
-    mac = (2.0 / 3.0) * cr * ((1.0 + eta + eta**2) / (1.0 + eta))
-    
-    # Położenie ŚDA wzdłuż rozpiętości (od płaszczyzny symetrii)
-    y_mac = (b / 6.0) * ((1.0 + 2.0 * eta) / (1.0 + eta))
-    
-    # Położenie krawędzi natarcia ŚDA wzdłuż osi X względem krawędzi natarcia w nasadzie
+    planform = params.get("wing_planform", "trapezoidal")
+    if planform not in ("trapezoidal", "rectangular", "compound_trapezoid", "elliptical", "swept_trapezoidal"):
+        planform = "trapezoidal"
+
     sweep_rad = math.radians(sweep_deg)
-    # Skos krawędzi natarcia chi_0: tg(chi_0) = tg(chi_25) + (cr - ct)/(2 * b) ...
-    tan_chi0 = math.tan(sweep_rad) + (cr * (1.0 - eta)) / (2.0 * b)
-    x_le_mac = y_mac * tan_chi0
-    
+    y_brk_m = None
+    break_span_ratio = float(params.get("break_span_ratio", 0.40))
+
+    if planform == "rectangular":
+        eta = 1.0
+        cr = S / b
+        ct = cr
+        mac = cr
+        y_mac = b / 4.0
+        x_le_mac = 0.0
+        planform_name_pl = "Prostokątny (stała cięciwa)"
+        def chord_at_y(y_val):
+            return cr
+        def int_y_c(y_val):
+            return cr * (y_val ** 2) / 2.0
+
+    elif planform == "elliptical":
+        eta = 0.0
+        c0 = (4.0 * S) / (math.pi * b)
+        cr = c0
+        ct = 0.0
+        mac = (8.0 / (3.0 * math.pi)) * c0
+        y_mac = (2.0 * b) / (3.0 * math.pi)
+        x_le_mac = 0.0
+        planform_name_pl = "Eliptyczny (wg Prandtla)"
+        def chord_at_y(y_val):
+            eta_loc = max(0.0, min(1.0, y_val / half_span))
+            return cr * math.sqrt(max(0.0, 1.0 - eta_loc ** 2))
+        def int_y_c(y_val):
+            eta_loc = max(0.0, min(1.0, y_val / half_span))
+            return ((half_span ** 2) * cr / 3.0) * (1.0 - (max(0.0, 1.0 - eta_loc ** 2) ** 1.5))
+
+    elif planform == "compound_trapezoid":
+        planform_name_pl = "Prostokątno-trapezowy (centropłat prostokątny + końcówki trapezowe)"
+        xi_brk = max(0.15, min(0.70, break_span_ratio))
+        y_brk = xi_brk * half_span
+        y_brk_m = round(y_brk, 2)
+        eta_tip = max(0.20, min(1.0, float(params.get("taper_ratio", 0.60))))
+        eta = eta_tip
+        w = half_span - y_brk
+        denom = 2.0 * (y_brk + ((1.0 + eta_tip) / 2.0) * w)
+        cr = S / max(0.01, denom)
+        ct = eta_tip * cr
+        mac = (2.0 / S) * (cr ** 2 * y_brk + (w / 3.0) * (cr ** 2 + cr * ct + ct ** 2))
+        i1 = cr * (y_brk ** 2) / 2.0
+        delta_c = cr - ct
+        i2 = y_brk * ((cr + ct) / 2.0) * w + (w ** 2) * ((cr / 2.0) - (delta_c / 3.0))
+        y_mac = (2.0 / S) * (i1 + i2)
+        x_le_mac = 0.0
+        def chord_at_y(y_val):
+            if y_val <= y_brk:
+                return cr
+            eta_out = max(0.0, min(1.0, (y_val - y_brk) / max(0.01, w)))
+            return cr - (cr - ct) * eta_out
+        def int_y_c(y_val):
+            if y_val <= y_brk:
+                return cr * (y_val ** 2) / 2.0
+            part1 = cr * (y_brk ** 2) / 2.0
+            u = y_val - y_brk
+            part2 = y_brk * (cr * u - delta_c * (u ** 2) / (2.0 * w)) + cr * (u ** 2) / 2.0 - delta_c * (u ** 3) / (3.0 * w)
+            return part1 + part2
+
+    else: # trapezoidal or swept_trapezoidal
+        eta = max(0.1, min(1.0, float(params.get("taper_ratio", 0.55))))
+        cr = (2.0 * S) / (b * (1.0 + eta))
+        ct = eta * cr
+        mac = (2.0 / 3.0) * cr * ((1.0 + eta + eta ** 2) / (1.0 + eta))
+        y_mac = (b / 6.0) * ((1.0 + 2.0 * eta) / (1.0 + eta))
+        tan_chi0 = math.tan(sweep_rad) + (cr * (1.0 - eta)) / (2.0 * b)
+        x_le_mac = y_mac * tan_chi0
+        planform_name_pl = "Skośny trapezowy" if (planform == "swept_trapezoidal" or sweep_deg > 5.0) else "Trapezowy (zbieżny prosty)"
+        def chord_at_y(y_val):
+            eta_loc = max(0.0, min(1.0, y_val / half_span))
+            return cr * (1.0 - (1.0 - eta) * eta_loc)
+        def int_y_c(y_val):
+            return cr * (y_val ** 2) / 2.0 - ((cr - ct) / half_span) * (y_val ** 3) / 3.0
+
     # 2. Geometria kadłuba (wstępne oszacowanie z liczby pasażerów i rozpiętości)
     if ac_type in ("glider", "motoglider"):
-        # Wstępny model smukłego kadłuba; nie stosuj proporcji samolotu
-        # komunikacyjnego do nowych typów CS-22. Wymiary wymagają weryfikacji.
         fuselage_len = max(5.5, 0.45 * b)
         fuselage_diam = 1.0 if ac_type == "glider" else 1.25
     elif ac_type in ["piston_ga", "uav"]:
@@ -128,31 +182,20 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     gear_track = round(0.24 * b, 2)               # Rozstaw kół podwozia głównego
     
     # 6. Rozkład obciążenia Schrenka wzdłuż półrozpiętości y w [0, b/2]
-    # c_geom(y) = cr * (1 - (1 - eta) * y / (b/2))
+    # c_geom(y) z obrysu wybranego przez użytkownika
     # c_ellip(y) = (4 * S) / (pi * b) * sqrt(1 - (y / (b/2))^2)
     # c_schrenk(y) = (c_geom + c_ellip) / 2
     n_points = 25
-    half_span = b / 2.0
     schrenk_data = []
-    
     c_ellip_root = (4.0 * S) / (math.pi * b)
     
     for i in range(n_points + 1):
         y = (i / n_points) * half_span
         eta_span = y / half_span # y / (b/2) od 0 do 1
-        
-        # Cięciwa trapezowa
-        c_geom = cr * (1.0 - (1.0 - eta) * eta_span)
-        
-        # Cięciwa eliptyczna
+        c_geom = chord_at_y(y)
         arg = max(0.0, 1.0 - (eta_span ** 2))
         c_ellip = c_ellip_root * math.sqrt(arg)
-        
-        # Rozkład Schrenka (średnia arytmetyczna wg Danilecki wzór 7.1)
         c_schrenk = 0.5 * (c_geom + c_ellip)
-        
-        # Współczynnik siły nośnej profilu przy Cz_płata = 1.0 (Danilecki wzór 7.2)
-        # cz1(y) = 0.5 * (1 + c_ellip / c_geom)
         cz_local_norm = 0.5 * (1.0 + (c_ellip / max(0.001, c_geom)))
         
         schrenk_data.append({
@@ -180,6 +223,178 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     s_wet_vtail = 2.0 * S_v * (1.0 + 0.25 * tc_tail)
     s_wet_total = s_wet_wing + s_wet_fus + s_wet_htail + s_wet_vtail
 
+    # =========================================================================
+    # 7. MECHANIZACJA KRAWĘDZI SPŁYWU: KLAPY (FLAPS) ORAZ LOTKI (AILERONS)
+    # Wg wytycznych BIPOL I (prof. C. Galiński rozdz. 16, T. Grabowski wzór 7, Danilecki rozdz. 8, Raymer rozdz. 12)
+    # =========================================================================
+    flap_type = params.get("flap_type", "single_slotted")
+    aileron_type = params.get("aileron_type")
+    if not aileron_type:
+        aileron_type = "flaperon" if flap_type == "flaperon" else "differential"
+
+    is_flaperon = (flap_type == "flaperon") or (aileron_type == "flaperon")
+
+    r_fus = fuselage_diam / 2.0
+    eta_fus = r_fus / half_span
+
+    if is_flaperon:
+        # Klapolotka: pojedyncza powierzchnia sterowa na niemal pełnej rozpiętości
+        eta_f_in = min(0.15, max(eta_fus, 0.08))
+        eta_f_out = 0.95
+        eta_a_in = eta_f_in
+        eta_a_out = eta_f_out
+        cf_c_ratio = float(params.get("flap_chord_ratio", 0.25))
+        ca_c_ratio = float(params.get("aileron_chord_ratio", cf_c_ratio))
+        bf_b_ratio = eta_f_out - eta_f_in
+        ba_b_ratio = bf_b_ratio
+    else:
+        # Standardowy układ: Klapy wewnętrzne (przykadłubowe) + Lotki zewnętrzne (przykońcówkowe)
+        user_bf_b = float(params.get("flap_span_ratio", 0.60))
+        user_ba_b = float(params.get("aileron_span_ratio", 0.28))
+        cf_c_ratio = float(params.get("flap_chord_ratio", 0.25))
+        ca_c_ratio = float(params.get("aileron_chord_ratio", 0.22))
+
+        eta_f_in = max(eta_fus, 0.05)
+        eta_f_out = min(0.74, max(eta_f_in + 0.15, eta_f_in + user_bf_b))
+        bf_b_ratio = eta_f_out - eta_f_in
+
+        eta_gap = 0.015
+        eta_a_in = min(0.85, eta_f_out + eta_gap)
+        eta_a_out = min(0.97, max(eta_a_in + 0.10, eta_a_in + user_ba_b))
+        ba_b_ratio = eta_a_out - eta_a_in
+
+    y_f_in = eta_f_in * half_span
+    y_f_out = eta_f_out * half_span
+    y_a_in = eta_a_in * half_span
+    y_a_out = eta_a_out * half_span
+
+    b_flap_m = 2.0 * (y_f_out - y_f_in)
+    b_aileron_m = 2.0 * (y_a_out - y_a_in)
+
+    c_f_in = chord_at_y(y_f_in)
+    c_f_out = chord_at_y(y_f_out)
+    s_flapped_wing = (c_f_in + c_f_out) * (y_f_out - y_f_in)
+    s_flap_surface = s_flapped_wing * cf_c_ratio
+
+    c_a_in = chord_at_y(y_a_in)
+    c_a_out = chord_at_y(y_a_out)
+    s_aileron_wing = (c_a_in + c_a_out) * (y_a_out - y_a_in)
+    s_aileron_surface = s_aileron_wing * ca_c_ratio
+
+    # Skuteczność poprzeczna i sterowność lotek (Roll Authority pb/2V wg Raymera eq. 12.18 / Roskama)
+    tau_a = 1.2 * math.sqrt(ca_c_ratio)
+    aw_est = (2.0 * math.pi * AR) / (2.0 + math.sqrt(4.0 + (AR / max(0.2, math.cos(sweep_rad))) ** 2))
+
+    geom_roll_integral = int_y_c(y_a_out) - int_y_c(y_a_in)
+    cl_delta_a = (2.0 * aw_est * tau_a / (S * b)) * geom_roll_integral
+    cl_p = - (aw_est / 6.0) * ((1.0 + 3.0 * eta) / (1.0 + eta))
+
+    delta_a_max_deg = 20.0
+    delta_a_max_rad = math.radians(delta_a_max_deg)
+    roll_helix_pb_2v = abs((cl_delta_a / min(-0.01, cl_p)) * delta_a_max_rad)
+
+    # Wymagania zdatności CS-23 / MIL-F-8785C na helisę przechylenia pb/(2V)
+    if ac_type in ("glider", "motoglider"):
+        min_pb_2v_req = 0.040
+    elif ac_type in ("jet_business", "jet_transport"):
+        min_pb_2v_req = 0.055
+    else: # piston_ga
+        min_pb_2v_req = 0.070
+    roll_authority_ok = roll_helix_pb_2v >= min_pb_2v_req
+
+    # Ocena bezpieczeństwa przeciągnięcia
+    stall_inboard_of_aileron = stall_eta_span < eta_a_in
+    if planform == "rectangular":
+        stall_safety_verdict = "Wybitnie bezpieczne: przeciążenie inicjowane przy kadłubie (stała cięciwa), lotki zachowują pełną sterowność."
+    elif planform == "compound_trapezoid":
+        stall_safety_verdict = "Bezpieczne: centropłat prostokątny chroni końcówki skrzydła i lotki przed przedwczesnym oderwaniem strug."
+    elif planform == "elliptical":
+        stall_safety_verdict = "Równomierne obciążenie Prandtla: jednoczesne przeciążenie na całej rozpiętości; wysoka sprawność aerodynamiczna."
+    elif stall_inboard_of_aileron:
+        stall_safety_verdict = "Bezpieczne: przeciążenie rozpoczyna się do wewnątrz od lotek (zachowana sterowność poprzeczna)."
+    else:
+        stall_safety_verdict = "Ostrzeżenie: przekrój krytyczny w rejonie lotek. Wymagane zwichrzenie geometryczne końcówek."
+
+    flap_names = {
+        "plain": "Klapa zwykła (uchylna)",
+        "split": "Klapa krokowa",
+        "single_slotted": "Klapa jednoszczelinowa",
+        "double_slotted": "Klapa dwuszczelinowa",
+        "fowler": "Klapa wysuwana Fowlera",
+        "junkers": "Klapa zewnętrzna Junkersa (szczelinowa)",
+        "flaperon": "Klapolotka (Flaperon)"
+    }
+    flap_name_pl = flap_names.get(flap_type, "Klapa jednoszczelinowa")
+
+    aileron_names = {
+        "plain": "Lotka zwykła",
+        "differential": "Lotka różnicowa (ograniczenie momentu oporowego)",
+        "frise": "Lotka typu Frise (kompensacja aerodynamiczna)",
+        "slotted": "Lotka szczelinowa",
+        "flaperon": "Klapolotka (sterowanie łączone ze sprzężeniem)"
+    }
+    aileron_name_pl = aileron_names.get(aileron_type, "Lotka różnicowa")
+
+    control_surfaces = {
+        "layout": "flaperon" if is_flaperon else "flaps_and_ailerons",
+        "is_flaperon": is_flaperon,
+        "flaps": {
+            "type": flap_type,
+            "name": flap_name_pl,
+            "b_f_m": round(b_flap_m, 2),
+            "bf_over_b": round(bf_b_ratio, 3),
+            "cf_over_c": round(cf_c_ratio, 3),
+            "eta_in": round(eta_f_in, 3),
+            "eta_out": round(eta_f_out, 3),
+            "y_in_m": round(y_f_in, 2),
+            "y_out_m": round(y_f_out, 2),
+            "S_flapped_m2": round(s_flapped_wing, 2),
+            "s_flapped_over_s": round(s_flapped_wing / S, 3),
+            "S_flap_surface_m2": round(s_flap_surface, 2),
+            "s_flap_over_s": round(s_flap_surface / S, 3),
+        },
+        "ailerons": {
+            "type": aileron_type,
+            "name": aileron_name_pl,
+            "b_a_m": round(b_aileron_m, 2),
+            "ba_over_b": round(ba_b_ratio, 3),
+            "ca_over_c": round(ca_c_ratio, 3),
+            "eta_in": round(eta_a_in, 3),
+            "eta_out": round(eta_a_out, 3),
+            "y_in_m": round(y_a_in, 2),
+            "y_out_m": round(y_a_out, 2),
+            "S_aileron_segment_m2": round(s_aileron_wing, 2),
+            "s_aileron_seg_over_s": round(s_aileron_wing / S, 3),
+            "S_aileron_surface_m2": round(s_aileron_surface, 2),
+            "s_aileron_over_s": round(s_aileron_surface / S, 3),
+            "roll_helix_pb_2v": round(roll_helix_pb_2v, 3),
+            "roll_authority_ok": roll_authority_ok,
+            "min_pb_2v_req": min_pb_2v_req,
+            "delta_a_max_deg": delta_a_max_deg,
+        },
+        "trailing_edge_partition": {
+            "fuselage_gap_pct": round(eta_fus * 100.0, 1),
+            "flap_span_pct": round(bf_b_ratio * 100.0, 1),
+            "clearance_gap_pct": round((eta_a_in - eta_f_out) * 100.0, 1) if not is_flaperon else 0.0,
+            "aileron_span_pct": round(ba_b_ratio * 100.0, 1),
+            "tip_clearance_pct": round((1.0 - eta_a_out) * 100.0, 1),
+        },
+        "stall_safety": {
+            "stall_eta_span": round(stall_eta_span, 3),
+            "stall_inboard_of_aileron": stall_inboard_of_aileron,
+            "verdict": stall_safety_verdict
+        },
+        "elevator": {
+            "ce_over_ch": round(float(params.get("elevator_chord_ratio", params.get("ce_ch", 0.35))), 3),
+            "type": "stabilator" if float(params.get("elevator_chord_ratio", params.get("ce_ch", 0.35))) >= 0.99 else "hinged_elevator",
+            "name": "Płytowy (stabilator)" if float(params.get("elevator_chord_ratio", params.get("ce_ch", 0.35))) >= 0.99 else "Klasyczny ster wysokości zawiasowy"
+        },
+        "rudder": {
+            "cr_over_cv": round(float(params.get("rudder_chord_ratio", params.get("cr_cv", 0.35))), 3),
+            "name": "Klasyczny ster kierunku zawiasowy"
+        }
+    }
+
     return {
         "wing": {
             "S": round(S, 2),
@@ -196,6 +411,9 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "sweep_deg": sweep_deg,
             "dihedral_deg": dihedral_deg,
             "wing_config": wing_config,
+            "wing_planform": planform,
+            "planform_name_pl": planform_name_pl,
+            "break_station_m": y_brk_m,
             "tc_ratio": tc_wing
         },
         "fuselage": {
@@ -213,7 +431,8 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "ct_h": round(ct_h, 3),
             "mac_h": round(mac_h, 3),
             "l_h": round(l_h, 2),
-            "vh_coeff": vh_coeff
+            "vh_coeff": vh_coeff,
+            "ce_over_ch": round(float(params.get("elevator_chord_ratio", params.get("ce_ch", 0.35))), 3)
         },
         "vertical_tail": {
             "S_v": round(S_v, 2),
@@ -224,7 +443,8 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "ct_v": round(ct_v, 3),
             "mac_v": round(mac_v, 3),
             "l_v": round(l_v, 2),
-            "vv_coeff": vv_coeff
+            "vv_coeff": vv_coeff,
+            "cr_over_cv": round(float(params.get("rudder_chord_ratio", params.get("cr_cv", 0.35))), 3)
         },
         "gear": {
             "wheelbase": gear_wheelbase,
@@ -239,5 +459,6 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "max_cz1": round(max_cz1_schrenk, 3),
             "stall_eta_span": round(stall_eta_span, 3),
             "stall_y_m": round(stall_y_m, 2)
-        }
+        },
+        "control_surfaces": control_surfaces
     }

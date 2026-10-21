@@ -2613,3 +2613,479 @@ html, body { line-height: 1.55; }
   .input-group input, .input-group select { font-size: 1rem; }
   .bipol-navbar .brand-subtitle { display: none; }
 }
+
+/* ==========================================================================
+   AKADEMICKIE BLOKI OBLICZENIOWE I FORMATOWANIE WZORÓW (MEiL PW / BIPOL I)
+   ========================================================================== */
+.textbook-calc-block {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #005691;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  page-break-inside: avoid;
+  font-family: inherit;
+}
+
+.calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.calc-step-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calc-source-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #005691;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.calc-desc {
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.55;
+  margin: 0 0 12px 0;
+}
+
+.calc-math-box {
+  background: #f8fafc;
+  border: 1px dashed #94a3b8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 12px 0;
+  text-align: center;
+  font-size: 1.14rem;
+  color: #0f172a;
+  overflow-x: auto;
+  font-family: 'KaTeX_Math', 'Cambria Math', 'Latin Modern Math', 'Times New Roman', serif;
+}
+
+.calc-legend {
+  font-size: 0.84rem;
+  color: #334155;
+  margin: 12px 0 10px 0;
+  line-height: 1.55;
+  background: #fdfefe;
+}
+
+.calc-legend-title {
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.calc-legend ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+
+.calc-legend li {
+  margin-bottom: 4px;
+}
+
+.calc-legend .var-sym {
+  font-family: 'KaTeX_Math', 'Cambria Math', serif;
+  font-style: italic;
+  font-weight: 700;
+  color: #005691;
+}
+
+.calc-legend .var-source {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.calc-substitution {
+  background: #f1f5f9;
+  border-left: 3px solid #0284c7;
+  padding: 10px 14px;
+  margin: 12px 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.88rem;
+  font-family: 'KaTeX_Math', 'Cambria Math', 'Consolas', monospace;
+  color: #0f172a;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.calc-substitution-title {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #0369a1;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  font-family: inherit;
+}
+
+.calc-verdict {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.45;
+}
+
+.calc-verdict.verdict-pass {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.calc-verdict.verdict-warn {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.calc-verdict.verdict-info {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+@media print {
+  .textbook-calc-block {
+    box-shadow: none !important;
+    border: 1px solid #64748b !important;
+    border-left: 4px solid #000000 !important;
+    page-break-inside: avoid !important;
+    margin: 10px 0 !important;
+    padding: 10px 14px !important;
+    background: #ffffff !important;
+  }
+  .calc-math-box {
+    background: #ffffff !important;
+    border: 1px solid #94a3b8 !important;
+    padding: 8px 10px !important;
+  }
+  .calc-substitution {
+    background: #f8fafc !important;
+    border-left: 2px solid #000000 !important;
+  }
+  .calc-source-badge {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+}
+
+/* ==========================================================================
+   BIPOL WORKFLOW STEPPER & STEP-BY-STEP DESIGN BAR
+   ========================================================================== */
+.bipol-workflow-stepper {
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  padding: 0.6rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  overflow-x: auto;
+}
+
+.stepper-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.stepper-header-title span.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: pulse 2s infinite;
+}
+
+.stepper-nodes-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  max-width: 1200px;
+}
+
+.step-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #1e293b;
+  color: #cbd5e1;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.step-node:hover {
+  background: #334155;
+  color: #ffffff;
+  border-color: #64748b;
+  transform: translateY(-1px);
+}
+
+.step-node.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+}
+
+.step-node.completed {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+.step-node .node-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.step-node.active .node-badge {
+  background: #ffffff;
+  color: #0284c7;
+}
+
+.step-separator {
+  color: #475569;
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+/* ==========================================================================
+   INITIAL CONSTRAINTS SUGGESTIONS PANEL
+   ========================================================================== */
+.initial-constraints-panel {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #0284c7;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.constraints-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.95rem;
+  background: #f1f5f9;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.constraints-drawer-header:hover {
+  background: #e2e8f0;
+}
+
+.constraints-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.constraints-drawer-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.constraints-drawer-body {
+  padding: 0.85rem;
+  background: #ffffff;
+}
+
+.suggestions-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.65rem;
+}
+
+.suggestion-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.45rem;
+  transition: all 0.18s ease;
+}
+
+.suggestion-card:hover {
+  border-color: #0284c7;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
+  background: #f0f9ff;
+}
+
+.suggestion-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.suggestion-card-desc {
+  font-size: 0.73rem;
+  color: #475569;
+  line-height: 1.35;
+}
+
+.suggestion-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.4rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.btn-apply-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-apply-suggestion:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   PARAMETER LOCKING & DERIVED VALUE UI
+   ========================================================================== */
+.param-lock-btn {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.35rem;
+  transition: all 0.15s ease;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.param-lock-btn:hover {
+  border-color: #0284c7;
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.param-lock-btn.is-locked {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+.input-group.is-locked input,
+.input-group.is-locked select {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+  font-weight: 600;
+}
+
+.input-group.is-derived input,
+.input-group.is-derived select {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+  font-weight: 700;
+}
+
+.derived-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.71rem;
+  color: #334155;
+  line-height: 1.3;
+}
+
+.derived-badge b {
+  color: #0369a1;
+  font-family: 'Cambria Math', monospace;
+}
+

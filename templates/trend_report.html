@@ -1,5 +1,6 @@
 {% set ta = res.bipol_projects.p1.trend_analysis %}
 {% set preliminary = res.bipol_projects.p1.preliminary %}
+{% set gta = ta.geometry_trends_analysis %}
 <section class="trend-report" data-trend-report>
   <h2>Analiza trendów — BIPOL_1, s. 1</h2>
   <p>{{ ta.class_label }}. Baza: <b>{{ ta.database_total }}</b> pozycji; wybrano <b>{{ ta.selected_n }} wariantów / {{ ta.families_n }} rodzin</b>. Waga: {{ 'równa dla rodzin' if ta.weighting == 'family' else 'równa dla wariantów' }}. Filtry: źródło {{ params.get('trend_source','all') }}, liczba silników {{ params.get('trend_engine_count',0)|int }} (0 = dowolna), lata {{ params.get('trend_year_min',0)|int }}–{{ params.get('trend_year_max',0)|int }} (0 = bez limitu), limit {{ params.get('trend_count',50)|int }} (0 = wszystkie pasujące).</p>
@@ -17,14 +18,164 @@
   <table class="b-table rep-table"><thead><tr><th>x → y</th><th>n</th><th>R²</th><th>Nachylenie liniowe</th></tr></thead><tbody>
   {% for r in ta.relationships %}<tr><td>{{ r.x_label }} [{{ r.x_unit }}] → {{ r.y_label }} [{{ r.y_unit }}]</td><td>{{ r.fit.n if r.fit else r.points|length }}</td><td>{{ r.fit.r2|trendnum(3) if r.fit else '—' }}</td><td>{{ r.fit.slope|trendnum(4) if r.fit else '—' }}</td></tr>{% endfor %}
   </tbody></table>
-  <h3>Średnie i kompletność</h3>
+  <h3>Średnie i kompletność parametrów ogólnych</h3>
   <table class="b-table rep-table"><thead><tr><th>Parametr</th><th>Średnia ważona</th><th>n</th></tr></thead><tbody>
-  {% for key,label in [('empty_fraction','OEW / MTOW'),('ar','AR'),('wing_loading_kg_m2','m₀/S [kg/m²]'),('h_tail_area','Sh [m²]'),('v_tail_area','Sv [m²]')] %}<tr><td>{{ label }}</td><td>{{ ta.averages[key].mean|trendnum(3) }}</td><td>{{ ta.averages[key].n }}</td></tr>{% endfor %}
+  {% for key,label in [('empty_fraction','OEW / MTOW'),('ar','AR'),('wing_loading_kg_m2','m₀/S [kg/m²]'),('prop_diameter_m','Średnica śmigła d [m]'),('h_tail_area','Sh [m²]'),('v_tail_area','Sv [m²]')] %}<tr><td>{{ label }}</td><td>{{ ta.averages[key].mean|trendnum(3) }}</td><td>{{ ta.averages[key].n }}</td></tr>{% endfor %}
   </tbody></table>
-  <p>V_H, V_V, rozpiętość lotek, względne cięciwy sterów i wznios nie mają pełnej dokumentacji w tych bazach. Nie przedstawiamy założeń formularza jako średnich z pomiarów.</p>
-  <h3>Wybrana próba i pochodzenie danych</h3>
-  <table class="b-table rep-table"><thead><tr><th>Model / rodzina</th><th>Cert.</th><th>MTOW / OEW [kg]</th><th>S [m²] / AR</th><th>Łączna moc / ciąg</th><th>Źródło / lokalizacja</th></tr></thead><tbody>
-  {% for r in ta.similar_aircraft %}<tr><td>{{ r.model }}<br><small>{{ r.family }}</small></td><td>{{ r.year or '—' }}</td><td>{{ r.m0|trendnum(0) }} / {{ r.me|trendnum(0) }}</td><td>{{ r.s|trendnum(2) }} / {{ r.ar|trendnum(2) }}</td><td>{% if r.engine_type == 'jet' %}{{ r.t_kn|trendnum(1) }} kN{% else %}{{ r.p_kw|trendnum(1) }} kW{% endif %}</td><td>{{ r.source_id|upper }}<br><small>{{ r.source_locator }}</small></td></tr>{% endfor %}
+
+  <!-- ========================================================================= -->
+  <!-- EMPIRYCZNA ANALIZA TRENDÓW GEOMETRII I POWIERZCHNI STEROWYCH (6 PARAMETRÓW) -->
+  <!-- ========================================================================= -->
+  {% if gta %}
+  <div style="margin-top:28px;">
+    <h3>Empiryczna analiza trendów geometrii i powierzchni sterowych (6 kluczowych parametrów)</h3>
+    <p>
+      Zgodnie z metodyką BIPOL I (dr inż. Z. Paturski, prof. dr hab. inż. C. Galiński) oraz podręcznikami projektowania samolotów (Roskam Part II &amp; III, Raymer Rozdz. 6, Corke Rozdz. 5, Gudmundsson Rozdz. 9–10), dobór geometrii usterzeń i powierzchni sterowych wymaga weryfikacji ze statystyką zrealizowanych i certyfikowanych konstrukcji w danej klasie. Poniższa analiza obejmuje <b>{{ gta.total_geometry_models }}</b> zweryfikowanych statków powietrznych (GA tłokowe, turbośmigłowe, odrzutowce biznesowe i komunikacyjne, szybowce, motoszybowce, UAV).
+    </p>
+
+    <!-- TABELA 1: ZBIORCZE ZESTAWIENIE 6 PARAMETRÓW -->
+    <h4 style="margin-top:16px;">Tabela 1.1: Zbiorcze zestawienie 6 parametrów geometrycznych i powierzchni sterowych</h4>
+    <table class="b-table rep-table">
+      <thead>
+        <tr>
+          <th>Parametr &amp; Symbol</th>
+          <th>Wartość projektu</th>
+          <th>Średnia klasy (n={{ gta.metrics[0].class_stats.n }})</th>
+          <th>Przedział klasy [min..max]</th>
+          <th>Odchylenie Δ</th>
+          <th>Regresja liniowa Y(m₀) w klasie</th>
+          <th>Typowy zakres literaturowy</th>
+          <th>Ocena zgodności</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in gta.metrics %}
+        <tr>
+          <td><b>{{ m.label }}</b><br><code>\({{ m.symbol }}\)</code></td>
+          <td><b>{{ m.project_value|trendnum(3) }}</b> {{ m.unit if m.unit != '−' else '' }}</td>
+          <td>{{ m.class_stats.mean|trendnum(3) }} &plusmn; {{ m.class_stats.std|trendnum(3) }}</td>
+          <td>[{{ m.class_stats.min|trendnum(2) }} &hellip; {{ m.class_stats.max|trendnum(2) }}]</td>
+          <td>
+            {% if m.diff_pct is not none %}
+              <span style="color:{{ '#0d652d' if m.diff_pct|abs <= 15 else '#a1420b' }};">
+                {{ '+' if m.diff_pct > 0 else '' }}{{ m.diff_pct|round(1) }}%
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if m.fit_m0 %}
+              <small>Y = {{ m.fit_m0.slope|trendnum(6) }}&middot;m₀ + {{ m.fit_m0.intercept|trendnum(3) }}<br>(R&sup2; = {{ m.fit_m0.r2|trendnum(3) }})</small>
+            {% else %}—{% endif %}
+          </td>
+          <td><small>{{ m.typical_range_str }}</small></td>
+          <td>
+            {% if m.status == 'ok' %}
+              <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#e6f4ea;color:#137333;font-weight:600;font-size:12px;">W normie</span>
+            {% elif m.status == 'info' %}
+              <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#e8f0fe;color:#1a73e8;font-weight:600;font-size:12px;">Wysoka wart.</span>
+            {% else %}
+              <span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#fef7e0;color:#b06000;font-weight:600;font-size:12px;">Do weryfikacji</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- KARTY SZCZEGÓŁOWE DLA KAŻDEGO PARAMETRU -->
+    <h4 style="margin-top:24px;">Szczegółowa analiza inżynierska i próba referencyjna dla każdego parametru</h4>
+    {% for m in gta.metrics %}
+    <div class="textbook-calc-block" style="margin-bottom:20px;">
+      <div class="calc-header">
+        <div class="calc-step-title">📐 {{ loop.index }}. {{ m.label }} — \( {{ m.symbol }} \)</div>
+        <span class="calc-source-badge">Roskam Part II &bull; Raymer Tab. 6.4 &bull; Gudmundsson &bull; BIPOL I</span>
+      </div>
+      <p class="calc-desc">{{ m.desc }}</p>
+      
+      <div class="calc-math-box">
+        \[ {{ m.formula_latex }} \]
+      </div>
+
+      <div class="calc-substitution">
+        <div class="calc-substitution-title">Porównanie z bazą empiryczną i modelem regresyjnym w klasie {{ gta.active_class_name }}:</div>
+        \[ {{ m.symbol }}_{	ext{proj}} = \mathbf{ {{ m.project_value|trendnum(3) }} } {{ m.unit if m.unit != '−' else '' }}, \quad ar{ {{ m.symbol }} }_{	ext{klasa}} = \mathbf{ {{ m.class_stats.mean|trendnum(3) }} } \pm {{ m.class_stats.std|trendnum(3) }} \quad \left(n = {{ m.class_stats.n }}, \; 	ext{zakres: } [{{ m.class_stats.min|trendnum(3) }} \dots {{ m.class_stats.max|trendnum(3) }}]ight) \]
+        {% if m.fit_m0 %}
+        \[ {{ m.symbol }}(m_0) = {{ m.fit_m0.slope|trendnum(6) }} \cdot m_0 + {{ m.fit_m0.intercept|trendnum(3) }} \quad \left(R^2 = {{ m.fit_m0.r2|trendnum(3) }}, \; 	ext{RMSE} = {{ m.fit_m0.rmse|trendnum(4) }}ight) \]
+        {% endif %}
+        {% if m.fit_b %}
+        \[ {{ m.symbol }}(b) = {{ m.fit_b.slope|trendnum(4) }} \cdot b + {{ m.fit_b.intercept|trendnum(3) }} \quad \left(R^2 = {{ m.fit_b.r2|trendnum(3) }}ight) \]
+        {% endif %}
+      </div>
+
+      <!-- PRÓBA REFERENCYJNA Z BAZY DANYCH -->
+      <div style="margin:12px 0;">
+        <div style="font-weight:600;font-size:12px;color:#294650;margin-bottom:6px;">Przykładowe konstrukcje referencyjne z bazy danych dla parametru {{ m.symbol }}:</div>
+        <table class="b-table rep-table" style="font-size:12px;">
+          <thead>
+            <tr><th>Konstrukcja / Model</th><th>MTOW [kg]</th><th>Rozpiętość b [m]</th><th>Zmierzona wartość \( {{ m.symbol }} \)</th><th>Źródło / TCDS / Literatura</th></tr>
+          </thead>
+          <tbody>
+            {% for s in m.samples %}
+            <tr>
+              <td><b>{{ s.model }}</b></td>
+              <td>{{ s.m0|trendnum(0) }} kg</td>
+              <td>{{ s.b|trendnum(2) if s.b else '—' }} m</td>
+              <td><b>{{ s.val|trendnum(3) }}</b> {{ m.unit if m.unit != '−' else '' }}</td>
+              <td><small>{{ s.source }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="calc-verdict {{ 'verdict-pass' if m.status == 'ok' else ('verdict-info' if m.status == 'info' else 'verdict-warning') }}">
+        <span>{{ '✔️' if m.status == 'ok' else ('ℹ️' if m.status == 'info' else '⚠️') }}</span>
+        <b>Wniosek inżynierski:</b> {{ m.verdict }}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- TABELA 2: PORÓWNANIE MIĘDZYKLASOWE (7 KLAS PŁATOWCÓW) -->
+    <h4 style="margin-top:24px;">Tabela 1.2: Porównanie trendów geometrycznych pomiędzy wszystkimi 7 klasami statków powietrznych</h4>
+    <p style="font-size:13px;color:#4f6873;">
+      Zestawienie średnich wartości empirycznych parametrów geometrycznych w podziale na kategorie lotnicze. Aktywna klasa bieżącego projektu została wyróżniona.
+    </p>
+    <table class="b-table rep-table" style="font-size:12px;">
+      <thead>
+        <tr>
+          <th>Klasa statku powietrznego</th>
+          <th>Próba n</th>
+          <th>\( V_H \) (UP)</th>
+          <th>\( b_{ail} / (b/2) \)</th>
+          <th>\( c_{ail} / c \)</th>
+          <th>\( c_e / c_H \)</th>
+          <th>\( c_r / c_V \)</th>
+          <th>\( \Gamma \) [°]</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in gta.cross_class_matrix %}
+        <tr style="{{ 'background:#edf7ed;font-weight:bold;' if row.is_active else '' }}">
+          <td>{{ '👉 ' if row.is_active else '' }}{{ row.class_name }}</td>
+          <td>{{ row.n_models }}</td>
+          <td>{{ row.v_h.mean|trendnum(3) if row.v_h else '—' }} <small>[{{ row.v_h.min|trendnum(2) }}..{{ row.v_h.max|trendnum(2) }}]</small></td>
+          <td>{{ row.aileron_span_fraction.mean|trendnum(3) if row.aileron_span_fraction else '—' }} <small>[{{ row.aileron_span_fraction.min|trendnum(2) }}..{{ row.aileron_span_fraction.max|trendnum(2) }}]</small></td>
+          <td>{{ row.aileron_chord_ratio.mean|trendnum(3) if row.aileron_chord_ratio else '—' }} <small>[{{ row.aileron_chord_ratio.min|trendnum(2) }}..{{ row.aileron_chord_ratio.max|trendnum(2) }}]</small></td>
+          <td>{{ row.elevator_chord_ratio.mean|trendnum(3) if row.elevator_chord_ratio else '—' }} <small>[{{ row.elevator_chord_ratio.min|trendnum(2) }}..{{ row.elevator_chord_ratio.max|trendnum(2) }}]</small></td>
+          <td>{{ row.rudder_chord_ratio.mean|trendnum(3) if row.rudder_chord_ratio else '—' }} <small>[{{ row.rudder_chord_ratio.min|trendnum(2) }}..{{ row.rudder_chord_ratio.max|trendnum(2) }}]</small></td>
+          <td>{{ row.dihedral_deg.mean|trendnum(1) if row.dihedral_deg else '—' }}&deg; <small>[{{ row.dihedral_deg.min|trendnum(1) }}..{{ row.dihedral_deg.max|trendnum(1) }}&deg;]</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>V_H, V_V, rozpiętość lotek, względne cięciwy sterów i wznios nie zostały załadowane do tego widoku.</p>
+  {% endif %}
+
+  <h3 style="margin-top:28px;">Wybrana próba i pochodzenie danych</h3>
+  <table class="b-table rep-table"><thead><tr><th>Model / rodzina</th><th>Cert.</th><th>MTOW / OEW [kg]</th><th>S [m²] / AR</th><th>Łączna moc / ciąg</th><th>Śmigło d [m]</th><th>Źródło / lokalizacja</th></tr></thead><tbody>
+  {% for r in ta.similar_aircraft %}<tr><td>{{ r.model }}<br><small>{{ r.family }}</small></td><td>{{ r.year or '—' }}</td><td>{{ r.m0|trendnum(0) }} / {{ r.me|trendnum(0) }}</td><td>{{ r.s|trendnum(2) }} / {{ r.ar|trendnum(2) }}</td><td>{% if r.engine_type == 'jet' %}{{ r.t_kn|trendnum(1) }} kN{% else %}{{ r.p_kw|trendnum(1) }} kW{% endif %}</td><td>{% if r.prop_diameter_m %}{{ r.prop_diameter_m|trendnum(2) }} m{% else %}—{% endif %}</td><td>{{ r.source_id|upper }}<br><small>{{ r.source_locator }}</small></td></tr>{% endfor %}
   </tbody></table>
   <h3>Sprawdzenia analityczne z wyprowadzeń Galińskiego i Grabowskiego</h3>
   <p>Paraboliczna biegunowa Cx = Cx₀ + kCz². Kmax = {{ preliminary.k_max|round(3) }}. Odtworzony Cx₀ = 1/(4kKmax²) = {{ preliminary.cx0_from_kmax|round(5) }}. Wydłużenie omywane AR/(Swet/S) = {{ preliminary.wetted_aspect_ratio|round(3) }}.</p>
@@ -33,7 +184,7 @@
   <p>Bilans: Wf/W₀ = {{ res.mass.mission_assumptions.reserve_factor }}·(1−Mff), K przelotu/Kmax = {{ res.mass.mission_assumptions.ld_factor }}, reszta równania masowego = {{ (res.mass.mission_assumptions.mass_residual_relative*100)|round(6) }}% (cel: ≤0,1%). {{ res.mass.mission_assumptions.note }}</p>
   <p>{{ preliminary.limitations }}</p>
   <h3>Bibliografia i ograniczenia</h3>
-  <p>Galiński, C.: BIPOL_1 — Analizy wstępne, s. 1–6. Galiński, C., Grabowski, T.: BIPOL_1 — Wyprowadzenie wzorów, s. 1–9.</p>
+  <p>Galiński, C.: BIPOL_1 — Analizy wstępne, s. 1–6. Galiński, C., Grabowski, T.: BIPOL_1 — Wyprowadzenie wzorów, s. 1–9. Paturski, Z.: Metodyka projektowania wstępnego i mechaniki lotu samolotów, MEiL PW.</p>
   {% for source in ta.sources.values() %}<p><a href="{{ source.url }}">{{ source.name }}</a>. {{ source.citation }} Licencja: {{ source.license }}. {{ source.get('attribution','') }}</p>{% endfor %}
   <p>{{ ta.limitations }}</p>
 </section>
