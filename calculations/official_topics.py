@@ -300,3 +300,58 @@ def build_official_topics():
     return topics
 
 ALL_TOPICS = build_official_topics()
+
+
+def topic_parameters(topic):
+    """Start each topic from its own class, never from the previous open aircraft."""
+    from calculations.presets import AIRCRAFT_PRESETS
+    d = topic['defaults']
+    baseline = {'motoglider': 'motoglider_aos', 'piston_ga': 'ga_trainer',
+                'jet_business': 'vlj_jet', 'jet_transport': 'vlj_jet',
+                'turboprop_regional': 'regional_turboprop'}.get(d['aircraft_type'], 'ga_trainer')
+    p = {**AIRCRAFT_PRESETS[baseline], **{k: v for k, v in d.items() if v is not None}}
+    passengers = d['n_pax']
+    p.update(name=topic['title'], topic_id=topic['num'], topic_origin='official',
+             n_crew=2 if passengers > 19 else 1, m_pax=100.0, m_bag=0.0,
+             wingspan_m=d.get('span_limit') or 0, wing_area_m2=0,
+             wing_input_mode='span_aspect' if d.get('span_limit') else 'loading',
+             payload_input_mode='seats', power_input_mode='sized', engine_power_kw=0,
+             locked_params=['n_pax','range_km'] + (['wingspan_m'] if d.get('span_limit') else []))
+    p['category'] = ('cs22_motoglider' if topic['category'] == 'motoszybowce' else
+                     'easa_optout_ul' if topic['category'] == 'ultralight' else
+                     'cs25_transport' if d['aircraft_type'] == 'jet_transport' or passengers > 19 else
+                     'cs23_commuter' if passengers > 9 else 'cs23_level3' if passengers > 6 else
+                     'cs23_level2' if passengers > 1 else 'cs23_level1')
+    title = topic['title'].lower()
+    if topic['category'] == 'motoszybowce':
+        p.update(aspect_ratio=24.0 if d['span_limit'] > 20 else 18.0,
+                 flap_type='flaperon', aileron_type='flaperon', slat_type='none',
+                 v_stall_kmh=72.0, takeoff_run_m=220.0)
+    elif 'stol' in title or 'rolnicz' in title:
+        p.update(flap_type='junkers', slat_type='fixed_slot', v_stall_kmh=75.0, takeoff_run_m=180.0)
+    elif d['aircraft_type'] in ('jet_transport','turboprop_regional'):
+        p.update(flap_type='fowler', slat_type='slats_auto',
+                 v_stall_kmh=185.0 if d['aircraft_type'] == 'jet_transport' else 140.0,
+                 takeoff_run_m=1400.0 if d['aircraft_type'] == 'jet_transport' else 750.0)
+    else:
+        p.update(flap_type='single_slotted', aileron_type='differential', slat_type='none',
+                 v_stall_kmh=90.0, takeoff_run_m=280.0)
+    return p
+
+
+def validate_topic_geometry(params, geometry):
+    if params.get('topic_origin') != 'official':
+        return
+    number = int(params.get('topic_id', 0))
+    span = float(params.get('wingspan_m') or geometry['wing']['b'])
+    if number in (7, 8) and span <= 20:
+        raise ValueError('Wybrany temat wymaga rozpiętości większej niż 20 m. '
+                         'Zmień niezależne założenia skrzydła albo wybierz własny temat.')
+    prescribed = 13.5 if number in (1, 2, 3) else 15.0 if number in (4, 5, 6) else None
+    if prescribed and abs(span - prescribed) > .005:
+        raise ValueError(f'Wybrany temat wymaga rozpiętości {prescribed:g} m. '
+                         'Zachowaj tę rozpiętość albo wybierz własny temat.')
+
+
+for _topic in ALL_TOPICS:
+    _topic['parameters'] = topic_parameters(_topic)

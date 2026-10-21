@@ -64,10 +64,15 @@ def calculate_matching_chart(params: dict, m0: float = None):
     # 1. Ograniczenie prędkości przeciągnięcia w konfiguracji do lądowania (Stall speed limit)
     # W/S <= 0.5 * rho0 * Vs0^2 * Cz_max_lnd
     ws_stall_max = 0.5 * RHO0 * (v_stall_ms ** 2) * cz_max_lnd
+    fixed_area = float(params.get('wing_area_m2') or 0)
+    ws_design = (float(m0) * G0 / fixed_area if fixed_area and m0 is not None
+                 else round(0.95 * ws_stall_max, 1))
     
     # Tworzymy wektor punktów W/S od 200 N/m^2 do 1.15 * ws_stall_max
     ws_min = min(200.0, 0.25 * ws_stall_max)
     ws_max = max(ws_stall_max * 1.15, 800.0)
+    ws_min = min(ws_min, ws_design * .7)
+    ws_max = max(ws_max, ws_design * 1.15)
     steps = 40
     ws_values = [ws_min + i * (ws_max - ws_min) / steps for i in range(steps + 1)]
     
@@ -142,7 +147,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
 
     # Dobór punktu projektowego (Design Point):
     # Wybieramy W/S równe 95% ws_stall_max (rezerwa na prędkość przeciągnięcia Vs0)
-    ws_design = round(0.95 * ws_stall_max, 1)
+    # A prescribed area sets W/S. VS0 remains an upper-bound requirement.
     
     # Obliczamy wartości w punkcie ws_design:
     s_eff = max(30.0, s_to_req)
@@ -192,6 +197,11 @@ def calculate_matching_chart(params: dict, m0: float = None):
     power_kw = round((pw_design * w_newtons) / 1000.0, 1) if (pw_design and w_newtons) else None
     power_hp = round((pw_design * w_newtons) / 735.5, 1) if (pw_design and w_newtons) else None
     thrust_kn = round((tw_design * w_newtons) / 1000.0, 2) if (tw_design and w_newtons) else None
+    required_power_kw = power_kw
+    if engine_type == 'prop' and 'engine_power_kw' in params.get('locked_params', []):
+        power_kw = float(params['engine_power_kw'])
+        power_hp = power_kw * 1000 / 735.5
+        pw_design = power_kw * 1000 / w_newtons
 
     return {
         "engine_type": engine_type,
@@ -207,6 +217,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
             "pw": pw_design, # W/N
             "pw_hp_kg": round(pw_design * G0 / 735.5, 3) if pw_design else None, # KM/kg
             "power_kw": power_kw,
+            "required_power_kw": required_power_kw,
             "power_hp": power_hp,
             "thrust_kn": thrust_kn,
             "tw_min_climb_bipol18": round(tw_min_climb_bipol18, 4)

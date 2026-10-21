@@ -153,3 +153,21 @@ body[data-workspace-view=semester] .quiet-return { display:flex; }
   .quiet-section-tabs button { padding:10px 13px; font-size:13px; }
 }
 @media print { .quiet-disclosure>* { display:block!important; } .quiet-section[hidden] { display:block!important; } .quiet-section-tabs, .quiet-project-menu, #workspaceNotice { display:none!important; } }
+
+/* Independent design inputs and their computed outputs share the same rules. */
+.input-group[hidden], .derived-badge[hidden], #projectWizardBackdrop [hidden] { display:none !important; }
+.basis-controls { margin:0 0 18px; padding:14px 16px; border:1px solid #d6e0e5; border-radius:8px; background:#fafcfd; }
+.basis-controls h4 { font-size:14px; margin:0 0 12px; }
+.basis-controls .input-row { margin-bottom:0; }
+.basis-note { font-size:12px; line-height:1.5; color:#526a77; margin:8px 0 0; }
+.basis-requirements { padding:12px; margin:0 0 18px; border:1px solid #d6e0e5; border-radius:6px; }
+.basis-requirements legend { font-size:13px; font-weight:600; padding:0 5px; }
+.basis-requirements label { display:inline-flex; gap:6px; align-items:center; margin:4px 14px 4px 0; font-size:12px; }
+.basis-requirements input { width:auto; }
+.basis-dimensions .input-group { flex:1; min-width:0; }
+.wizard-topic-field { margin-bottom:18px; }
+.param-lock-btn:disabled { cursor:default; opacity:.65; }
+@media(max-width:650px) { .basis-controls .input-row, .basis-dimensions { flex-direction:column; } }
+.wizard-author { margin-bottom:16px; border:1px solid #d6e0e5; border-radius:6px; }
+.wizard-author > summary { cursor:pointer; font-size:13px; padding:10px 12px; }
+.wizard-author > div { margin:0!important; border:0!important; background:#fff!important; }

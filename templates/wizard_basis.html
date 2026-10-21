@@ -1,0 +1,19 @@
+<div class="input-group wizard-topic-field">
+  <label for="wiz_topic">Temat projektu</label>
+  <select id="wiz_topic"><option value="">Własne założenia</option>{% for topic in topics %}<option value="{{ topic.id }}">{{ topic.title }}</option>{% endfor %}</select>
+  <p class="basis-note" id="wiz_topic_note">Wybierz temat wydziałowy albo skonfiguruj własny projekt.</p>
+</div>
+{% with prefix='wiz_' %}{% include 'basis_selectors.html' %}{% endwith %}
+<div class="input-row basis-dimensions">
+  {% for key,label,unit,value,minimum,maximum in [('wingspan_m','Rozpiętość docelowa','m',15,0,100),('wing_area_m2','Powierzchnia skrzydła','m²',12,0,1000),('aspect_ratio','Wydłużenie skrzydła','—',18,2,35)] %}
+  <div class="input-group" data-basis-param="{{ key }}">
+    <label for="wiz_{{ key }}">{{ label }} [{{ unit }}]</label>
+    <input type="number" step="any" required id="wiz_{{ key }}" value="{{ value }}" min="{{ minimum }}" max="{{ maximum }}">
+    <div class="derived-badge" id="wiz_derived_badge_{{ key }}" hidden></div>
+  </div>
+  {% endfor %}
+</div>
+<fieldset class="basis-requirements"><legend>Wielkości narzucone w temacie</legend>
+  {% for key,label in [('range_km','Zasięg maksymalny'),('cruise_speed_kmh','Prędkość przelotowa'),('v_stall_kmh','Maksymalna prędkość przeciągnięcia'),('n_pax','Liczba pasażerów')] %}<label><input type="checkbox" data-wizard-assumption="{{ key }}">{{ label }}</label>{% endfor %}
+  <p class="basis-note">Wartości niezaznaczone są założeniami roboczymi. Możesz je doprecyzować w następnych krokach.</p>
+</fieldset>

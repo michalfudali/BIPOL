@@ -57,7 +57,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # =========================================================================
     # Temat projektu
     topic_id = int(params.get("topic_id", 33))
-    selected_topic = next((t for t in ALL_TOPICS if t["id"] == topic_id), None)
+    selected_topic = next((dict(t, id=t['num'], catalog_id=t['id']) for t in ALL_TOPICS if t['num'] == topic_id), None)
     if not selected_topic:
         selected_topic = {
             "id": topic_id,

@@ -7,7 +7,7 @@ NUMERIC_LIMITS = {
     "range_km": (0, 30000), "cruise_altitude_m": (0, 20000),
     "cruise_speed_kmh": (1, 1200), "v_stall_kmh": (1, 400),
     "takeoff_run_m": (0, 10000), "climb_rate_ms": (0, 100),
-    "aspect_ratio": (2, 35), "taper_ratio": (0.1, 1),
+    "aspect_ratio": (2, 35), "taper_ratio": (0, 1),
     "sweep_quarter_deg": (-30, 60), "dihedral_deg": (-15, 20),
     "cx0": (0.001, 0.3), "oswald_e": (0.1, 1),
     "cz_max_clean": (0.1, 5), "cz_max_to": (0.1, 6), "cz_max_lnd": (0.1, 7),
@@ -23,7 +23,7 @@ NUMERIC_LIMITS = {
     "trend_count": (0, 716), "trend_engine_count": (0, 8),
     "trend_year_min": (0, 2100), "trend_year_max": (0, 2100),
     "fuel_reserve_factor": (1, 1.5), "mission_ld_factor": (0.5, 1),
-    "wing_area_m2": (0.5, 1000), "engine_power_kw": (0, 100000),
+    "wing_area_m2": (0, 1000), "engine_power_kw": (0, 100000),
     "break_span_ratio": (0.1, 0.9), "m_payload": (0, 500000),
 }
 
@@ -61,6 +61,21 @@ def validate_parameters(data):
             p["sfc"] = 0
     elif data.get("aircraft_type") in ("jet_business", "jet_transport") and "engine_type" not in data:
         p["engine_type"] = "jet"
+    # Cached outputs are never inputs to a new calculation on a different basis.
+    if p.get('wing_input_mode') in ('loading', 'span_aspect'):
+        p['wing_area_m2'] = 0.0
+    if p.get('wing_input_mode') in ('loading', 'area_aspect'):
+        p['wingspan_m'] = 0.0
+        p['span_limit'] = 0.0
+    if p.get('wing_input_mode') == 'span_area':
+        p['aspect_ratio'] = DEFAULTS['aspect_ratio']
+    locked = p.get('locked_params', [])
+    if p.get('payload_input_mode') == 'total' or (isinstance(locked, list) and 'm_payload' in locked and 'payload_input_mode' not in p):
+        p.pop('m_cargo', None)
+    if p.get('payload_input_mode') == 'seats':
+        p.pop('m_payload', None)
+    if p.get('wing_planform') in ('rectangular','elliptical'):
+        p['taper_ratio'] = 1.0 if p['wing_planform'] == 'rectangular' else 0.0
     for key, (lower, upper) in NUMERIC_LIMITS.items():
         if key not in p:
             continue
@@ -82,6 +97,9 @@ def validate_parameters(data):
         if key in p and not float(p[key]).is_integer():
             raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
     for key, allowed in {'trend_source': ('all', 'fast', 'cado'),
+                         'wing_input_mode': ('loading', 'span_aspect', 'span_area', 'area_aspect'),
+                         'payload_input_mode': ('seats', 'total'),
+                         'power_input_mode': ('sized', 'fixed'),
                          'trend_weighting': ('family', 'variant'),
                          'mission_phase_model': ('standard', 'galinski'),
                          'flap_type': ('plain', 'split', 'junkers', 'single_slotted', 'fowler', 'double_slotted', 'flaperon'),
@@ -98,6 +116,8 @@ def validate_parameters(data):
         raise ValueError('Pole variable_sweep: wymagana wartość logiczna.')
     if 'locked_params' in p and not isinstance(p['locked_params'], list):
         raise ValueError('Pole locked_params: wymagana lista identyfikatorów parametrów.')
+    if any(not isinstance(k, str) for k in p.get('locked_params', [])):
+        raise ValueError('Pole locked_params: identyfikatory parametrów muszą być tekstem.')
     if 'trend_aircraft_ids' in p:
         ids = p['trend_aircraft_ids']
         if not isinstance(ids, list) or len(ids) > 716 or any(not isinstance(i, str) for i in ids):
@@ -108,7 +128,7 @@ def validate_parameters(data):
             raise ValueError('Dobór konstrukcji zawiera nieznany identyfikator.')
     if p["v_stall_kmh"] >= p["cruise_speed_kmh"]:
         raise ValueError("Prędkość przelotowa musi być większa od prędkości przeciągnięcia VS0.")
-    if p["aircraft_type"] != "glider" and p.get("takeoff_run_m", 0) < 50:
+    if p["engine_type"] != "none" and p.get("takeoff_run_m", 0) < 50:
         raise ValueError("Pole takeoff_run_m: wymagana skończona liczba od 50 do 10000.")
     if p["cz_max_to"] < p["cz_max_clean"] or p["cz_max_lnd"] < p["cz_max_to"]:
         raise ValueError("Wymagane Cz max: konfiguracja gładka ≤ startowa ≤ lądowania.")

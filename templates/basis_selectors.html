@@ -1,0 +1,22 @@
+<div class="basis-controls">
+  <h4>Od jakich założeń wychodzisz?</h4>
+  <div class="input-row">
+    <div class="input-group">
+      <label for="{{ prefix }}wing_input_mode">Założenia skrzydła</label>
+      <select id="{{ prefix }}wing_input_mode" data-basis-selector>
+        <option value="loading">Prędkość przeciągnięcia i wydłużenie → powierzchnia i rozpiętość</option>
+        <option value="span_aspect">Rozpiętość i wydłużenie → powierzchnia</option>
+        <option value="span_area">Rozpiętość i powierzchnia → wydłużenie</option>
+        <option value="area_aspect">Powierzchnia i wydłużenie → rozpiętość</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label for="{{ prefix }}payload_input_mode">Założenia masy płatnej</label>
+      <select id="{{ prefix }}payload_input_mode" data-basis-selector>
+        <option value="seats">Liczba pasażerów i cargo → masa płatna</option>
+        <option value="total">Masa płatna i liczba pasażerów → cargo</option>
+      </select>
+    </div>
+  </div>
+  <p class="basis-note" id="{{ prefix }}basis_note">Pola wynikające z wybranych założeń są obliczane automatycznie.</p>
+</div>

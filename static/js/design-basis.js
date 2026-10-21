@@ -1,0 +1,189 @@
+/* Select independent assumptions explicitly; dependent controls are outputs. */
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const extraKeys = ['wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
+    'wing_area_m2','m_payload','engine_power_kw','wing_planform','dihedral_deg','aileron_type'];
+  const wingSources = {loading:['aspect_ratio'],span_aspect:['wingspan_m','aspect_ratio'],
+    span_area:['wingspan_m','wing_area_m2'],area_aspect:['wing_area_m2','aspect_ratio']};
+  let wizardBase = {};
+  let classPresets = {};
+  const value = (prefix, key) => $(prefix+key)?.value;
+  const number = (prefix, key) => Number(value(prefix,key) || 0);
+  const set = (prefix, key, val) => { if ($(prefix+key) && val != null) $(prefix+key).value = val; };
+  function derived(prefix, key, isDerived, formula='', result) {
+    const input=$(prefix+key); if (!input) return;
+    input.readOnly=isDerived;
+    input.setAttribute('aria-readonly',String(isDerived));
+    input.closest('.input-group')?.classList.toggle('is-derived',isDerived);
+    if (isDerived && Number.isFinite(result)) input.value=+result.toFixed(6);
+    const badge=$(prefix+'derived_badge_'+key);
+    if (badge) {badge.hidden=!isDerived;badge.style.display=isDerived?'block':'none';badge.textContent=formula;}
+    const button=$('lock_btn_'+key);
+    if (!prefix && button) {button.disabled=isDerived;button.title=isDerived?formula:'Przypnij jako założenie';}
+  }
+  function sync(prefix='') {
+    const mode=value(prefix,'wing_input_mode') || 'loading';
+    const b=number(prefix,'wingspan_m'), s=number(prefix,'wing_area_m2'), ar=number(prefix,'aspect_ratio');
+    if (mode==='span_aspect') {
+      derived(prefix,'wingspan_m',false);derived(prefix,'aspect_ratio',false);
+      derived(prefix,'wing_area_m2',true,'S = b² / Λ', ar>0?b*b/ar:undefined);
+    } else if (mode==='span_area') {
+      derived(prefix,'wingspan_m',false);derived(prefix,'wing_area_m2',false);
+      derived(prefix,'aspect_ratio',true,'Λ = b² / S',s>0?b*b/s:undefined);
+    } else if (mode==='area_aspect') {
+      derived(prefix,'wing_area_m2',false);derived(prefix,'aspect_ratio',false);
+      derived(prefix,'wingspan_m',true,'b = √(S · Λ)',s>0&&ar>0?Math.sqrt(s*ar):undefined);
+    } else {
+      derived(prefix,'aspect_ratio',false);
+      derived(prefix,'wing_area_m2',true,'Powierzchnia z bilansu masy i wymagania VS0 — po przeliczeniu.');
+      derived(prefix,'wingspan_m',true,'Rozpiętość z powierzchni i wydłużenia — po przeliczeniu.');
+    }
+    const payload=number(prefix,'n_pax')*(number(prefix,'m_pax')+(prefix?Number(wizardBase.m_bag||0):Number(formBaseParams.m_bag||0)));
+    if (value(prefix,'payload_input_mode')==='total') {
+      derived(prefix,'m_payload',false);
+      derived(prefix,'m_cargo',true,'Cargo = masa płatna − masa pasażerów z bagażem.',number(prefix,'m_payload')-payload);
+    } else {
+      derived(prefix,'m_cargo',false);
+      derived(prefix,'m_payload',true,'Masa płatna = pasażerowie z bagażem + cargo (bez załogi).',payload+number(prefix,'m_cargo'));
+    }
+    const planform=value(prefix,'wing_planform');
+    derived(prefix,'taper_ratio',planform==='rectangular'||planform==='elliptical',
+      'Zbieżność wynika z wybranego obrysu.',planform==='rectangular'?1:planform==='elliptical'?0:undefined);
+    const unpowered=value(prefix,'engine_type')==='none';
+    const fixedPower=value(prefix,'power_input_mode')==='fixed'&&!unpowered;
+    derived(prefix,'engine_power_kw',!fixedPower,unpowered?'Nie dotyczy lotu bez napędu.':'Moc z diagramu doboru — po przeliczeniu.',unpowered?0:undefined);
+    const uas=value(prefix,'aircraft_type')==='uav';
+    derived(prefix,'n_pax',uas,'Statek bezzałogowy — brak osób na pokładzie.',uas?0:undefined);
+    derived(prefix,'n_crew',uas,'Statek bezzałogowy — brak osób na pokładzie.',uas?0:undefined);
+    const note=$(prefix+'basis_note');
+    if (note) note.textContent=mode==='loading'
+      ? 'Powierzchnia i rozpiętość wynikają z masy, wymagania VS0 i przyjętego wydłużenia.'
+      : 'Dwa wymiary są założeniami, trzeci wynika z b² = S · Λ. Wymaganie VS0 jest sprawdzane dla tej geometrii.';
+  }
+  function propulsion(prefix='') {
+    const engine=value(prefix,'engine_type'), none=engine==='none', prop=engine==='prop';
+    if (!prop) set(prefix,'power_input_mode','sized');
+    for (const key of ['engine_location','sfc','prop_efficiency','engine_power_kw','power_input_mode','loiter_time_min','prop_eff_to','takeoff_run_m','climb_rate_ms']) {
+      const input=$(prefix+key);if(!input)continue;
+      const hide=none||(!prop&&['prop_efficiency','engine_power_kw','power_input_mode','prop_eff_to'].includes(key));
+      const group=input.closest('.input-group'); if(group){group.hidden=hide;group.style.display=hide?'none':'';}
+      input.disabled=hide;
+      if(['sfc','takeoff_run_m','climb_rate_ms'].includes(key))input.readOnly=none;
+      if (none&&['sfc','engine_power_kw','takeoff_run_m','climb_rate_ms'].includes(key))input.value=0;
+    }
+    const loc=$(prefix+'engine_location');
+    if (loc) {
+      const noLocation=loc.querySelector('option[value="none"]');if(noLocation){noLocation.hidden=!none;noLocation.disabled=!none;}
+      if(none) {if(loc.value!=='none')loc.dataset.poweredLocation=loc.value;loc.value='none';}
+      else if(loc.value==='none'||!loc.value)loc.value=loc.dataset.poweredLocation||((engine==='jet')?'rear':'nose');
+    }
+    const title=$('wiz_pane3_title');
+    if(prefix&&title)title.textContent=none?'Krok 3: Lot bez napędu':'Krok 3: Zespół napędowy';
+    const description=prefix?$('wizardPane3')?.querySelector('.wizard-pane-header p'):null;
+    if(description)description.textContent=none?'Szybowiec nie wymaga lokalizacji silnika, mocy ani zużycia paliwa. Przejdź do konfiguracji płata.':'Określ rodzaj i lokalizację napędu. Możesz podać dostępną moc albo pozostawić jej dobór obliczeniom.';
+    if(prefix)document.querySelectorAll('#wizardPane3 .formula-box').forEach(el=>el.hidden=none);
+    sync(prefix);
+  }
+  function infer(params) {
+    return {...params, wing_input_mode:params.wing_input_mode||((params.wingspan_m||params.span_limit)?'span_aspect':params.wing_area_m2?'area_aspect':'loading'),
+      payload_input_mode:params.payload_input_mode||(params.locked_params?.includes('m_payload')?'total':'seats'),
+      power_input_mode:params.power_input_mode||(params.locked_params?.includes('engine_power_kw')?'fixed':'sized')};
+  }
+  function restore(params) {
+    const p=infer(params);window.userLockedParams=new Set(p.locked_params||[]);
+    for (const key of extraKeys) if(key in p)set('',key,p[key]);
+    if(!('wing_area_m2' in p))set('','wing_area_m2',0);
+    if(!('wingspan_m' in p))set('','wingspan_m',p.span_limit||0);
+    if(!('engine_power_kw' in p))set('','engine_power_kw',0);
+    sync();propulsion();
+  }
+  function openWizard() {
+    wizardBase=infer(collectFormData());
+    for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
+    const topic=topicsData.find(t=>t.num===Number(wizardBase.topic_id));
+    set('wiz_','topic',wizardBase.topic_origin==='official'&&topic?topic.id:'');
+    document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=window.userLockedParams.has(input.dataset.wizardAssumption));
+    sync('wiz_');propulsion('wiz_');topicNote();
+  }
+  function topicNote() {
+    const topic=topicsData.find(t=>t.id===value('wiz_','topic'));
+    const note=$('wiz_topic_note');
+    if(note)note.textContent=topic?[7,8].includes(topic.num)?'Ten temat wymaga rozpiętości większej niż 20 m. Przyjęto roboczo 21 m; możesz podać inną wartość powyżej 20 m.':'Wartości startowe odpowiadają wybranemu tematowi. Możesz zmienić niezależne założenia.':'Własny projekt: wybierz wielkości wejściowe i ich wartości.';
+    const b=$('wiz_wingspan_m');if(b)b.min=topic&&[7,8].includes(topic.num)?'20.001':'0';
+  }
+  function chooseTopic() {
+    const topic=topicsData.find(t=>t.id===value('wiz_','topic'));
+    if(!topic){delete wizardBase.topic_id;delete wizardBase.topic_origin;topicNote();return;}
+    wizardBase=structuredClone(topic.parameters);
+    for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
+    document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=wizardBase.locked_params.includes(input.dataset.wizardAssumption));
+    syncAircraftClassAndEASAUI(true);syncWizardPropulsionUI(false);renderWizardStep4Mechanics();
+    sync('wiz_');topicNote();
+  }
+  function snapshot() {
+    sync('wiz_');
+    const p={...wizardBase};
+    const keys=new Set([...Object.keys(collectFormData()),...extraKeys]);
+    keys.forEach(key=>{const input=$('wiz_'+key);if(!input)return;p[key]=input.type==='number'?Number(input.value):input.value;});
+    p.name=$('wiz_name').value.trim()||'Mój projekt BIPOL';
+    const locked=new Set(wizardBase.locked_params||[]);
+    for(const key of ['wingspan_m','wing_area_m2','aspect_ratio','m_payload','m_cargo','engine_power_kw'])locked.delete(key);
+    for(const key of wingSources[p.wing_input_mode])locked.add(key);
+    if(p.payload_input_mode==='total')locked.add('m_payload');
+    if(p.power_input_mode==='fixed'&&p.engine_type==='prop')locked.add('engine_power_kw');
+    document.querySelectorAll('[data-wizard-assumption]').forEach(input=>{
+      if(input.checked)locked.add(input.dataset.wizardAssumption);else locked.delete(input.dataset.wizardAssumption);
+    });
+    p.locked_params=[...locked];
+    return p;
+  }
+  function collect(data) {
+    // Read-only numbers shown to the user are outputs; modes are authoritative.
+    data.wing_input_mode=value('','wing_input_mode');
+    data.payload_input_mode=value('','payload_input_mode');
+    data.power_input_mode=value('','power_input_mode');
+    return data;
+  }
+  function loadTopic(topic) {
+    formBaseParams=structuredClone(topic.parameters);
+    for(const [key,val] of Object.entries(formBaseParams))set('',key,val);
+    restore(formBaseParams);
+    const active=getActiveProject();
+    if(active){active.name=topic.title;active.params={...formBaseParams};saveProject(active);}
+    if($('projectNameDisplay'))$('projectNameDisplay').textContent=topic.title;
+    syncAircraftClassAndEASAUI(false);syncFormPropulsionUI(false);renderWingConfigDidacticCard();renderFlapDidacticCard(true);
+    sync();updateAccordionPills();performCalculation();
+  }
+  function applyResult(result) {
+    window.userLockedParams=new Set(result.params.locked_params||[]);
+    for(const key of ['wing_input_mode','payload_input_mode','power_input_mode'])set('',key,result.params[key]);
+    sync();
+  }
+  function classDefaults(prefix='') {
+    const base=prefix?wizardBase:formBaseParams;
+    delete base.topic_id;delete base.topic_origin;
+    if(prefix){set('wiz_','topic','');topicNote();}
+    const preset=classPresets[value(prefix,'aircraft_type')];if(!preset)return;
+    for(const key of ['aspect_ratio','cx0','oswald_e','sfc','v_h','v_v','ar_h','ar_v','loiter_time_min']){
+      if (key==='aspect_ratio'&&(value(prefix,'wing_input_mode')!=='loading'||(prefix?(base.locked_params||[]):[...window.userLockedParams]).includes(key)))continue;
+      base[key]=preset[key];set(prefix,key,preset[key]);
+    }
+    sync(prefix);
+  }
+  window.BipolDesignBasis={sync,propulsion,restore,openWizard,snapshot,collect,loadTopic,applyResult,classDefaults};
+  document.addEventListener('DOMContentLoaded',async()=>{
+    $('wiz_topic')?.addEventListener('change',chooseTopic);
+    document.addEventListener('input',event=>{
+      const input=event.target;if(!input.matches('#designForm input, #projectWizardBackdrop input'))return;
+      const prefix=input.id.startsWith('wiz_')?'wiz_':'';sync(prefix);
+    });
+    document.addEventListener('change',event=>{
+      const input=event.target;if(!input.matches('#designForm select, #projectWizardBackdrop select'))return;
+      const prefix=input.id.startsWith('wiz_')?'wiz_':'';
+      if(input.dataset.basisSelector!==undefined && value(prefix,'power_input_mode')==='fixed'&&number(prefix,'engine_power_kw')<=0)set(prefix,'engine_power_kw',73.5);
+      sync(prefix);
+    });
+    try {const response=await fetch('/api/presets');const presets=await response.json();for(const preset of Object.values(presets))classPresets[preset.aircraft_type]??=preset;} catch(_){}
+  });
+})();

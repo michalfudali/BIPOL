@@ -14,7 +14,8 @@ from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
 from calculations.validation import validate_parameters
 from calculations.glide import calculate_glide_polar
-from calculations.constraints import resolve_and_lock_parameters, get_initial_constraint_suggestions, WING_PLANFORMS
+from calculations.official_topics import validate_topic_geometry
+from calculations.constraints import resolve_and_lock_parameters, finalize_parameter_states, get_initial_constraint_suggestions, WING_PLANFORMS
 
 def run_bipol_project(params: dict):
     """
@@ -22,13 +23,11 @@ def run_bipol_project(params: dict):
     """
     # Normalizacja domeny: napęd odrzutowy nie występuje w konfiguracji ciągnącej w nosie kadłuba (GA tractor)
     params = validate_parameters(params)
-    params, param_states, constraint_warnings = resolve_and_lock_parameters(params, params.get("locked_params", []))
-    if params.get("engine_type") == "jet" and params.get("engine_location") == "nose":
-        params["engine_location"] = "wing" if params.get("aircraft_type") == "jet_transport" else "rear"
-
-    # Klasyfikacja wg polskiego prawa (Dz. U. 2025 poz. 1137): spójność klasy UM/UL/A z liczbą osób na pokładzie
     params, law_corrections = normalize_occupants(params)
     params["_law_corrections"] = law_corrections
+    params, param_states, constraint_warnings = resolve_and_lock_parameters(params, params.get("locked_params", []))
+    if params.get("engine_type") == "jet" and params.get("engine_location") in ("nose", "retractable", "none"):
+        params["engine_location"] = "wing" if params.get("aircraft_type") == "jet_transport" else "rear"
 
     # Etap P1 i P2: Bilans masowy (szacowanie MTOW)
     mass_res = calculate_mass_sizing(params)
@@ -42,26 +41,10 @@ def run_bipol_project(params: dict):
     
     # Etap P3: Wymiarowanie zespołów (skrzydło, kadłub, usterzenia, Schrenk)
     geom_res = calculate_geometry(m0, ws, params)
+    validate_topic_geometry(params, geom_res)
 
-    # Narzucona rozpiętość zmienia wydłużenie. Uzgodnij bilans masowy i napęd
-    # z tą samą geometrią, z której następnie korzystają aerodynamika i osiągi.
-    if params.get("wingspan_m") or params.get("span_limit"):
-        for _ in range(80):
-            span = params.get("wingspan_m") or params.get("span_limit")
-            actual_ar = float(span) ** 2 * ws / (m0 * G0)
-            if not 2 <= actual_ar <= 35:
-                raise ValueError("Narzucona rozpiętość daje wydłużenie poza zakresem modelu 2–35. Zmień rozpiętość lub wymaganie VS0.")
-            if abs(actual_ar - params["aspect_ratio"]) < 0.001:
-                break
-            params["aspect_ratio"] = actual_ar
-            mass_res = calculate_mass_sizing(params)
-            m0 = mass_res["m0"]
-            sizing_res = calculate_matching_chart(params, m0=m0)
-            ws = sizing_res["design_point"]["ws"]
-            geom_res = calculate_geometry(m0, ws, params)
-        else:
-            raise ValueError("Nie uzyskano zgodności masy i narzuconej rozpiętości.")
-    
+    finalize_parameter_states(params, param_states, mass_res, sizing_res, geom_res)
+
     # Etap P4: Charakterystyki aerodynamiczne (biegunowe, doskonałość)
     aero_res = calculate_aerodynamics(geom_res, params, m0=m0)
     

@@ -88,6 +88,7 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   const eng = engEl ? engEl.value : 'prop';
   const acType = acEl ? acEl.value : 'piston_ga';
   const isGlider = eng === 'none';
+  window.BipolDesignBasis?.propulsion('');
   for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById(field);
     if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
@@ -296,9 +297,11 @@ function syncEngineWithAircraft(isWizard = false) {
   const prefix = isWizard ? 'wiz_' : '';
   const engine = document.getElementById(prefix + 'engine_type');
   const aircraft = document.getElementById(prefix + 'aircraft_type');
+  const previousClass = aircraft?.value;
   if (engine?.value === 'none') aircraft.value = 'glider';
   else if (aircraft?.value === 'glider') aircraft.value = engine.value === 'jet' ? 'jet_business' : 'motoglider';
   syncAircraftClassAndEASAUI(isWizard, 'aircraft');
+  if (aircraft?.value !== previousClass) window.BipolDesignBasis?.classDefaults(prefix);
 }
 
 function initSidebarModularity() {
@@ -331,6 +334,7 @@ function initSidebarModularity() {
         }
       }
       syncAircraftClassAndEASAUI(false, 'aircraft');
+      window.BipolDesignBasis?.classDefaults('');
       syncFormPropulsionUI(true);
       updateAccordionPills();
       performCalculation();
@@ -870,70 +874,7 @@ function populateTopicsSelect(filterCat) {
 // Załadowanie tematu wybranego z listy wydziałowej
 function loadTopic(topicId) {
   const topic = topicsData.find(t => String(t.id) === String(topicId));
-  if (!topic) return;
-
-  const def = topic.defaults;
-  formBaseParams = {};
-  const passengers = Number(def.n_pax || 0);
-  setFieldValue('category', topic.category === 'motoszybowce' ? 'cs22_motoglider'
-    : topic.category === 'ultralight' ? 'easa_optout_ul'
-    : def.aircraft_type === 'jet_transport' || passengers > 19 ? 'cs25_transport'
-    : passengers > 9 ? 'cs23_commuter' : passengers > 6 ? 'cs23_level3'
-    : passengers > 1 ? 'cs23_level2' : 'cs23_level1');
-  setFieldValue('n_crew', passengers > 19 ? 2 : 1);
-  setFieldValue('m_pax', 100);
-  const pnd = document.getElementById('projectNameDisplay');
-  if (pnd) pnd.textContent = topic.title;
-
-  setFieldValue('aircraft_type', def.aircraft_type);
-  setFieldValue('engine_type', def.engine_type);
-  setFieldValue('engine_location', def.engine_location);
-  setFieldValue('wing_config', def.wing_config);
-  setFieldValue('n_pax', def.n_pax);
-  setFieldValue('m_cargo', def.m_cargo);
-  setFieldValue('range_km', def.range_km);
-  setFieldValue('cruise_altitude_m', def.cruise_altitude_m);
-  setFieldValue('cruise_speed_kmh', def.cruise_speed_kmh);
-  setFieldValue('climb_rate_ms', def.climb_rate_ms);
-  
-  if (def.span_limit) {
-    setFieldValue('wingspan_m', def.span_limit);
-  } else {
-    setFieldValue('wingspan_m', 0);
-  }
-
-  // Automatyczny dobór mechanizacji płata i Vs0 zależnie od kategorii tematu
-  const titleLower = topic.title.toLowerCase();
-  if (titleLower.includes('stol') || titleLower.includes('rolnicz')) {
-    setFieldValue('flap_type', 'junkers');
-    setFieldValue('slat_type', 'fixed_slot');
-    setFieldValue('v_stall_kmh', 75);
-    setFieldValue('takeoff_run_m', 180);
-  } else if (def.aircraft_type === 'jet_transport' || def.aircraft_type === 'turboprop_regional') {
-    setFieldValue('flap_type', 'fowler');
-    setFieldValue('slat_type', 'slats_auto');
-    setFieldValue('v_stall_kmh', def.aircraft_type === 'jet_transport' ? 185 : 140);
-    setFieldValue('takeoff_run_m', def.aircraft_type === 'jet_transport' ? 1400 : 750);
-  } else if (titleLower.includes('motoszybow')) {
-    setFieldValue('flap_type', 'flaperon');
-    setFieldValue('aileron_type', 'flaperon');
-    setFieldValue('slat_type', 'none');
-    setFieldValue('v_stall_kmh', 72);
-    setFieldValue('takeoff_run_m', 220);
-  } else {
-    setFieldValue('flap_type', 'single_slotted');
-    setFieldValue('aileron_type', 'differential');
-    setFieldValue('slat_type', 'none');
-    setFieldValue('v_stall_kmh', 90);
-    setFieldValue('takeoff_run_m', 280);
-  }
-
-  syncAircraftClassAndEASAUI(false);
-  syncFormPropulsionUI(true);
-  renderWingConfigDidacticCard();
-  renderFlapDidacticCard(true);
-  updateAccordionPills();
-  performCalculation();
+  if (topic) BipolDesignBasis.loadTopic(topic);
 }
 
 function setFieldValue(id, val) {
@@ -947,7 +888,7 @@ function collectFormData() {
   const data = { ...formBaseParams };
   const inputs = document.querySelectorAll('#designForm input, #designForm select, [data-analysis-param]');
   inputs.forEach(input => {
-    if (!input.id) return;
+    if (!input.id || input.type === 'checkbox') return;
     const val = input.value;
     if (input.type === 'number') {
       data[input.id] = parseFloat(val);
@@ -970,7 +911,7 @@ function collectFormData() {
   const nameEl = document.getElementById('projectNameDisplay');
   data['name'] = activeProj ? activeProj.name : (nameEl ? nameEl.textContent.trim() : 'Wstępny Projekt Samolotu');
   data['locked_params'] = Array.from(window.userLockedParams || []);
-  return data;
+  return window.BipolDesignBasis ? BipolDesignBasis.collect(data) : data;
 }
 
 let calculationSequence = 0;
@@ -987,6 +928,7 @@ function showCalculationStatus(message, error = false) {
 
 function validateNumericFields(root) {
   for (const input of root.querySelectorAll('input[type="number"]')) {
+    if (input.disabled || input.readOnly) continue;
     if (input.value.trim() === '' || !Number.isFinite(Number(input.value)) || !input.checkValidity()) {
       const label = document.querySelector(`label[for="${input.id}"]`)?.textContent.trim() || input.id;
       throw new Error(`Sprawdź pole „${label}”. ${input.validationMessage || 'Podaj liczbę.'}`);
@@ -1860,6 +1802,8 @@ function loadProjectIntoForm(project) {
     }
   }
 
+  window.BipolDesignBasis?.restore(params);
+
   const pnd = document.getElementById('projectNameDisplay');
   if (pnd) pnd.textContent = project.name;
 
@@ -2376,6 +2320,7 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
   const eng = engEl ? engEl.value : 'prop';
   const acType = acEl ? acEl.value : 'piston_ga';
   const isGlider = eng === 'none';
+  window.BipolDesignBasis?.propulsion('wiz_');
   for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById('wiz_' + field);
     if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
@@ -2537,6 +2482,7 @@ function initWizardSystem() {
         }
       }
       syncAircraftClassAndEASAUI(true, 'aircraft');
+      window.BipolDesignBasis?.classDefaults('wiz_');
       suggestStepDefaults(2);
       syncWizardPropulsionUI(true);
     });
@@ -2560,7 +2506,7 @@ function openWizard(mode = 'create') {
 
   if (mode === 'create') {
     if (wizardModalTitle) {
-      wizardModalTitle.innerHTML = '🪄 Kreator Nowego Projektu Samolotu (Nowa Sesja / Nowy Projekt BIPOL I)';
+      wizardModalTitle.textContent = 'Nowy projekt';
     }
     const list = getProjectsList();
     const wizNameInput = document.getElementById('wiz_name');
@@ -2568,9 +2514,10 @@ function openWizard(mode = 'create') {
       wizNameInput.value = `Projekt Samolotu #${list.length + 1}`;
     }
     syncFormToWizard();
+    if (wizNameInput) wizNameInput.value = `Projekt Samolotu #${list.length + 1}`;
   } else {
     if (wizardModalTitle) {
-      wizardModalTitle.innerHTML = '🪄 Edycja Założeń Projektu w Kreatorze';
+      wizardModalTitle.textContent = 'Edytuj założenia projektu';
     }
     syncFormToWizard();
     const active = getActiveProject();
@@ -2644,6 +2591,7 @@ function syncFormToWizard() {
   if (projNameEl && wizNameEl && projNameEl.textContent.trim()) {
     wizNameEl.value = projNameEl.textContent.trim();
   }
+  window.BipolDesignBasis?.openWizard();
 }
 
 function goToWizardStep(step) {
@@ -2865,7 +2813,7 @@ function renderWizardStep5Summary() {
     <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
     <tr><td><b>Osiągi lotniskowe</b></td><td>Rozbieg Sto / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
     <tr><td><b>Zespół Napędowy</b></td><td>Rodzaj, zabudowa i zużycie paliwa</td><td class="num"><b>${propSummaryText}</b></td><td>Zespół napędowy</td></tr>
-    <tr><td><b>Płat Nośny</b></td><td>Układ i geometria obrysu</td><td class="num"><b>${wingCfg.toUpperCase()} &bull; &Lambda; = ${AR}, &eta; = ${eta}</b></td><td>Wydłużenie i zbieżność</td></tr>
+    <tr><td><b>Założenia skrzydła</b></td><td>${escapeHtml(document.getElementById('wiz_wing_input_mode').selectedOptions[0].textContent)}</td><td class="num"><b>b = ${document.getElementById('wiz_wingspan_m').value} m; S = ${document.getElementById('wiz_wing_area_m2').value} m²; Λ = ${AR}</b></td><td>Wielkości zależne są obliczane</td></tr>
     <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>Klapa: ${flap} &bull; Slot: ${slat}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
   `;
 
@@ -2914,8 +2862,8 @@ function renderWizardStep5Summary() {
   if (issues.length === 0) {
     auditBox.className = 'wizard-audit-box success';
     auditBox.innerHTML = `
-      <strong>✅ Konfiguracja w pełni poprawna i spójna merytorycznie!</strong><br>
-      Wszystkie parametry spełniają normy projektowania MEiL PW. Kliknij poniższy zielony przycisk, aby uruchomić pełny ciąg obliczeniowy P1–P6 i wygenerować dokumentację CAD A3Z.
+      <strong>✅ Założenia gotowe do przeliczenia.</strong><br>
+      Przy zatwierdzeniu program sprawdzi bilans masy, geometrię i osiągi. Projekt zostanie zapisany dopiero po poprawnym przeliczeniu.
     `;
   } else {
     auditBox.className = 'wizard-audit-box warning';
@@ -2934,103 +2882,44 @@ function showWizardError(message) {
   if (el) el.textContent = message;
 }
 
-function commitWizardToForm() {
+async function commitWizardToForm() {
+  syncAircraftClassAndEASAUI(true);
+  syncWizardPropulsionUI(false);
+  BipolDesignBasis.sync('wiz_');
   for (let step = 1; step <= 4; step++) {
     try { validateNumericFields(document.getElementById(`wizardPane${step}`)); }
     catch (err) { goToWizardStep(step); showWizardError(err.message); return; }
   }
+  const params = BipolDesignBasis.snapshot();
+  const finish = document.getElementById('wizFinishBtn');
+  const originalText = finish.textContent;
+  finish.disabled = true; finish.textContent = 'Sprawdzanie projektu…';
   showWizardError('');
-  syncAircraftClassAndEASAUI(true);
-  syncWizardPropulsionUI(false);
-
-  const mappings = [
-    { wizId: 'wiz_aircraft_type', formId: 'aircraft_type' },
-    { wizId: 'wiz_category', formId: 'category' },
-    { wizId: 'wiz_n_crew', formId: 'n_crew' },
-    { wizId: 'wiz_n_pax', formId: 'n_pax' },
-    { wizId: 'wiz_m_pax', formId: 'm_pax' },
-    { wizId: 'wiz_m_cargo', formId: 'm_cargo' },
-    { wizId: 'wiz_range_km', formId: 'range_km' },
-    { wizId: 'wiz_cruise_altitude_m', formId: 'cruise_altitude_m' },
-    { wizId: 'wiz_cruise_speed_kmh', formId: 'cruise_speed_kmh' },
-    { wizId: 'wiz_v_stall_kmh', formId: 'v_stall_kmh' },
-    { wizId: 'wiz_takeoff_run_m', formId: 'takeoff_run_m' },
-    { wizId: 'wiz_climb_rate_ms', formId: 'climb_rate_ms' },
-    { wizId: 'wiz_engine_type', formId: 'engine_type' },
-    { wizId: 'wiz_engine_location', formId: 'engine_location' },
-    { wizId: 'wiz_prop_efficiency', formId: 'prop_efficiency' },
-    { wizId: 'wiz_sfc', formId: 'sfc' },
-    { wizId: 'wiz_wing_config', formId: 'wing_config' },
-    { wizId: 'wiz_aspect_ratio', formId: 'aspect_ratio' },
-    { wizId: 'wiz_taper_ratio', formId: 'taper_ratio' },
-    { wizId: 'wiz_sweep_quarter_deg', formId: 'sweep_quarter_deg' },
-    { wizId: 'wiz_flap_type', formId: 'flap_type' },
-    { wizId: 'wiz_aileron_type', formId: 'aileron_type' },
-    { wizId: 'wiz_slat_type', formId: 'slat_type' }
-  ];
-
-  mappings.forEach(m => {
-    const wEl = document.getElementById(m.wizId);
-    const fEl = document.getElementById(m.formId);
-    if (wEl && fEl) {
-      fEl.value = wEl.value;
+  try {
+    const response = await fetch('/api/calculate', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(params)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Nie udało się obliczyć projektu.');
+    if (!document.getElementById('projectWizardBackdrop').classList.contains('active')) return;
+    if (JSON.stringify(params) !== JSON.stringify(BipolDesignBasis.snapshot())) {
+      throw new Error('Założenia zmieniły się podczas obliczeń. Zatwierdź je ponownie.');
     }
-  });
-
-  const wizNameEl = document.getElementById('wiz_name');
-  const projName = (wizNameEl && wizNameEl.value.trim()) ? wizNameEl.value.trim() : 'Mój Samolot BIPOL';
-
-  const projNameEl = document.getElementById('projectNameDisplay');
-  if (projNameEl) {
-    projNameEl.textContent = projName;
-  }
-
-  delete formBaseParams.cz_max_to;
-  // Zaktualizuj karty dydaktyczne i pola napędowe w głównym formularzu
-  syncFormPropulsionUI(false);
-  renderWingConfigDidacticCard();
-  renderFlapDidacticCard(true);
-  updateAccordionPills();
-
-  // Zamknij wizard
-  closeWizard();
-
-  // Zapisz w Systemie Projektów
-  if (wizardProjectMode === 'create') {
-    const newId = 'proj_' + Date.now();
-    const newProject = {
-      id: newId,
-      name: projName,
-      aircraft_type: document.getElementById('aircraft_type')?.value || 'piston_ga',
-      category: document.getElementById('category')?.value || 'normal',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      params: { ...collectFormData(), name: projName },
-      summary: {}
-    };
-    saveProject(newProject);
-    setActiveProjectId(newId);
-    renderProjectSwitcher();
-    flashSaveStatus(`Utworzono projekt: ${projName}`);
-  } else {
-    const active = getActiveProject();
-    if (active) {
-      active.name = projName;
-      active.aircraft_type = document.getElementById('aircraft_type')?.value || 'piston_ga';
-      active.category = document.getElementById('category')?.value || 'normal';
-      active.params = res ? res.params : collectFormData();
-      saveProject(active);
-      renderProjectSwitcher();
-      flashSaveStatus(`Zaktualizowano projekt: ${projName}`);
-    }
-  }
-
-  // Uruchom obliczenia i przejdź do widoku CAD
-  performCalculation();
-
-  // Przełącz na zakładkę CAD
-  const cadTab = document.querySelector('.bipol-tab[data-target="tab-cad"]');
-  if (cadTab) cadTab.click();
+    calculationSequence++; calculationController?.abort();
+    const active = wizardProjectMode === 'edit' ? getActiveProject() : null;
+    const project = active || {id:'proj_'+Date.now(), createdAt:new Date().toISOString()};
+    Object.assign(project, {name:params.name, aircraft_type:result.params.aircraft_type,
+      category:result.params.category, params:result.params, summary:{}});
+    saveProject(project); setActiveProjectId(project.id); loadProjectIntoForm(project);
+    currentResults = result; updateUI(result); updateDerivedUI(result.constraints.parameter_states);
+    autoSaveActiveProject(result); renderProjectSwitcher();
+    showCalculationStatus('Wyniki i zapis projektu są aktualne.');
+    document.getElementById('openReportBtn')?.setAttribute('data-results-stale','false');
+    document.dispatchEvent(new CustomEvent('bipol:results', {detail:result}));
+    closeWizard();
+    document.querySelector('.bipol-tab[data-target="tab-cad"]')?.click();
+  } catch (error) { showWizardError(error.message); }
+  finally { finish.disabled = false; finish.textContent = originalText; }
 }
 
 // =========================================================================

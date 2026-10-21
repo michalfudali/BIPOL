@@ -109,6 +109,7 @@
                   </div>
                 </div>
                 <div class="module-body" id="body_mod1">
+                  {% with prefix='' %}{% include 'basis_selectors.html' %}{% endwith %}
                   <!-- SUGEROWANE OGRANICZENIA POCZĄTKOWE (BIPOL I / MEiL PW / EASA) -->
                   <div class="initial-constraints-panel" id="initialConstraintsPanel">
                     <div class="constraints-drawer-header" onclick="toggleConstraintsDrawer()">
@@ -206,11 +207,11 @@
                     </div>
                     <div class="input-group" data-param="m_payload" id="group_m_payload">
                       <label for="m_payload">
-                        <span class="label-text">Masa płatna łączna [kg] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="m_payload" tabindex="0">i</span></span>
+                        <span class="label-text">Masa płatna bez załogi [kg] <span class="info-circle-icon" data-param="m_payload" tabindex="0">i</span></span>
                         <button type="button" class="param-lock-btn" id="lock_btn_m_payload" onclick="toggleParamLock('m_payload')" title="Zablokuj łączną masę płatną">🔓</button>
                       </label>
                       <input step="any" type="number" id="m_payload" min="0" max="50000" value="0" placeholder="0 = z pax + cargo">
-                      <div class="param-didactic-hint" id="hint_m_payload">Łączna masa płatna m_payload = n_pax · 85 + m_cargo. Zablokowanie wylicza m_cargo zależnie.</div>
+                      <div class="param-didactic-hint" id="hint_m_payload">Masa pasażerów z bagażem i cargo. Sposób obliczania wybierasz w założeniach masy płatnej.</div>
                       <div class="derived-badge" id="derived_badge_m_payload" style="display:none;"></div>
                     </div>
                   </div>
@@ -360,6 +361,7 @@
                     </div>
                   </div>
 
+                  <div class="input-group" data-param="wing_area_m2"><label for="wing_area_m2">Powierzchnia skrzydła S [m²]</label><input type="number" step="any" id="wing_area_m2" min="0" max="1000" value="0"><div class="derived-badge" id="derived_badge_wing_area_m2" hidden></div></div>
                   <!-- Karta Dydaktyczna Plusów i Minusów Wybranego Układu Skrzydła -->
                   <div id="wingConfigDidacticBox" class="flap-didactic-card" style="margin-bottom:0.75rem;"></div>
 
@@ -369,7 +371,7 @@
                         <span class="label-text">Wydłużenie skrzydła Λ (AR) [-] <span class="info-circle-icon" data-param="aspect_ratio" tabindex="0">i</span></span>
                         <button type="button" class="param-lock-btn" id="lock_btn_aspect_ratio" onclick="toggleParamLock('aspect_ratio')" title="Zablokuj wydłużenie">🔓</button>
                       </label>
-                      <input step="any" required type="number" id="aspect_ratio" min="3" max="32" value="7.33">
+                      <input step="any" required type="number" id="aspect_ratio" min="2" max="35" value="7.33">
                       <div class="param-didactic-hint" id="hint_aspect_ratio"></div>
                       <div class="derived-badge" id="derived_badge_aspect_ratio" style="display:none;"></div>
                     </div>
@@ -377,7 +379,7 @@
                       <label for="taper_ratio">
                         <span class="label-text">Zbieżność skrzydła η = ct/cr [-] <span class="info-circle-icon" data-param="taper_ratio" tabindex="0">i</span></span>
                       </label>
-                      <input step="any" required type="number" id="taper_ratio" min="0.2" max="1.0" value="0.60">
+                      <input step="any" required type="number" id="taper_ratio" min="0" max="1.0" value="0.60">
                       <div class="param-didactic-hint" id="hint_taper_ratio"></div>
                     </div>
                   </div>
@@ -569,12 +571,14 @@
                         <option value="wing">Skrzydła (Gondole)</option>
                         <option value="rear">Tył kadłuba (Pchający / Gondole)</option>
                         <option value="retractable">Chowany w kadłubie (AOS)</option>
+                        <option value="none" hidden>Nie dotyczy — bez napędu</option>
                       </select>
                       <div class="param-didactic-hint" id="hint_engine_location"></div>
                     </div>
                   </div>
 
                   <div class="input-row">
+                    <div class="input-group" data-power-basis><label for="power_input_mode">Dobór mocy</label><select id="power_input_mode" data-basis-selector><option value="sized">Oblicz wymaganą moc</option><option value="fixed">Znam dostępną moc silnika</option></select></div>
                     <div class="input-group" data-param="engine_power_kw" id="group_engine_power_kw">
                       <label for="engine_power_kw">
                         <span class="label-text">Moc silnika P_max [kW] <small style="color:#0284c7;">(0=auto)</small> <span class="info-circle-icon" data-param="engine_power_kw" tabindex="0">i</span></span>

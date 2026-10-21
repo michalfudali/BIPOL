@@ -1,21 +1,15 @@
-"""Module for parameter locking, dependency resolution and initial constraint suggestions.
+"""Independent design assumptions, dependent outputs and suggested constraints.
 
-Implements bidirectional physical triads for aircraft conceptual design:
-1. Wing geometry triad: S * AR = b^2
-2. Wing loading triad: W/S = (m0 * g) / S
-3. Payload triad: m_payload = n_pax * m_pax_unit + m_cargo
-4. Propulsion triad: P_avail = P_max * eta_prop >= P_req
-5. Stall speed triad: V_s0 = sqrt(2 * m0 * g / (rho * S * Cz_max))
+The wing uses one independent pair from (span, area, aspect ratio), or automatic
+area sizing from the stall requirement. Payload includes passenger baggage;
+known engine power is used by both sizing and subsequent performance checks.
 """
 import math
-from calculations.atmosphere import G0, RHO0
 
 LOCKABLE_PARAMETERS = {
     'wingspan_m': {'label': 'Rozpiętość skrzydła b', 'unit': 'm', 'stage': 'P3', 'triad': 'wing_geom'},
     'aspect_ratio': {'label': 'Wydłużenie skrzydła Λ (AR)', 'unit': '−', 'stage': 'P3', 'triad': 'wing_geom'},
     'wing_area_m2': {'label': 'Powierzchnia skrzydła S', 'unit': 'm²', 'stage': 'P3', 'triad': 'wing_geom'},
-    'wing_loading_kg_m2': {'label': 'Obciążenie powierzchni m₀/S', 'unit': 'kg/m²', 'stage': 'P2', 'triad': 'wing_loading'},
-    'm0': {'label': 'Maksymalna masa startowa MTOW', 'unit': 'kg', 'stage': 'P2', 'triad': 'mass'},
     'n_pax': {'label': 'Liczba pasażerów', 'unit': 'os.', 'stage': 'P1', 'triad': 'payload'},
     'n_crew': {'label': 'Liczba załogi (pilotów)', 'unit': 'os.', 'stage': 'P1', 'triad': 'payload'},
     'm_cargo': {'label': 'Ładunek cargo / wyposażenie', 'unit': 'kg', 'stage': 'P1', 'triad': 'payload'},
@@ -197,125 +191,137 @@ def get_initial_constraint_suggestions(category: str, aircraft_type: str) -> lis
 
 
 def resolve_and_lock_parameters(params: dict, locked_keys: list = None) -> tuple[dict, dict, list]:
-    """
-    Enforces bidirectional physical triads and resolves derived parameters.
-    
-    Returns:
-      (resolved_params, parameter_states, warnings)
+    """Resolve independent inputs before any mass, sizing or performance calculation.
+
+    VS0 is a maximum requirement. With a specified wing area it remains a check,
+    rather than a second, conflicting prescription for that same area.
     """
     p = dict(params)
-    locked = set(locked_keys or p.get('locked_params', []))
+    locked = set(locked_keys if locked_keys is not None else p.get('locked_params', []))
+    if 'm0' in locked or 'wing_loading_kg_m2' in locked:
+        raise ValueError('Masa startowa i obciążenie powierzchni są wynikami bilansu. '
+                         'Jako założenia wybierz masę płatną i niezależne wymiary skrzydła.')
     states = {}
     warnings = []
 
-    m_pax_unit = float(p.get('m_pax', 85.0))
-    n_pax = int(p.get('n_pax', 1))
-    n_crew = int(p.get('n_crew', 1))
+    def state(key, value, formula=None, sources=()):
+        p[key] = value
+        states[key] = {'state': 'derived' if formula else ('locked' if key in locked else 'input'),
+                       'value': value}
+        if formula:
+            states[key].update(formula=formula, sources=list(sources))
+            locked.discard(key)
 
-    # --- TRIADA 1: LICZBA MIEJSC I MASY PŁATNE ---
-    # m_payload = n_pax * m_pax_unit + m_cargo
-    if 'm_payload' in locked and 'n_pax' in locked:
-        p_payload = float(p.get('m_payload', 100.0))
-        computed_cargo = max(0.0, p_payload - n_pax * m_pax_unit)
-        p['m_cargo'] = round(computed_cargo, 1)
-        states['m_cargo'] = {
-            'state': 'derived',
-            'formula': 'm_cargo = m_payload − n_pax · 85 kg',
-            'sources': ['m_payload', 'n_pax'],
-            'value': p['m_cargo']
-        }
-        states['m_payload'] = {'state': 'locked', 'value': p_payload}
-        states['n_pax'] = {'state': 'locked', 'value': n_pax}
-    elif 'n_pax' in locked or 'm_cargo' in locked:
-        m_cargo = float(p.get('m_cargo', 0.0))
-        tot_payload = n_pax * m_pax_unit + m_cargo
-        p['m_payload'] = round(tot_payload, 1)
-        states['m_payload'] = {
-            'state': 'derived',
-            'formula': 'm_payload = n_pax · 85 kg + m_cargo',
-            'sources': ['n_pax', 'm_cargo'],
-            'value': p['m_payload']
-        }
-        if 'n_pax' in locked:
-            states['n_pax'] = {'state': 'locked', 'value': n_pax}
-        if 'm_cargo' in locked:
-            states['m_cargo'] = {'state': 'locked', 'value': m_cargo}
+    span = float(p.get('wingspan_m') or p.get('span_limit') or 0)
+    area = float(p.get('wing_area_m2') or 0)
+    aspect = float(p['aspect_ratio'])
+    if not p.get('wing_input_mode') and {'wingspan_m','wing_area_m2','aspect_ratio'} <= locked:
+        raise ValueError('Wybierz dwa niezależne wymiary skrzydła; trzeci musi wynikać z b² = S · Λ.')
+    mode = p.get('wing_input_mode')
+    if not mode:
+        mode = ('span_area' if span and area and 'wing_area_m2' in locked else
+                'span_aspect' if span else 'area_aspect' if area else 'loading')
+    p['wing_input_mode'] = mode
+    if mode in ('span_aspect', 'span_area') and span <= .5:
+        raise ValueError('Pole wingspan_m: podaj dodatnią rozpiętość dla wybranych założeń skrzydła.')
+    if mode in ('span_area', 'area_aspect') and area < .5:
+        raise ValueError('Pole wing_area_m2: podaj powierzchnię co najmniej 0,5 m².')
+    if mode == 'span_aspect':
+        state('wingspan_m', span)
+        state('aspect_ratio', aspect)
+        state('wing_area_m2', span ** 2 / aspect, 'S = b² / Λ', ('wingspan_m','aspect_ratio'))
+    elif mode == 'span_area':
+        aspect = span ** 2 / area
+        if not 2 <= aspect <= 35:
+            raise ValueError('Podana rozpiętość i powierzchnia dają Λ poza zakresem 2–35. '
+                             'Zwiększ powierzchnię lub wybierz założenia „rozpiętość i wydłużenie”.')
+        state('wingspan_m', span)
+        state('wing_area_m2', area)
+        state('aspect_ratio', aspect, 'Λ = b² / S', ('wingspan_m','wing_area_m2'))
+    elif mode == 'area_aspect':
+        state('wing_area_m2', area)
+        state('aspect_ratio', aspect)
+        state('wingspan_m', math.sqrt(area * aspect), 'b = √(S · Λ)', ('wing_area_m2','aspect_ratio'))
+    else:
+        # Discard cached outputs from a previous calculation or a different basis.
+        p['wingspan_m'] = p['wing_area_m2'] = 0.0
+        state('aspect_ratio', aspect)
+    p['span_limit'] = 0.0  # The resolved mode, rather than this legacy alias, controls geometry.
 
-    # --- TRIADA 2: ROZPIĘTOŚĆ b, WYDŁUŻENIE AR ORAZ POWIERZCHNIA S ---
-    # b^2 = S * AR
-    has_b = 'wingspan_m' in locked and float(p.get('wingspan_m', 0)) > 0.5
-    has_ar = 'aspect_ratio' in locked and float(p.get('aspect_ratio', 0)) > 1.0
-    has_s = 'wing_area_m2' in locked and float(p.get('wing_area_m2', 0)) > 1.0
+    unmanned = p.get('aircraft_type') == 'uav' or str(p.get('category', '')).startswith('easa_uas_')
+    if unmanned:
+        state('n_pax', 0, 'Statek bezzałogowy: 0 pasażerów', ('aircraft_type',))
+        state('n_crew', 0, 'Statek bezzałogowy: 0 osób załogi na pokładzie', ('aircraft_type',))
+    per_person = float(p.get('m_pax', 80)) + float(p.get('m_bag', 0))
+    passengers_mass = int(p['n_pax']) * per_person
+    payload_mode = p.get('payload_input_mode') or ('total' if 'm_payload' in locked else 'seats')
+    p['payload_input_mode'] = payload_mode
+    if payload_mode == 'total':
+        payload = float(p.get('m_payload', 0))
+        cargo = payload - passengers_mass
+        if cargo < -1e-8:
+            raise ValueError('Masa płatna jest mniejsza od masy pasażerów z bagażem. '
+                             'Zwiększ masę płatną albo zmniejsz liczbę pasażerów.')
+        state('m_payload', payload)
+        state('m_cargo', max(0.0, cargo), 'm_cargo = m_payload − n_pax · (m_pax + m_bag)',
+              ('m_payload','n_pax','m_pax','m_bag'))
+    else:
+        state('m_cargo', float(p.get('m_cargo', 0)))
+        state('m_payload', passengers_mass + p['m_cargo'],
+              'm_payload = n_pax · (m_pax + m_bag) + m_cargo', ('n_pax','m_pax','m_bag','m_cargo'))
+    state('n_pax', p['n_pax'], states.get('n_pax', {}).get('formula'), ('aircraft_type',))
 
-    if has_b and has_ar:
-        b_val = float(p['wingspan_m'])
-        ar_val = float(p['aspect_ratio'])
-        s_val = round((b_val ** 2) / ar_val, 2)
-        p['wing_area_m2'] = s_val
-        states['wing_area_m2'] = {
-            'state': 'derived',
-            'formula': 'S = b² / AR',
-            'sources': ['wingspan_m', 'aspect_ratio'],
-            'value': s_val
-        }
-        states['wingspan_m'] = {'state': 'locked', 'value': b_val}
-        states['aspect_ratio'] = {'state': 'locked', 'value': ar_val}
-    elif has_s and has_b:
-        s_val = float(p['wing_area_m2'])
-        b_val = float(p['wingspan_m'])
-        ar_val = round((b_val ** 2) / s_val, 2)
-        p['aspect_ratio'] = ar_val
-        states['aspect_ratio'] = {
-            'state': 'derived',
-            'formula': 'AR = b² / S',
-            'sources': ['wingspan_m', 'wing_area_m2'],
-            'value': ar_val
-        }
-        states['wing_area_m2'] = {'state': 'locked', 'value': s_val}
-        states['wingspan_m'] = {'state': 'locked', 'value': b_val}
-    elif has_s and has_ar:
-        s_val = float(p['wing_area_m2'])
-        ar_val = float(p['aspect_ratio'])
-        b_val = round(math.sqrt(s_val * ar_val), 2)
-        p['wingspan_m'] = b_val
-        states['wingspan_m'] = {
-            'state': 'derived',
-            'formula': 'b = √(S · AR)',
-            'sources': ['wing_area_m2', 'aspect_ratio'],
-            'value': b_val
-        }
-        states['wing_area_m2'] = {'state': 'locked', 'value': s_val}
-        states['aspect_ratio'] = {'state': 'locked', 'value': ar_val}
-    elif has_b:
-        states['wingspan_m'] = {'state': 'locked', 'value': float(p['wingspan_m'])}
-    elif has_ar:
-        states['aspect_ratio'] = {'state': 'locked', 'value': float(p['aspect_ratio'])}
-    elif has_s:
-        states['wing_area_m2'] = {'state': 'locked', 'value': float(p['wing_area_m2'])}
+    power_mode = p.get('power_input_mode') or ('fixed' if 'engine_power_kw' in locked else 'sized')
+    p['power_input_mode'] = power_mode
+    if power_mode == 'fixed':
+        locked.add('engine_power_kw')
+    else:
+        locked.discard('engine_power_kw')
+    if p['engine_type'] == 'none':
+        for key in ('sfc','engine_power_kw','takeoff_run_m','climb_rate_ms'):
+            state(key, 0.0, 'Nie dotyczy lotu bez napędu', ('engine_type',))
+        p['engine_location'] = 'none'
+        p['power_input_mode'] = 'sized'
+        locked.discard('engine_power_kw')
+    elif 'engine_power_kw' in locked:
+        if p['engine_type'] != 'prop' or float(p.get('engine_power_kw', 0)) <= 0:
+            raise ValueError('Stała moc silnika wymaga napędu śmigłowego i dodatniej mocy w kW.')
+        state('engine_power_kw', float(p['engine_power_kw']))
 
-    # --- TRIADA 3: MOC MAKSYMALNA SILNIKA ---
-    if 'engine_power_kw' in locked:
-        p_max = float(p['engine_power_kw'])
-        states['engine_power_kw'] = {'state': 'locked', 'value': p_max}
-        # In prop GA, locking P_max means available power is fixed:
-        p['p_max_kw'] = p_max
-
-    # --- ZASIĘG I PRĘDKOŚĆ ---
-    if 'range_km' in locked:
-        states['range_km'] = {'state': 'locked', 'value': float(p['range_km'])}
-    if 'cruise_speed_kmh' in locked:
-        states['cruise_speed_kmh'] = {'state': 'locked', 'value': float(p['cruise_speed_kmh'])}
-    if 'v_stall_kmh' in locked:
-        states['v_stall_kmh'] = {'state': 'locked', 'value': float(p['v_stall_kmh'])}
-
-    # --- OBRYS SKRZYDŁA ---
     planform = p.get('wing_planform', 'trapezoidal')
-    if planform not in WING_PLANFORMS:
-        planform = 'trapezoidal'
-    p['wing_planform'] = planform
-    states['wing_planform'] = {'state': 'locked' if 'wing_planform' in locked else 'auto', 'value': planform}
-
-    # Record locked parameters list in params
-    p['locked_params'] = list(locked)
-    
+    state('wing_planform', planform)
+    if planform in ('rectangular', 'elliptical'):
+        state('taper_ratio', 1.0 if planform == 'rectangular' else 0.0,
+              'Zbieżność wynika z wybranego obrysu skrzydła', ('wing_planform',))
+    for key in sorted(locked):
+        if key in p and key not in states:
+            state(key, p[key])
+    p['locked_params'] = sorted(locked)
     return p, states, warnings
+
+
+def finalize_parameter_states(params, states, mass, sizing, geometry):
+    """Expose computed quantities as outputs, including the automatic sizing mode."""
+    wing = geometry['wing']
+    mode = params['wing_input_mode']
+    values = {'wing_area_m2': wing['S'], 'wingspan_m': wing['b'], 'aspect_ratio': wing['AR'],
+              'm_payload': mass['m_payload'], 'wing_loading_kg_m2': mass['m0'] / wing['S']}
+    derived = {'wing_loading_kg_m2': ('m₀ / S', ['m0','wing_area_m2'])}
+    if mode == 'loading':
+        derived.update(wing_area_m2=('S = m₀g / (W/S)', ['m0','v_stall_kmh']),
+                       wingspan_m=('b = √(S · Λ)', ['wing_area_m2','aspect_ratio']))
+    if params['engine_type'] == 'prop' and 'engine_power_kw' not in params['locked_params']:
+        values['engine_power_kw'] = sizing['design_point']['power_kw']
+        derived['engine_power_kw'] = ('Moc wyznaczona z diagramu doboru', ['range_km','cruise_speed_kmh','climb_rate_ms'])
+    for key, value in values.items():
+        if key in states and states[key]['state'] != 'derived' and key not in derived:
+            value = params[key]
+        else:
+            params[key] = value
+        if key in derived:
+            formula, sources = derived[key]
+            states[key] = {'state': 'derived', 'value': value, 'formula': formula, 'sources': sources}
+        elif key in states:
+            states[key]['value'] = value
+    params['locked_params'] = sorted(set(params['locked_params']) -
+                                    {key for key, info in states.items() if info['state'] == 'derived'})

@@ -38,6 +38,11 @@ Interfejs otwiera od razu zapisany projekt. Założenia mają osobny widok, anal
 pokazują szczegóły na żądanie, a w trendach widoczny jest jeden wybrany wykres.
 Układ, dostępność i testy opisuje [`docs/INTERFEJS.md`](docs/INTERFEJS.md).
 
+Kreator pozwala wybrać temat i niezależne założenia: rozpiętość, powierzchnię lub
+wydłużenie skrzydła, masę płatną, liczbę pasażerów i dostępną moc. Parametry
+zależne są tylko do odczytu. Motoszybowce powyżej 20 m otrzymują spójną geometrię.
+Szczegóły i testy: [`docs/ZALOZENIA_PROJEKTU.md`](docs/ZALOZENIA_PROJEKTU.md).
+
 Widok **Baza i analiza trendów** zawiera **840 konstrukcji i wariantów** z FAST
 Aerobase oraz ENAC CADO: filtry i ręczny dobór próby, regresję udziału masy pustej,
 trendy czasowe z prognozą +5 lat, zależności osiągów i eksport danych ze źródłami.

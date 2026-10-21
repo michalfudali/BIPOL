@@ -44,12 +44,15 @@ const WING_PLANFORMS_INFO = {
 };
 
 function toggleParamLock(paramKey) {
+  if (document.getElementById(paramKey)?.readOnly) return;
   const btn = document.getElementById(`lock_btn_${paramKey}`);
   const group = document.querySelector(`.input-group[data-param="${paramKey}"]`);
   const input = document.getElementById(paramKey);
 
   if (window.userLockedParams.has(paramKey)) {
     window.userLockedParams.delete(paramKey);
+    if (paramKey === 'engine_power_kw') document.getElementById('power_input_mode').value = 'sized';
+    if (paramKey === 'm_payload') document.getElementById('payload_input_mode').value = 'seats';
     if (btn) {
       btn.textContent = '🔓';
       btn.classList.remove('is-locked');
@@ -74,6 +77,9 @@ function toggleParamLock(paramKey) {
 }
 
 function applySuggestedConstraint(paramKey, value) {
+  if (paramKey === 'wingspan_m') document.getElementById('wing_input_mode').value = 'span_aspect';
+  if (paramKey === 'm_payload') document.getElementById('payload_input_mode').value = 'total';
+  if (paramKey === 'engine_power_kw') document.getElementById('power_input_mode').value = 'fixed';
   const input = document.getElementById(paramKey);
   if (input) {
     input.value = value;
@@ -96,6 +102,12 @@ function applySuggestedConstraint(paramKey, value) {
 
 function updateDerivedUI(paramStates) {
   if (!paramStates) return;
+  document.querySelectorAll('#designForm .is-derived').forEach(group => {
+    group.classList.remove('is-derived');
+    group.querySelectorAll('input').forEach(input=>input.readOnly=false);
+    group.querySelectorAll('.derived-badge').forEach(badge=>badge.style.display='none');
+    group.querySelectorAll('.param-lock-btn').forEach(button=>button.disabled=false);
+  });
 
   for (const [key, info] of Object.entries(paramStates)) {
     const input = document.getElementById(key);
@@ -105,6 +117,7 @@ function updateDerivedUI(paramStates) {
 
     if (!input || !group) continue;
 
+    if (btn) btn.disabled = info.state === 'derived';
     if (info.state === 'derived') {
       input.readOnly = true;
       if (info.value != null && !isNaN(info.value)) {
@@ -147,6 +160,7 @@ function updateDerivedUI(paramStates) {
       }
     }
   }
+  window.BipolDesignBasis?.applyResult(currentResults);
 }
 
 async function renderInitialSuggestions() {
@@ -162,7 +176,8 @@ async function renderInitialSuggestions() {
     const resp = await fetch(`/api/constraints/suggestions?category=${encodeURIComponent(cat)}&aircraft_type=${encodeURIComponent(acType)}`);
     if (!resp.ok) return;
     const data = await resp.json();
-    const suggestions = data.suggestions || [];
+    const noEngine = document.getElementById('engine_type')?.value === 'none';
+    const suggestions = (data.suggestions || []).filter(s=>!noEngine||!['engine_power_kw','takeoff_run_m'].includes(s.param));
 
     if (suggestions.length === 0) {
       container.innerHTML = '<div style="font-size:0.75rem; color:#64748b;">Brak specyficznych ograniczeń dla wybranej konfiguracji.</div>';

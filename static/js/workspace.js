@@ -167,7 +167,7 @@
     if ($('title_mod4')) $('title_mod4').textContent='Napęd';
     document.querySelectorAll('[id^=lock_btn_]').forEach(button=>{
       const key=button.id.replace('lock_btn_',''), label=document.querySelector(`label[for="${key}"]`)?.textContent.replace(/\s+i\s*$/,'').trim()||key;
-      button.setAttribute('aria-label',`${window.userLockedParams?.has(key)?'Odblokuj':'Zablokuj'} parametr: ${label}`);
+      button.setAttribute('aria-label',button.disabled?`Wartość obliczana: ${label}`:`${window.userLockedParams?.has(key)?'Odblokuj':'Zablokuj'} parametr: ${label}`);
       button.setAttribute('aria-pressed',String(!!window.userLockedParams?.has(key)));
     });
   }

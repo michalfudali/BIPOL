@@ -97,8 +97,14 @@ def report_document(results, sections, overrides=None, folder_cover=False):
         dp = results['sizing']['design_point']
         drive = (f'ciąg {number(dp["thrust_kn"])} kN' if p['engine_type'] == 'jet'
                  else f'moc {number(dp["power_kw"], 1)} kW')
-        conclusions['p2'].append(f'Z diagramu doboru uzyskano {drive}. Jest to wartość '
-                                 'do doboru zespołu napędowego; wybór konkretnego silnika wymaga jego charakterystyk.')
+        if p.get('power_input_mode') == 'fixed' and p['engine_type'] == 'prop':
+            conclusions['p2'].append(
+                f'Do obliczeń osiągów przyjęto narzuconą moc {number(dp["power_kw"], 1)} kW. '
+                f'Diagram doboru wskazuje wymaganą moc {number(dp["required_power_kw"], 1)} kW. '
+                'Różnicę uwzględniono przez sprawdzenie rzeczywistych osiągów dla dostępnej mocy.')
+        else:
+            conclusions['p2'].append(f'Z diagramu doboru uzyskano {drive}. Jest to wartość '
+                                     'do doboru zespołu napędowego; wybór konkretnego silnika wymaga jego charakterystyk.')
     else:
         conclusions['p2'].append('Dla szybowca pominięto dobór mocy i paliwową interpretację zasięgu. '
                                  'Podstawą oceny misji pozostają prędkość i opadanie w locie ślizgowym.')

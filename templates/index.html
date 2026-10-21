@@ -123,6 +123,7 @@
         <button type="button" id="btnNewProjectWizard" class="btn btn-primary" style="font-weight:700; font-size:0.82rem;" title="Utwórz nowy projekt samolotu za pomocą kreatora">
           Nowy projekt
         </button>
+        <button type="button" id="btnEditProjectWizard" class="btn btn-outline" onclick="openWizard('edit')">Edytuj w kreatorze</button>
         <button type="button" id="btnOpenProjectManager" class="btn btn-outline" style="font-weight:700; font-size:0.82rem;" title="Przeglądaj wszystkie projekty, zmieniaj nazwy, duplikuj lub eksportuj">
           Projekty (<span id="projectCountBadge">1</span>)
         </button>
@@ -1944,7 +1945,7 @@
       <div class="wizard-stepper">
         <div class="wizard-step-tab active" data-step="1">
           <div class="step-circle">1</div>
-          <span class="step-title">Klasa & Załoga</span>
+          <span class="step-title">Temat i założenia</span>
         </div>
         <div class="wizard-step-tab" data-step="2">
           <div class="step-circle">2</div>
@@ -1970,14 +1971,14 @@
         <!-- KROK 1: Przeznaczenie, Klasa i Kategoria Zdatności -->
         <div class="wizard-pane active" id="wizardPane1">
           <div class="wizard-pane-header">
-            <h4>Krok 1: Przeznaczenie Płatowca, Załoga i Kategoria Zdatności (Projekt P1)</h4>
-            <p>Zdefiniuj rolę operacyjną statku powietrznego, przepisy certyfikacyjne oraz liczbę osób na pokładzie.</p>
+            <h4>Krok 1: Temat i założenia projektu</h4>
+            <p>Wybierz temat, niezależne wielkości wejściowe i liczbę osób na pokładzie.</p>
           </div>
 
+          {% include 'wizard_basis.html' %}
+
+          <details class="wizard-author"><summary>Dane autora do raportu</summary>
           <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:0.75rem; margin-bottom:0.85rem;">
-            <div style="font-size:0.80rem; font-weight:800; color:#0369a1; margin-bottom:0.5rem;">
-              🪪 Obowiązkowe Dane Projektanta-Studenta (do Strony Tytułowej wg Rys. 2 i Teczki wg Rys. 1):
-            </div>
             <div class="input-row">
               <div class="input-group">
                 <label for="wiz_student_name">Imię i Nazwisko projektanta:</label>
@@ -1999,6 +2000,8 @@
               </div>
             </div>
           </div>
+
+          </details>
 
           <div class="input-group" style="margin-bottom:0.75rem;">
             <label for="wiz_name"><strong>Nazwa Twojego Projektu / Płatowca:</strong></label>
@@ -2073,9 +2076,15 @@
             <div class="input-group" id="wiz_group_m_cargo">
               <label for="wiz_m_cargo" id="label_wiz_m_cargo">Dodatkowy ładunek handlowy cargo [kg]:</label>
               <input step="any" required type="number" id="wiz_m_cargo" min="0" max="50000" value="0">
+              <div class="derived-badge" id="wiz_derived_badge_m_cargo" hidden></div>
             </div>
           </div>
 
+          <div class="input-group" data-basis-param="m_payload">
+            <label for="wiz_m_payload">Łączna masa płatna, bez załogi [kg]</label>
+            <input type="number" step="any" required id="wiz_m_payload" min="0" max="500000" value="100">
+            <div class="derived-badge" id="wiz_derived_badge_m_payload" hidden></div>
+          </div>
           <div class="formula-box" style="margin-top:0.75rem;">
             <div class="formula-legend">
               <strong>💡 Wytyczne EASA (CS-23 Amdt 5 & CS-25):</strong> EASA dzieli samoloty normalne na poziomy certyfikacji (Level 1–4) zależne od liczby pasażerów (Level 1: 0–1 pax, Level 2: 2–6 pax, Level 3: 7–9 pax, Level 4: 10–19 pax). Dla małych samolotów sportowych obowiązuje CS-LSA (MTOM ≤ 600 kg) lub CS-VLA (MTOM ≤ 750 kg) z limitem prędkości lądowania \(V_{S0} \le 45\text{ kt}\).
@@ -2144,6 +2153,10 @@
             <p>Wybierz typ silnika, rozmieszczenie napędu na płatowcu oraz parametry jednostkowego zużycia paliwa.</p>
           </div>
 
+          <div class="input-row" data-power-basis>
+            <div class="input-group"><label for="wiz_power_input_mode">Dobór mocy</label><select id="wiz_power_input_mode" data-basis-selector><option value="sized">Oblicz wymaganą moc</option><option value="fixed">Znam dostępną moc silnika</option></select></div>
+            <div class="input-group"><label for="wiz_engine_power_kw">Moc silnika [kW]</label><input type="number" id="wiz_engine_power_kw" min="0" max="100000" step="any" value="0"><div class="derived-badge" id="wiz_derived_badge_engine_power_kw" hidden></div></div>
+          </div>
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_engine_type">Rodzaj zespołu napędowego:</label>
@@ -2160,6 +2173,8 @@
                 <option value="nose">Nos kadłuba (1 silnik ciągnący - klasyk GA)</option>
                 <option value="wing">Gondole podskrzydłowe / naskrzydłowe (wielosilnikowy)</option>
                 <option value="rear">Tył kadłuba / gondole boczne lub ogonowe</option>
+                <option value="retractable">Napęd chowany — motoszybowiec</option>
+                <option value="none" hidden>Nie dotyczy — bez napędu</option>
               </select>
             </div>
           </div>
@@ -2191,9 +2206,10 @@
         <div class="wizard-pane" id="wizardPane4">
           <div class="wizard-pane-header">
             <h4>Krok 4: Konfiguracja Skrzydła i Mechanizacja Płata (Projekt P3 / P4)</h4>
-            <p>Dobierz układ pionowy płata, wydłużenie, zbieżność oraz mechanizację spływu i natarcia.</p>
+            <p>Dobierz układ płata, obrys i mechanizację. Wielkości wynikające z założeń są obliczane automatycznie.</p>
           </div>
 
+          <div class="input-group"><label for="wiz_wing_planform">Obrys skrzydła</label><select id="wiz_wing_planform"><option value="trapezoidal">Trapezowy</option><option value="rectangular">Prostokątny</option><option value="compound_trapezoid">Prostokątno-trapezowy</option><option value="elliptical">Eliptyczny</option><option value="swept_trapezoidal">Skośny trapezowy</option></select></div>
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_wing_config">Układ pionowy skrzydła:</label>
@@ -2204,16 +2220,13 @@
                 <option value="mid">Średniopłat (motoszybowce / akrobacyjne)</option>
               </select>
             </div>
-            <div class="input-group">
-              <label for="wiz_aspect_ratio">Wydłużenie skrzydła &Lambda; (AR) [-]:</label>
-              <input step="any" required type="number" id="wiz_aspect_ratio" min="4" max="30" value="7.33">
-            </div>
+
           </div>
 
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_taper_ratio">Zbieżność skrzydła &eta; = c_t/c_r [-]:</label>
-              <input step="any" required type="number" id="wiz_taper_ratio" min="0.2" max="1.0" value="0.60">
+              <input step="any" required type="number" id="wiz_taper_ratio" min="0" max="1.0" value="0.60">
             </div>
             <div class="input-group">
               <label for="wiz_sweep_quarter_deg">Skos skrzydła &chi;₂₅% [&deg;]:</label>
@@ -2328,8 +2341,9 @@
   <script src="/static/js/studio-visuals.js?v=1"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=13"></script>
-  <script src="/static/js/app.js?v=16"></script>
-  <script src="/static/js/constraints-ui.js?v=2"></script>
+  <script src="/static/js/app.js?v=17"></script>
+  <script src="/static/js/constraints-ui.js?v=3"></script>
+  <script src="/static/js/design-basis.js?v=1"></script>
   <script src="/static/js/studio.js?v=3"></script>
   <script src="/static/js/trends.js?v=2"></script>
   <script src="/static/js/workspace.js?v=1"></script>
