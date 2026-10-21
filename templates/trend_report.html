@@ -91,19 +91,22 @@
         <span class="calc-source-badge">Roskam Part II &bull; Raymer Tab. 6.4 &bull; Gudmundsson &bull; BIPOL I</span>
       </div>
       <p class="calc-desc">{{ m.desc }}</p>
-      
+
       <div class="calc-math-box">
         \[ {{ m.formula_latex }} \]
       </div>
 
       <div class="calc-substitution">
         <div class="calc-substitution-title">Porównanie z bazą empiryczną i modelem regresyjnym w klasie {{ gta.active_class_name }}:</div>
-        \[ {{ m.symbol }}_{	ext{proj}} = \mathbf{ {{ m.project_value|trendnum(3) }} } {{ m.unit if m.unit != '−' else '' }}, \quad ar{ {{ m.symbol }} }_{	ext{klasa}} = \mathbf{ {{ m.class_stats.mean|trendnum(3) }} } \pm {{ m.class_stats.std|trendnum(3) }} \quad \left(n = {{ m.class_stats.n }}, \; 	ext{zakres: } [{{ m.class_stats.min|trendnum(3) }} \dots {{ m.class_stats.max|trendnum(3) }}]ight) \]
+        \[ \left( {{ m.symbol }} \right)_{\text{proj}} = \mathbf{ {{ m.project_value|trendnum(3) }} } {{ m.unit if m.unit != '−' else '' }} \]
+        \[ \bar{ {{ m.symbol }} }_{\text{klasa}} = \mathbf{ {{ m.class_stats.mean|trendnum(3) }} } \pm {{ m.class_stats.std|trendnum(3) }} \]
+        <p>n = {{ m.class_stats.n }}, zakres: {{ m.class_stats.min|trendnum(3) }}–{{ m.class_stats.max|trendnum(3) }} {{ m.unit if m.unit != '−' else '' }}</p>
         {% if m.fit_m0 %}
-        \[ {{ m.symbol }}(m_0) = {{ m.fit_m0.slope|trendnum(6) }} \cdot m_0 + {{ m.fit_m0.intercept|trendnum(3) }} \quad \left(R^2 = {{ m.fit_m0.r2|trendnum(3) }}, \; 	ext{RMSE} = {{ m.fit_m0.rmse|trendnum(4) }}ight) \]
+        \[ {{ m.symbol }}(m_0) = {{ m.fit_m0.slope|trendnum(6) }} \cdot m_0 + {{ m.fit_m0.intercept|trendnum(3) }} \]
+        <p>R² = {{ m.fit_m0.r2|trendnum(3) }}, RMSE = {{ m.fit_m0.rmse|trendnum(4) }}</p>
         {% endif %}
         {% if m.fit_b %}
-        \[ {{ m.symbol }}(b) = {{ m.fit_b.slope|trendnum(4) }} \cdot b + {{ m.fit_b.intercept|trendnum(3) }} \quad \left(R^2 = {{ m.fit_b.r2|trendnum(3) }}ight) \]
+        \[ {{ m.symbol }}(b) = {{ m.fit_b.slope|trendnum(4) }} \cdot b + {{ m.fit_b.intercept|trendnum(3) }} \quad \left(R^2 = {{ m.fit_b.r2|trendnum(3) }}\right) \]
         {% endif %}
       </div>
 

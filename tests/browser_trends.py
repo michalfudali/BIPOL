@@ -3,6 +3,7 @@ import argparse
 import json
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from browser_helpers import navigate, edit_inputs, reveal_details
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--base-url', default='http://127.0.0.1:5000')
@@ -19,13 +20,14 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(args.base_url)
     page.wait_for_function('currentResults !== null')
-    page.locator('[data-studio-nav=tab-trends]').click()
+    navigate(page, 'tab-trends')
     page.wait_for_function("document.querySelectorAll('#trendAircraftRows tr').length > 1")
-    assert page.locator('#trendSummary').inner_text().startswith('Konstrukcji w bazie\n716')
+    assert str(page.request.get(args.base_url+'/api/aircraft').json()['total']) in page.locator('#trendSummary').inner_text()
     assert page.locator('#trendMassChart svg').count() == 1
     assert 'brak' not in page.locator('#trendStatus').inner_text().lower() or 'braki danych' in page.locator('#trendStatus').inner_text()
 
     # Controls use the API cohort, not only a filter on the visible table.
+    page.locator('#trendSelectionPanel-tab').click()
     page.locator('#trend_source').select_option('cado')
     page.locator('#trend_count').select_option('20')
     page.locator('#trend_engine_count').select_option('1')
@@ -44,10 +46,11 @@ with sync_playwright() as p:
     page.locator('#trendApplySelection').click()
     page.wait_for_function('currentResults.bipol_projects.p1.trend_analysis.selected_n === 2')
     assert set(page.evaluate('currentResults.params.trend_aircraft_ids')) == set(chosen)
-    assert page.locator('#trendWarnings').inner_text().find('co najmniej 20') >= 0
+    reveal_details(page.locator('#trendWarnings'))
+    assert 'co najmniej 20' in page.locator('#trendWarnings').inner_text()
     assert page.evaluate('currentResults.bipol_projects.p1.trend_analysis.mass_fit') is None
     page.reload(); page.wait_for_function('currentResults?.bipol_projects.p1.trend_analysis.selected_n === 2')
-    page.locator('[data-studio-nav=tab-trends]').click()
+    navigate(page, 'tab-trends')
     assert page.locator('#trend_count').input_value() == '0'
     assert set(page.evaluate('getActiveProject().params.trend_aircraft_ids')) == set(chosen)
     print('CUSTOM COHORT AND RELOAD PERSISTENCE: OK')
@@ -74,8 +77,10 @@ with sync_playwright() as p:
     offline.close()
     print('CSV, JSON AND OFFLINE P1 REPORT: OK')
 
+    page.locator('#trendSelectionPanel-tab').click()
     page.locator('#trendAutomatic').click()
     page.wait_for_function('currentResults.params.trend_aircraft_ids === undefined')
+    reveal_details(page.locator('#trend_year_min'))
     page.locator('#trend_year_min').fill('2005');page.locator('#trend_year_max').fill('1990')
     page.locator('#trendRecalculate').click()
     page.wait_for_function("document.getElementById('calculationStatus').classList.contains('is-error')")
@@ -85,7 +90,8 @@ with sync_playwright() as p:
     page.wait_for_function("document.getElementById('openReportBtn').dataset.resultsStale === 'false'")
 
     # Analytical assumptions really feed the mass solver and persist in the project.
-    page.locator('#trendMissionApply').locator('xpath=..').locator('summary').click()
+    page.locator('#trendMethodPanel-tab').click()
+    reveal_details(page.locator('#trendMissionApply'))
     mass_before = page.evaluate('currentResults.mass.m0')
     page.locator('#fuel_reserve_factor').fill('1.10')
     page.locator('#mission_phase_model').select_option('galinski')
@@ -96,13 +102,16 @@ with sync_playwright() as p:
     print('VALIDATION AND MISSION MODEL INTEGRATION: OK')
 
     # Dated, jet-only data; no disguised power or invented TAS from Mach.
-    page.locator('[data-studio-nav=tab-p3]').click()
-    page.locator('#aircraft_type').select_option('jet_transport')
+    navigate(page, 'tab-p3')
+    edit_inputs(page,'aircraft_type').select_option('jet_transport')
     page.wait_for_function("currentResults.params.aircraft_type === 'jet_transport'")
-    page.locator('[data-studio-nav=tab-trends]').click()
+    navigate(page, 'tab-trends')
+    page.locator('#trendSelectionPanel-tab').click()
     page.locator('#trend_source').select_option('fast');page.locator('#trend_engine_count').select_option('0')
     page.locator('#trend_count').select_option('100');page.locator('#trendRecalculate').click()
     page.wait_for_function("currentResults.params.trend_source === 'fast' && currentResults.params.trend_engine_count === 0")
+    page.locator('#trendResultsPanel-tab').click()
+    page.locator('#trendChartView').select_option('1')
     assert page.locator('#trendTimeChart svg').count() == 1
     assert page.evaluate('currentResults.bipol_projects.p1.trend_analysis.time_trends[0].forecast_year === currentResults.bipol_projects.p1.trend_analysis.time_trends[0].fit.x_max + 5')
     page.screenshot(path=out/'desktop-viewport.png', animations='disabled')

@@ -13,10 +13,12 @@ from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend
 from calculations.trends import reference_catalog, SOURCES, DATA
 from calculations.trend_report import trend_chart
+from calculations.report_assets import math_assets
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 app.jinja_env.globals['trend_chart'] = trend_chart
+app.jinja_env.globals['math_assets'] = math_assets
 app.jinja_env.filters['trendnum'] = lambda v, digits=3: f'{v:.{digits}f}' if isinstance(v, (int, float)) else '—'
 
 

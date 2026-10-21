@@ -3,7 +3,7 @@
   'use strict';
   const {escape: esc, format: fmt, filename, snapshot, metrics, csv, resultRows} = BipolStudio;
   const VARIANTS_KEY = 'bipol_studio_variants_v1';
-  const wideTabs = new Set(['tab-overview', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
+  const wideTabs = new Set(['tab-overview', 'tab-inputs', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
   let view = 'iso', fresh = false, resultProject = null, messageTimer;
   const $ = id => document.getElementById(id);
   const announce = (message, error = false) => {
@@ -27,6 +27,8 @@
   }
 
   function navigate(target) {
+    const nav = document.querySelector(`[data-studio-nav="${target}"]`);
+    if (nav?.closest('details')) nav.closest('details').open = true;
     setPortalMode('holistic');
     document.querySelector(`.bipol-tab[data-target="${target}"]`)?.click();
     navigationOpen(false, true);
@@ -35,6 +37,9 @@
 
   function syncNavigation() {
     const target = document.querySelector('.tab-content.active')?.id || 'tab-overview';
+    document.body.dataset.workspaceView = currentPortalMode === 'projects' ? 'semester' : target;
+    const selectedNav = document.querySelector(`[data-studio-nav="${target}"]`);
+    if (selectedNav?.closest('details')) selectedNav.closest('details').open = true;
     document.body.classList.toggle('studio-wide', currentPortalMode === 'holistic' && wideTabs.has(target));
     document.body.classList.toggle('studio-trends', currentPortalMode === 'holistic' && target === 'tab-trends');
     document.querySelectorAll('[data-studio-nav]').forEach(button => {
@@ -209,7 +214,7 @@
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && document.body.classList.contains('studio-nav-open')) $('studioNavBackdrop').click(); });
     $('studioSidebar').addEventListener('keydown', event => {
       if (event.key !== 'Tab' || !document.body.classList.contains('studio-nav-open')) return;
-      const controls = [...$('studioSidebar').querySelectorAll('a, button')], first = controls[0], last = controls.at(-1);
+      const controls = [...$('studioSidebar').querySelectorAll('a, button, summary')].filter(el => el.getClientRects().length), first = controls[0], last = controls.at(-1);
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     });

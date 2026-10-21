@@ -3,10 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Raport BIPOL I - Wstępny Projekt Samolotu</title>
-  <!-- KaTeX CSS + JS dla akademickiego składu wzorów -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="if(window.renderMathInElement){renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false});}"></script>
+  {% include "math_assets.html" %}
   <style>{{ report_assets.css|safe }}</style>
   <style>
     body {

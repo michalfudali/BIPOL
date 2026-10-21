@@ -40,7 +40,8 @@ def test_new_upstream_aircraft_types_keep_correct_classification(key, category):
     if key == 'glider_pw5':
         assert result['params']['engine_type'] == 'none'
         assert result['mass']['m_fuel'] == 0
-        assert result['performance']['climb']['wy_max_ms'] < 0
+        # Paturski P6 uses zero for "no powered climb"; sink lives in the glide model.
+        assert result['performance']['climb']['wy_max_ms'] <= 0
         assert result['mass']['breakdown']['m_propulsion'] == 0
         assert sum(result['mass']['breakdown'].values()) == pytest.approx(result['mass']['m_empty'], abs=.3)
     assert result['geometry']['fuselage']['diameter'] <= 1.5

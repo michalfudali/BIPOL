@@ -64,7 +64,8 @@ def test_explicit_span_uses_same_aspect_ratio_for_sizing_and_aerodynamics():
     wing = result['geometry']['wing']
     assert wing['b'] == 13.5
     assert result['params']['aspect_ratio'] == pytest.approx(wing['AR'], abs=.006)
-    k_expected = 1 / (math.pi * result['params']['aspect_ratio'] * result['params']['oswald_e'])
+    # 76d212d derives the effective aspect ratio from the selected planform.
+    k_expected = 1 / (math.pi * result['aerodynamics']['lambda_e'])
     assert result['aerodynamics']['k_clean'] == pytest.approx(k_expected, rel=.001)
     assert result['sizing']['design_point']['ws'] == pytest.approx(result['mass']['m0'] * G0 / wing['S'], rel=.001)
 

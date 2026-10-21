@@ -553,9 +553,9 @@ function initDidacticSystem() {
       document.body.classList.toggle('show-inline-hints');
       const inlineShown = document.body.classList.contains('show-inline-hints');
       toggleBtn.textContent = inlineShown
-        ? '🎓 Wskazówki: Rozwinięte pod polami + dymki (i)'
-        : 'ℹ️ Wskazówki: Po najechaniu na ikonkę (i)';
-      toggleBtn.style.background = inlineShown ? '#059669' : '#1e40af';
+        ? 'Ukryj objaśnienia'
+        : 'Objaśnienia';
+      toggleBtn.setAttribute('aria-pressed', String(inlineShown));
     });
   }
 
@@ -1041,7 +1041,7 @@ async function performCalculation() {
   } finally {
     if (btn && sequence === calculationSequence) {
       btn.disabled = false;
-      btn.textContent = 'Oblicz projekt i odśwież wyniki';
+      btn.textContent = 'Przelicz projekt';
     }
   }
 }
@@ -2226,15 +2226,9 @@ function initProjectSystem() {
   }
   renderProjectSwitcher();
 
-  // SPRAWDZENIE POCZĄTKU NOWEJ SESJI:
-  let isSessionInitialized = null;
-  try { isSessionInitialized = sessionStorage.getItem(SESSION_INITIALIZED_KEY); } catch (_) {}
-  if (!isSessionInitialized) {
-    // Na początku nowej sesji wyświetlamy modal wyboru / tworzenia z kreatora
-    openSessionStarterModal();
-  } else {
-    performCalculation();
-  }
+  // Open the saved workspace directly; the wizard remains available under project options.
+  closeSessionStarterModal();
+  performCalculation();
 
   setupProjectEventListeners();
 }

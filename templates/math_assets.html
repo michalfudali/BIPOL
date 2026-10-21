@@ -1,0 +1,16 @@
+<style>{{ math_assets().css|safe }}</style>
+<script>{{ math_assets().katex|safe }}</script>
+<script>{{ math_assets().render|safe }}</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '$', right: '$', display: false}
+    ],
+    throwOnError: false
+  });
+});
+</script>

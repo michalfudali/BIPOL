@@ -66,6 +66,7 @@ function toggleParamLock(paramKey) {
     if (group) group.classList.add('is-locked');
   }
 
+  if (btn) btn.setAttribute('aria-pressed', String(window.userLockedParams.has(paramKey)));
   // Wykonaj przeliczenie z nowym zbiorem blokad
   if (typeof performCalculation === 'function') {
     performCalculation();
@@ -80,6 +81,7 @@ function applySuggestedConstraint(paramKey, value) {
   window.userLockedParams.add(paramKey);
   const btn = document.getElementById(`lock_btn_${paramKey}`);
   if (btn) {
+    btn.setAttribute('aria-pressed', 'true');
     btn.textContent = '🔒';
     btn.classList.add('is-locked');
     btn.title = 'Zablokowany przez Ciebie (Założenie wejściowe)';

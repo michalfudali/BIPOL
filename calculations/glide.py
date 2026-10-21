@@ -38,14 +38,15 @@ def calculate_glide_polar(mass: float, geometry: dict, aero: dict, altitude_m: f
         gamma = math.atan2(cd, cl)
         speed = math.sqrt(2.0 * mass * G0 / (rho * area * math.hypot(cl, cd)))
         points.append({
-            "cz": round(cl, 4),
-            "cx": round(cd, 5),
-            "v_ms": round(speed, 2),
+            # Round presentation in the UI, preserving force balance in the data.
+            "cz": cl,
+            "cx": cd,
+            "v_ms": speed,
             "v_kmh": round(speed * 3.6, 1),
-            "horizontal_ms": round(speed * math.cos(gamma), 2),
-            "sink_ms": round(speed * math.sin(gamma), 2),
-            "gamma_deg": round(math.degrees(gamma), 2),
-            "ld": round(cl / cd, 2),
+            "horizontal_ms": speed * math.cos(gamma),
+            "sink_ms": speed * math.sin(gamma),
+            "gamma_deg": math.degrees(gamma),
+            "ld": cl / cd,
         })
     points.sort(key=lambda row: row["v_ms"])
 

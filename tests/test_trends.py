@@ -98,17 +98,20 @@ def test_forecast_uses_last_observed_date_plus_five_and_does_not_invent_producti
             assert trend['forecast_year']==trend['fit']['x_max']+5
             assert trend['forecast'] == pytest.approx(predict(trend['fit'],trend['forecast_year']))
     assert all(r['year_basis']=='certification' for r in a['similar_aircraft'])
-    ga=analyze_trends({'aircraft_type':'piston_ga','engine_type':'prop','trend_count':0},1100,700)
+    ga=analyze_trends({'aircraft_type':'piston_ga','engine_type':'prop','trend_source':'cado','trend_count':0},1100,700)
     assert ga['selected_n']>=20 and ga['time_trends'][0]['available_n']<20
     assert any('dat' in w for w in ga['warnings'])
 
 
 @pytest.mark.parametrize('preset', ['glider_pw5','motoglider_aos','uav_tactical'])
-def test_unsupported_cohort_is_explicit_and_never_replaced_with_powered_ga(preset):
+def test_new_upstream_cohorts_never_fall_back_to_powered_ga(preset):
     r=run_bipol_project(AIRCRAFT_PRESETS[preset])
     a=r['bipol_projects']['p1']['trend_analysis']
-    assert a['selected_n']==0 and a['mass_fit'] is None and a['warnings']
-    assert a['reg_A'] is None and a['we_wo_trend'] is None
+    assert all(row['aircraft_type']==r['params']['aircraft_type'] and row['engine_type']==r['params']['engine_type'] for row in a['similar_aircraft'])
+    if a['selected_n']<20:
+        assert a['warnings']
+    if not a['selected_n']:
+        assert a['reg_A'] is None and a['we_wo_trend'] is None
     json.dumps(r,allow_nan=False)
 
 

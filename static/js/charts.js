@@ -357,7 +357,15 @@ function drawClimbChart(canvasId, climbData) {
   
   ctx.clearRect(0, 0, width, height);
   
-  const curve = climbData.climb_curve;
+  const curve = climbData.climb_curve || [];
+  if (!curve.length) {
+    const message = 'Brak krzywej wznoszenia.';
+    document.getElementById(canvasId)?.setAttribute('aria-label', message);
+    ctx.fillStyle = '#526d79'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(message, width / 2, height / 2 - 10, width - 30);
+    ctx.fillText('Lot bez napędu: sprawdź moduł „Lot szybowy”.', width / 2, height / 2 + 16, width - 30);
+    return;
+  }
   const xMin = curve[0].v_kmh * 0.9;
   const xMax = curve[curve.length - 1].v_kmh * 1.05;
   const yMax = Math.max(climbData.wy_max_ms * 1.25, 6.0);

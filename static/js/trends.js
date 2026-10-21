@@ -89,7 +89,7 @@
     result=res;
     const a=res.bipol_projects.p1.trend_analysis,p=res.bipol_projects.p1.preliminary;
     selected=new Set(a.similar_aircraft.map(r=>r.id));
-    status('Analiza aktualna. Zmieniaj próbę i porównuj założenia; braki danych są oznaczone kreską.');
+    status('Analiza aktualna.');
     $('p1_we_trend').textContent=fmt(a.we_wo_trend,3);$('p1_we_actual').textContent=fmt(a.we_wo_actual,3);
     $('p1_trend_summary').textContent=`Baza: ${a.database_total} pozycji · próba: ${a.selected_n} wariantów / ${a.families_n} rodzin · regresja masowa: n=${a.mass_fit?.n??0}. ${a.warnings[0]||''}`;
     $('trendClassDescription').textContent=`${a.class_label} · napęd ${res.params.engine_type==='jet'?'odrzutowy':res.params.engine_type==='none'?'bez napędu':'śmigłowy'} · masa projektu ${fmt(res.mass.m0,1)} kg.`;

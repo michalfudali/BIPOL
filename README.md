@@ -23,7 +23,11 @@ wariantów, eksport CSV/SVG, raport z wyborem etapów P1–P6, dane i wnioski au
 oraz dokładną biegunową lotu szybowego. Raport można pobrać jako samodzielny HTML.
 Szczegóły integracji i testów są w `docs/INTEGRACJA_STUDIO.md`.
 
-Widok **Baza i analiza trendów** zawiera **716 konstrukcji i wariantów** z FAST
+Interfejs otwiera od razu zapisany projekt. Założenia mają osobny widok, analizy
+pokazują szczegóły na żądanie, a w trendach widoczny jest jeden wybrany wykres.
+Układ, dostępność i testy opisuje [`docs/INTERFEJS.md`](docs/INTERFEJS.md).
+
+Widok **Baza i analiza trendów** zawiera **840 konstrukcji i wariantów** z FAST
 Aerobase oraz ENAC CADO: filtry i ręczny dobór próby, regresję udziału masy pustej,
 trendy czasowe z prognozą +5 lat, zależności osiągów i eksport danych ze źródłami.
 Daty certyfikacji są jawnie odróżnione od lat produkcji, a brakujące dane pozostają
