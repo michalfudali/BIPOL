@@ -24,6 +24,8 @@ with sync_playwright() as p:
     assert page.evaluate('currentResults.params.takeoff_distance_m')==750
     assert page.evaluate('currentResults.params.landing_distance_m')==700
     assert page.evaluate('currentResults.params.gear_attachment')=='wing'
+    assert page.evaluate('currentResults.bipol_projects.p4.high_lift.takeoff.flap_deflection_deg')==20
+    assert page.evaluate('currentResults.bipol_projects.p4.high_lift.landing.flap_deflection_deg')==40
     print('WIZARD: FULL TAKEOFF/LANDING REQUIREMENTS AND GEAR MOUNTING SAVED',flush=True)
     navigate(page,'tab-trends');page.locator('#trendSelectionPanel-tab').click()
     reveal_details(page.locator('#trendObservationFile'))
@@ -43,7 +45,7 @@ with sync_playwright() as p:
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),width
     print('CSV TEMPLATE, SOURCE SUPPLEMENT, RELOAD, REVIEW AND MOBILE WIDTHS: OK',flush=True)
     params=page.evaluate('currentResults.params')
-    response=context.request.post(args.base_url+'/report?sections=p1,p2,p3',data=params)
+    response=context.request.post(args.base_url+'/report?sections=p1,p2,p3,p4',data=params)
     assert response.ok
     offline=browser.new_context(offline=True,viewport={'width':1100,'height':1000})
     report=offline.new_page();report.on('pageerror',lambda e:errors.append(str(e)))
@@ -51,6 +53,8 @@ with sync_playwright() as p:
     assert report.locator('[data-course-chart]').count()==6
     assert report.locator('[data-course-chart] svg').count()==6
     assert report.locator('.katex-error').count()==0
+    assert 'Startowa (20°)' in report.locator('#report-p4').inner_text()
+    assert 'Do lądowania (40°)' in report.locator('#report-p4').inner_text()
     report.evaluate('window.print=()=>{window.testPrintCalled=true;}')
     reveal_details(report.locator('#print-drawing-grid'))
     report.locator('#print-drawing-grid').click();report.wait_for_function('window.testPrintCalled')

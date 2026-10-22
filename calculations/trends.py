@@ -478,12 +478,12 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     def time_chart(key):
         t = next(t for t in time_trends if t['key'] == key)
         return {'mode': key, 'kind': 'time', 'label': f"{t['label']} w funkcji roku",
-                'n': t['available_n'], 'fit': t['fit']}
+                'parameter': key, 'n': t['available_n'], 'fit': t['fit']}
 
     def relation_chart(x, y):
         r = next(r for r in relationships if r['x_key'] == x and r['y_key'] == y)
         return {'mode': f'{x}:{y}', 'kind': 'relation', 'label': f"{r['y_label']} a {r['x_label']}",
-                'n': len(r['points']), 'fit': r['fit']}
+                'parameter': y, 'n': len(r['points']), 'fit': r['fit']}
 
     propulsion_key = 'thrust_to_weight' if params.get('engine_type') == 'jet' else 'power_loading_kg_kw'
     performance_key = ('cruise_mach' if sum(r.get('cruise_mach') is not None for r in rows) >
@@ -497,20 +497,24 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     if params.get('engine_type') == 'none':
         choices = [('ar','ld_max'), ('wing_loading_kg_m2','v_cruise_kmh'),
                    ('ar','v_h'), ('ar','aileron_chord_ratio'), ('wing_loading_kg_m2','dihedral_deg')]
-        candidates = [relation_chart(x, y) for x, y in choices]
-        candidates.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
-        report_charts.extend(candidates[:3])
     else:
-        report_charts.append(relation_chart('ar', 'range_km'))
         climb_chart = relation_chart(propulsion_key, 'climb_rate_ms')
-        # Choose another meaningful performance relationship when catalogues
-        # omit climb; the missing requested climb analysis stays visible below.
-        airport_options = [relation_chart('wing_loading_kg_m2', key) for key in ('takeoff_distance_m', performance_key, 'v_h')]
-        airport_options.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
-        report_charts.extend([climb_chart if climb_chart['n'] >= MIN_AIRCRAFT else relation_chart(propulsion_key, 'range_km'),
-                              airport_options[0]])
+        choices = [('ar','range_km'), (propulsion_key,'climb_rate_ms'),
+                   ('wing_loading_kg_m2','takeoff_distance_m'), (propulsion_key,performance_key),
+                   ('ar','ld_max'), ('wing_loading_kg_m2','v_h'), ('ar','aileron_chord_ratio'),
+                   ('wing_loading_kg_m2','dihedral_deg'), ('wing_loading_kg_m2','landing_distance_m')]
         if climb_chart['n'] < MIN_AIRCRAFT:
-            warnings.append('Wznoszenie a obciążenie napędu: uzupełnij katalogowe prędkości wznoszenia. Do zestawu sześciu wykresów przyjęto zasięg a obciążenie napędu, jeśli danych wznoszenia brakuje.')
+            warnings.append('Wznoszenie a obciążenie napędu: uzupełnij katalogowe prędkości wznoszenia. Gdy ich brakuje, zestaw pięciu parametrów wykorzystuje inne jawnie opisane obserwacje.')
+    candidates = [relation_chart(x, y) for x, y in choices]
+    candidates.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
+    used_parameters = {c['parameter'] for c in report_charts if c['kind'] != 'mass'}
+    for candidate in candidates:
+        if candidate['parameter'] in used_parameters:
+            continue
+        report_charts.append(candidate)
+        used_parameters.add(candidate['parameter'])
+        if len(report_charts) == 6:
+            break
     if any(c['n'] < MIN_AIRCRAFT for c in report_charts):
         warnings.append('Część sześciu wymaganych wykresów ma mniej niż 8 par danych. Uzupełnij dane źródłowe; nie zastępuj pełnego startu rozbiegiem ani wznoszenia opadaniem.')
 

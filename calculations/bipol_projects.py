@@ -495,6 +495,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         "is_cs23_compliant": perf_res["speeds"]["vs_lnd_kmh"] <= (stall_limit_kmh + 1.0),
         "control_surfaces": geom_res.get("control_surfaces", {})
     }
+    for phase in ('clean', 'takeoff', 'landing'):
+        high_lift_summary[phase]['flap_deflection_deg'] = aero_res['flap_configurations'][phase]['deflection_deg']
     
     p4_data = {
         "drag_breakdown": parasite_drag_breakdown,

@@ -307,6 +307,9 @@ def finalize_parameter_states(params, states, mass, sizing, geometry):
     values = {'wing_area_m2': wing['S'], 'wingspan_m': wing['b'], 'aspect_ratio': wing['AR'],
               'm_payload': mass['m_payload'], 'wing_loading_kg_m2': mass['m0'] / wing['S']}
     derived = {'wing_loading_kg_m2': ('m₀ / S', ['m0','wing_area_m2'])}
+    for key in ('flap_takeoff_deg', 'flap_landing_deg'):
+        values[key] = params[key]
+        derived[key] = ('Wychylenie klap w stopniach według wytycznych prowadzącego', ['flap_type'])
     if mode == 'loading':
         derived.update(wing_area_m2=('S = m₀g / (W/S)', ['m0','v_stall_kmh']),
                        wingspan_m=('b = √(S · Λ)', ['wing_area_m2','aspect_ratio']))

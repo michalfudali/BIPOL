@@ -19,6 +19,7 @@ domyślnymi programu; nieczytelnych dopisków nie zamieniono w równania.
 | IMG20261021122735 | Cechy geometryczne: V_H, lotki, stery, wznios; 2–3 przykłady | Dla każdego parametru do raportu trafiają trzy przykłady z tej samej klasy. Brak klasy nie jest już maskowany średnią lub regresją całej bazy. Względną rozpiętość jednej lotki odnosi się do b/2; nie myli się jej z b. |
 | IMG20261021122735 | Sloty nie są odlodzeniem | Opis w raporcie aerodynamicznym; poprawiono rozpoznawanie identyfikatora `slats_auto`, który wcześniej nie uruchamiał poprawki modelu przedskrzydeł. |
 | IMG20261021122735 | 115 kg = pasażer z bagażem; pasażer/cargo/paliwo | Nowe projekty i tematy otrzymują 115 kg. Istniejące jawne założenia masy nie są nadpisywane; różnica jest wskazana w kontroli. P2 zawiera bilans zamiany masy pasażerów na paliwo przy stałym MTOW. Jest to granica masowa, bez przyjmowania nieznanej pojemności zbiorników. |
+| IMG20261021122739 | Klapy 20° do startu i 40° do lądowania (potwierdzone przez użytkownika 22.10.2026) | Stałe konfiguracje 0°/20°/40° w modelu aerodynamicznym, wynikach API i tabelach P4. Wychylenia są narzucone metodyką; przyrosty Cz/Cx pozostają przybliżeniami dla wybranego rodzaju mechanizacji. |
 | IMG20261021122739 | Nie maksymalizować bezrefleksyjnie Cz,max; n=L/W, n=1 w locie poziomym | Raport wyjaśnia kompromis nośność/opór i poprawny związek n=1+a_z/g. Obciążenia do wymiarowania nadal wynikają z kategorii i podmuchów; współczynnik bezpieczeństwa jest oddzielny. |
 | IMG20261021122751 | Masa maleje w przelocie; ok. 5 iteracji | Fazy misji zmniejszają masę o spalone paliwo. Minimum pięć iteracji, dalsze obliczenia do zbieżności. Raport pokazuje pierwsze pięć i końcową, z resztą równania. Nie zatrzymuje się niezbieżnego bilansu po piątym kroku. |
 | IMG20261021122751 | 0,970≤m₁/m_TO≤0,975 | Przyjęto 0,975; rozruch i start stanowią jeden ubytek. Brak podwójnego naliczania paliwa. Dla szybowca wszystkie ułamki wynoszą 1. |
@@ -30,10 +31,9 @@ domyślnymi programu; nieczytelnych dopisków nie zamieniono w równania.
 - „~30 lat” traktujemy jako zalecany przekrój historyczny. Dat nie uzupełnia się
   umownie, a certyfikacji nie przedstawia jako daty produkcji. Rok i źródło można
   uzupełnić przez CSV, ale kolumna `year` nadal oznacza certyfikację.
-- Dopisek o klapach „start 20 / lądowanie 40” ma niejednoznaczny znak jednostki.
-  Nie zamieniono go na uniwersalny wzrost Cz o 20/40% ani regułę wychyleń każdej
-  klapy. Istniejące przyrosty aerodynamiczne zależą od rodzaju mechanizacji;
-  charakterystyki rzeczywistego profilu i wychylenia trzeba udokumentować.
+- Znak jednostki przy klapach został wyjaśniony przez użytkownika 22.10.2026:
+  chodzi o **20° i 40°**, nie procenty. Reguła została wdrożona. Rzeczywiste
+  przyrosty nośności i oporu dla danego profilu wymagają danych doświadczalnych.
 - „m>5 t → CS-25”, ogólne 3,6 i „pasażerskie 2,5” są skrótami notatkowymi,
   nie kompletną podstawą klasyfikacji. Nie zastępują kryteriów kategorii,
   liczby miejsc, prędkości ani zależnych od masy przepisów obciążeń.

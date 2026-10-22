@@ -21,6 +21,22 @@ def test_lecture_mission_supersedes_old_defaults_and_preserves_mass_balance():
     assert m['m0'] == pytest.approx(sum(m[k] for k in ('m_empty','m_fuel','m_payload','m_crew')), abs=.3)
 
 
+def test_flap_angles_are_fixed_course_assumptions_and_increments_are_not_percentages():
+    r = run_bipol_project({**AIRCRAFT_PRESETS['ga_trainer'], 'slat_type':'none',
+                          'flap_type':'plain', 'flap_takeoff_deg':5, 'flap_landing_deg':10})
+    p, a = r['params'], r['aerodynamics']
+    assert (p['flap_takeoff_deg'], p['flap_landing_deg']) == (20, 40)
+    assert a['flap_configurations']['takeoff']['deflection_deg'] == 20
+    assert a['flap_configurations']['landing']['deflection_deg'] == 40
+    assert a['cz_max_to'] == pytest.approx(a['cz_max_clean'] + .30, abs=.005)
+    assert a['cz_max_lnd'] == pytest.approx(a['cz_max_clean'] + .60, abs=.005)
+    for key in ('flap_takeoff_deg','flap_landing_deg'):
+        assert r['constraints']['parameter_states'][key]['state']=='derived'
+    with app.test_client() as client:
+        html=client.post('/report/project/p4',json=p).get_data(as_text=True)
+    assert 'Startowa (20°)' in html and 'Do lądowania (40°)' in html
+
+
 @pytest.mark.parametrize('name', ['ga_trainer','vlj_jet'])
 def test_full_takeoff_requirement_controls_power_and_never_uses_roll_as_total(name):
     p = copy.deepcopy(AIRCRAFT_PRESETS[name]); p['takeoff_distance_m'] = 800
@@ -76,6 +92,7 @@ def test_six_distinct_report_charts_include_two_time_plots_and_one_mass_plot(nam
     assert len(charts) == len({c['mode'] for c in charts}) == 6
     assert [c['kind'] for c in charts].count('time') == 2
     assert [c['kind'] for c in charts].count('mass') == 1
+    assert len({c['parameter'] for c in charts if c['kind']!='mass'}) == 5
     assert not any(c['mode'].startswith(('s:', 'p_kw:')) for c in charts)
 
 

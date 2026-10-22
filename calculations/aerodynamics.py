@@ -15,6 +15,7 @@ Wyznacza:
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 from calculations.paturski_ml import paturski_project_2_wing, paturski_project_3_aircraft_aero
+from calculations.instructor import FLAP_TAKEOFF_DEFLECTION_DEG, FLAP_LANDING_DEFLECTION_DEG
 
 
 def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
@@ -63,6 +64,15 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
         "none": {"delta_cz_to": 0.00, "delta_cz_lnd": 0.00, "delta_cx0_to": 0.000, "delta_cx0_lnd": 0.000, "e_to": oswald_e, "e_lnd": oswald_e}
     }
     fd = flap_deltas.get(flap_type, flap_deltas["single_slotted"])
+    # The table's increments describe these discrete course configurations.
+    # They are preliminary estimates, not measured polars or percentages.
+    flap_configurations = {
+        'clean': {'deflection_deg': 0.0, 'delta_cz': 0.0, 'delta_cx0': 0.0},
+        'takeoff': {'deflection_deg': FLAP_TAKEOFF_DEFLECTION_DEG,
+                    'delta_cz': fd['delta_cz_to'], 'delta_cx0': fd['delta_cx0_to']},
+        'landing': {'deflection_deg': FLAP_LANDING_DEFLECTION_DEG,
+                    'delta_cz': fd['delta_cz_lnd'], 'delta_cx0': fd['delta_cx0_lnd']},
+    }
 
     delta_cz_slat = 0.0
     delta_cx_slat = 0.0
@@ -73,11 +83,11 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
         delta_cz_slat = 0.30
         delta_cx_slat = 0.012
 
-    cz_max_to = round(cz_max_clean + fd["delta_cz_to"] + delta_cz_slat * 0.5, 2)
-    cz_max_lnd = round(cz_max_clean + fd["delta_cz_lnd"] + delta_cz_slat, 2)
+    cz_max_to = round(cz_max_clean + flap_configurations['takeoff']['delta_cz'] + delta_cz_slat * 0.5, 2)
+    cz_max_lnd = round(cz_max_clean + flap_configurations['landing']['delta_cz'] + delta_cz_slat, 2)
 
-    delta_cx0_to = fd["delta_cx0_to"] + delta_cx_slat * 0.5
-    delta_cx0_lnd = fd["delta_cx0_lnd"] + delta_cx_slat
+    delta_cx0_to = flap_configurations['takeoff']['delta_cx0'] + delta_cx_slat * 0.5
+    delta_cx0_lnd = flap_configurations['landing']['delta_cx0'] + delta_cx_slat
 
     ac_type = params.get("aircraft_type", "piston_ga")
     is_retractable = bool(params.get("retractable_gear", True if ac_type not in ["piston_ga", "ultralight", "glider"] else False))
@@ -223,6 +233,7 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
         "cz_max_clean": cz_max_clean,
         "cz_max_to": cz_max_to,
         "cz_max_lnd": cz_max_lnd,
+        "flap_configurations": flap_configurations,
         "polar_points": polar_points,
         "control_surfaces": geom.get("control_surfaces", {}),
         "paturski_p2": p2,

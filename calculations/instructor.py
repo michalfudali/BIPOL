@@ -8,6 +8,8 @@ CRUISE_LD_FACTOR = 0.94
 PASSENGER_WITH_BAG_KG = 115.0
 TAKEOFF_MASS_FRACTION = 0.975
 MIN_MASS_ITERATIONS = 5
+FLAP_TAKEOFF_DEFLECTION_DEG = 20.0
+FLAP_LANDING_DEFLECTION_DEG = 40.0
 
 
 def review_coursework(result):
@@ -23,13 +25,19 @@ def review_coursework(result):
     check('sample', 'Co najmniej 8 podobnych konstrukcji', trends['families_n'] >= MIN_AIRCRAFT,
           f"{trends['families_n']} rodzin; {trends['selected_n']} wariantów tej samej klasy i napędu.")
     check('charts', '6 wykresów: 1 masowy i 5 parametrów',
-          len(charts) == 6 and all(c['n'] >= MIN_AIRCRAFT and c['fit'] for c in charts),
+          len(charts) == 6 and len({c['parameter'] for c in charts if c['kind'] != 'mass'}) == 5
+          and all(c['n'] >= MIN_AIRCRAFT and c['fit'] for c in charts),
           f"Kompletne wykresy (minimum 8 par): {sum(c['n'] >= MIN_AIRCRAFT and bool(c['fit']) for c in charts)}/6. Braki wymagają danych źródłowych.")
     check('mass_trend', 'Malejący udział masy pustej w funkcji MTOW', fit and fit['C'] < 0,
           f"C = {fit['C']:.4f}." if fit else 'Brak regresji masowej.')
     check('iteration', 'Bilans masy: minimum 5 iteracji i zbieżność',
           len(mass['iterations']) >= MIN_MASS_ITERATIONS and mass['mission_assumptions']['mass_residual_relative'] <= .001,
           f"{len(mass['iterations'])} iteracji; kryterium reszty równania ≤0,1%.")
+    flap_states = result['aerodynamics']['flap_configurations']
+    check('flaps', 'Wychylenia klap: start 20°, lądowanie 40°',
+          flap_states['takeoff']['deflection_deg'] == FLAP_TAKEOFF_DEFLECTION_DEG and
+          flap_states['landing']['deflection_deg'] == FLAP_LANDING_DEFLECTION_DEG,
+          'Wychylenia w stopniach, potwierdzone przez autora notatek. Przyrosty nośności i oporu są oszacowaniami dla tych konfiguracji.')
     if p['engine_type'] != 'none':
         drive_key = 'thrust_to_weight' if p['engine_type'] == 'jet' else 'power_loading_kg_kw'
         climb = next(c for c in trends['relationships'] if c['x_key'] == drive_key and c['y_key'] == 'climb_rate_ms')

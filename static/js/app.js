@@ -3589,14 +3589,14 @@ function hydrateSemesterProjectsData(res) {
           <td>Konfiguracja przelotowa</td>
         </tr>
         <tr>
-          <td><b>Startowa (Takeoff)</b></td>
+          <td><b>Startowa — klapy ${hl.takeoff.flap_deflection_deg}°</b></td>
           <td>${hl.takeoff.cz_max}</td>
           <td>${hl.takeoff.vs_kmh} km/h</td>
           <td>+${hl.takeoff.delta_cz}</td>
           <td>Skrócenie rozbiegu</td>
         </tr>
         <tr>
-          <td><b>Do lądowania (Landing)</b></td>
+          <td><b>Do lądowania — klapy ${hl.landing.flap_deflection_deg}°</b></td>
           <td><b>${hl.landing.cz_max}</b></td>
           <td><b>${hl.landing.vs_kmh} km/h</b></td>
           <td>+${hl.landing.delta_cz}</td>

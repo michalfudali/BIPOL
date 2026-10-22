@@ -1,6 +1,7 @@
 """Wspólne wartości wejściowe i walidacja przed uruchomieniem obliczeń."""
 import math
-from calculations.instructor import CRUISE_LD_FACTOR, PASSENGER_WITH_BAG_KG
+from calculations.instructor import (CRUISE_LD_FACTOR, PASSENGER_WITH_BAG_KG,
+                                     FLAP_TAKEOFF_DEFLECTION_DEG, FLAP_LANDING_DEFLECTION_DEG)
 
 NUMERIC_LIMITS = {
     "n_pax": (0, 1000), "n_crew": (0, 20), "m_pax": (0, 500),
@@ -142,6 +143,8 @@ def validate_parameters(data):
     # Validate submitted data above, then canonicalize the course assumptions.
     p['mission_ld_factor'] = CRUISE_LD_FACTOR
     p['mission_phase_model'] = 'galinski'
+    p['flap_takeoff_deg'] = FLAP_TAKEOFF_DEFLECTION_DEG
+    p['flap_landing_deg'] = FLAP_LANDING_DEFLECTION_DEG
     if 'trend_observations' in p:
         from calculations.trend_observations import validate_observations
         p['trend_observations'] = validate_observations(p['trend_observations'])
