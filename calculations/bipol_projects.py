@@ -620,7 +620,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         {"param": "Prędkość maksymalna Vmax [km/h]", "project_assumed": round(v_cr_kmh * 1.15, 1), "actual_calc": perf_res["speeds"]["v_max_sl_kmh"], "comment": "Spełnia założenia taktyczne"},
         {"param": "Prędkość przelotowa Vcr [km/h]", "project_assumed": v_cr_kmh, "actual_calc": perf_res["speeds"]["v_cruise_kmh"], "comment": "Optymalna pod kątem zasięgu"},
         {"param": "Prędkość wznoszenia wy_max [m/s]", "project_assumed": float(params.get("climb_rate_ms", 4.0)), "actual_calc": perf_res["climb"]["wy_max_ms"], "comment": "Przewyższa minimalny wymóg zdatności"},
-        {"param": "Długość rozbiegu Sto [m]", "project_assumed": float(params.get("takeoff_run_m", 450.0)), "actual_calc": perf_res["takeoff"]["ground_roll_m"], "comment": "Zapewnia operacje z pasów trawiastych"},
+        {"param": "Całkowita długość startu do 15 m [m]", "project_assumed": float(params.get("takeoff_distance_m", 0)), "actual_calc": perf_res["takeoff"]["distance_to_15m"], "comment": "Rozbieg i odcinek powietrzny; nawierzchnia i warunki wg modelu"},
         {"param": "Zasięg obliczeniowy [km]", "project_assumed": float(params.get("range_km", 1000.0)), "actual_calc": range_km_m3, "comment": "Uwzględnia rezerwę 45 min krążenia"}
     ]
     

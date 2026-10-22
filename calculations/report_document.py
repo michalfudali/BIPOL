@@ -70,6 +70,11 @@ def report_document(results, sections, overrides=None, folder_cover=False):
                        'required': f'≥ {number(aileron["min_pb_2v_req"], 3)}',
                        'actual': number(aileron['roll_helix_pb_2v'], 3),
                        'passed': aileron['roll_authority_ok']})
+    if 'p1' in sections:
+        for c in results['instructor_review']['checks']:
+            if c['key'] in ('sample','charts','mass_trend','climb_data'):
+                checks.append(dict(parameter=c['label'], required='Wytyczne prowadzącego',
+                                   actual=c['detail'], passed=c['passed']))
     failed = [c for c in checks if not c['passed'] and c.get('severity') != 'warning']
     pending = [c for c in checks if not c['passed'] and c.get('severity') == 'warning']
     conclusions = {key: [] for key in TITLES}
@@ -138,7 +143,7 @@ def report_document(results, sections, overrides=None, folder_cover=False):
         conclusions['p5'].append(
             f'Obliczony rozbieg wynosi {number(perf["takeoff"]["ground_roll_m"], 1)} m, '
             f'a start nad przeszkodę 15 m wymaga {number(perf["takeoff"]["distance_to_15m"], 1)} m. '
-            'Wielkości te rozróżniono przy porównaniu z wymaganiem dotyczącym drogi rozbiegu.')
+            'Z wymaganiem porównano całkowitą długość startu, łącznie z odcinkiem powietrznym.')
     else:
         glide = perf['glide']
         conclusions['p5'].append(
@@ -187,7 +192,7 @@ def report_document(results, sections, overrides=None, folder_cover=False):
                        ('Minimalne opadanie', perf['glide']['minimum_sink']['sink_ms'], 'm/s', 2)]
             if powered:
                 summary += [('Maksymalna prędkość wznoszenia', perf['climb']['wy_max_ms'], 'm/s', 2),
-                            ('Droga rozbiegu', perf['takeoff']['ground_roll_m'], 'm', 1),
+                            ('Całkowita droga startu do 15 m', perf['takeoff']['distance_to_15m'], 'm', 1),
                             ('Pułap praktyczny', perf['ceiling']['service_ceiling_m'], 'm', 0)]
         elif key == 'p6':
             summary = [('Prędkość manewrowa VA', env['speeds']['v_a_kmh'], 'km/h', 1),

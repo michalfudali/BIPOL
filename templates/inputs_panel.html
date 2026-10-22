@@ -270,18 +270,18 @@
                         <label for="m_pax">
                           <span class="label-text">Masa 1 os. z bagażem [kg] <span class="info-circle-icon" data-param="m_pax" tabindex="0">i</span></span>
                         </label>
-                        <input step="any" required type="number" id="m_pax" min="0" max="150" value="100">
+                        <input step="any" required type="number" id="m_pax" min="0" max="150" value="115">
                         <div class="param-didactic-hint" id="hint_m_pax"></div>
                       </div>
                     </div>
                     <div class="input-row">
-                      <div class="input-group" data-param="takeoff_run_m">
+                      <div class="input-group" data-param="takeoff_distance_m"><label for="takeoff_distance_m">Maks. całkowita długość startu [m]</label><input type="number" id="takeoff_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><div class="input-group" data-param="landing_distance_m"><label for="landing_distance_m">Maks. całkowita długość lądowania [m]</label><input type="number" id="landing_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><details class="legacy-runway"><summary>Dodatkowe ograniczenie rozbiegu</summary><div class="input-group" data-param="takeoff_run_m">
                         <label for="takeoff_run_m">
                           <span class="label-text">Droga rozbiegu Sto [m] <span class="info-circle-icon" data-param="takeoff_run_m" tabindex="0">i</span></span>
                         </label>
                         <input step="any" required type="number" id="takeoff_run_m" min="60" max="3500" value="210">
                         <div class="param-didactic-hint" id="hint_takeoff_run_m"></div>
-                      </div>
+                      </div></details>
                       <div class="input-group" data-param="climb_rate_ms">
                         <label for="climb_rate_ms">
                           <span class="label-text">Wznoszenie przy ziemi wy [m/s] <span class="info-circle-icon" data-param="climb_rate_ms" tabindex="0">i</span></span>
@@ -338,7 +338,7 @@
                   <div id="wingPlanformDidacticBox" class="flap-didactic-card" style="margin-bottom:0.75rem;"></div>
 
                   <div class="input-row">
-                    <div class="input-group" data-param="wing_config">
+                    <div class="input-group"><label for="gear_attachment">Mocowanie podwozia głównego</label><select id="gear_attachment"><option value="fuselage">Do kadłuba</option><option value="wing">Do skrzydła</option></select></div><div class="input-group" data-param="wing_config">
                       <label for="wing_config">
                         <span class="label-text">Układ pionowy skrzydła <span class="info-circle-icon" data-param="wing_config" tabindex="0">i</span></span>
                       </label>

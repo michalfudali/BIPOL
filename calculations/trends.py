@@ -10,6 +10,7 @@ import json
 import math
 
 from calculations.atmosphere import G0
+from calculations.instructor import MIN_AIRCRAFT
 
 DATA = Path(__file__).resolve().parents[1] / 'data' / 'aircraft'
 CLASSES = {
@@ -47,6 +48,7 @@ def derived(row):
     r['wing_loading_kg_m2'] = mass / area if area else None
     r['wing_loading_n_m2'] = G0 * mass / area if area else None
     r['power_loading_kg_kw'] = mass / r['p_kw'] if r.get('p_kw') else None
+    r['specific_power_kw_kg'] = r['p_kw'] / mass if r.get('p_kw') else None
     r['thrust_to_weight'] = r['t_kn'] * 1000 / (mass * G0) if r.get('t_kn') else None
     r['prop_diameter_m'] = r.get('prop_diameter_m')
     r['prop_type'] = r.get('prop_type')
@@ -58,6 +60,11 @@ def derived(row):
     r['elevator_chord_ratio'] = r.get('elevator_chord_ratio')
     r['rudder_chord_ratio'] = r.get('rudder_chord_ratio')
     r['dihedral_deg'] = r.get('dihedral_deg')
+    # A catalogue's unlabeled take-off number may be ground roll. Do not
+    # silently promote it to obstacle distance (the lecture explicitly forbids it).
+    r['takeoff_distance_m'] = r.get('takeoff_m') if r.get('takeoff_basis') in ('15m', '50ft', 'field_length') else None
+    r['landing_distance_m'] = r.get('landing_m') if r.get('landing_basis') in ('15m', '50ft', 'field_length') else None
+    r['climb_rate_ms'] = r.get('climb_rate_ms')
     r['quality_notes'] = []
     if r['empty_fraction'] is not None and not .15 < r['empty_fraction'] < .95:
         r['quality_notes'].append('Nietypowy udział OEW/MTOW — pominięto w regresji masowej.')
@@ -85,6 +92,10 @@ def reference_catalog():
 def select_references(params, m0):
     cls, engine = params.get('aircraft_type', 'piston_ga'), params.get('engine_type', 'prop')
     pool = [r for r in load_aircraft() if r['aircraft_type'] == cls and r['engine_type'] == engine]
+    overrides = {r['id']: r for r in params.get('trend_observations', [])}
+    pool = [{**r, **{k: v for k, v in overrides.get(r['id'], {}).items() if k != 'source'},
+             'source_references': r['source_references'] + ('; Uzupełnienie autora: ' + overrides[r['id']]['source'] if r['id'] in overrides else '')}
+            for r in pool]
     source = params.get('trend_source', 'all')
     if source != 'all':
         pool = [r for r in pool if r['source_id'] == source]
@@ -147,6 +158,13 @@ METRICS = {
     'prop_diameter_m': ('Średnica / rozpiętość śmigła', 'm'),
     'v_cruise_kmh': ('Prędkość przelotowa', 'km/h'), 'cruise_mach': ('Liczba Macha przelotu', 'Ma'),
     'range_km': ('Zasięg katalogowy', 'km'), 'takeoff_m': ('Długość startu katalogowa', 'm'),
+    'takeoff_distance_m': ('Całkowita długość startu (wg źródła)', 'm'),
+    'landing_distance_m': ('Całkowita długość lądowania (wg źródła)', 'm'),
+    'climb_rate_ms': ('Prędkość wznoszenia', 'm/s'),
+    'power_loading_kg_kw': ('Obciążenie mocy m₀/P', 'kg/kW'),
+    'specific_power_kw_kg': ('Moc jednostkowa P/m₀', 'kW/kg'),
+    'thrust_to_weight': ('Obciążenie ciągu T/W', '−'),
+    'ld_max': ('Doskonałość maksymalna', '−'),
     'v_h': ('Cecha objętościowa usterzenia poziomego V_H', '−'),
     'aileron_span_fraction': ('Część rozpiętości objęta lotkami b_ail/(b/2)', '−'),
     'aileron_chord_ratio': ('Względna cięciwa lotek c_ail/c', '−'),
@@ -175,7 +193,7 @@ GEOMETRY_METRICS_INFO = {
     'aileron_span_fraction': {
         'label': 'Część rozpiętości objęta lotkami',
         'symbol': 'b_{ail} / (b/2)',
-        'formula_latex': r'\frac{b_{ail}}{b/2} \quad \left(\text{lub } \frac{b_{ail}}{b}\right)',
+        'formula_latex': r'\frac{b_{ail,1}}{b/2}=\frac{2b_{ail,1}}{b}',
         'unit': '−',
         'desc': 'Udział rozpiętości skrzydła zajęty przez lotkę; determinuje skuteczność przechylania pb/(2V).',
         'typical_ranges': {
@@ -241,7 +259,7 @@ GEOMETRY_METRICS_INFO = {
         'symbol': r'\Gamma',
         'formula_latex': r'\Gamma \; [^\circ]',
         'unit': '°',
-        'desc': 'Kąt wzniosu geometrycznego skrzydła gwarantujący poprzeczną stateczność statyczną.',
+        'desc': 'Kąt wzniosu geometrycznego skrzydła wpływający na poprzeczną stateczność statyczną.',
         'typical_ranges': {
             'piston_ga': (0.0, 7.0, 'Dolnopłat: 4°–7°; Górnopłat: 0°–2° (Roskam Tab. 3.1)'),
             'turboprop_regional': (0.0, 7.0, 'Dolnopłat: 4°–6°; Górnopłat: 0°–3°'),
@@ -297,17 +315,17 @@ def analyze_geometry_trends(params, geom_res=None):
         class_vals = [r[key] for r in class_subset]
 
         all_stats = compute_vector_stats(all_vals)
-        class_stats = compute_vector_stats(class_vals) or all_stats
+        class_stats = compute_vector_stats(class_vals)
 
         proj_val = proj_vals.get(key)
 
-        # Regressions for class (or full database if class subset is small)
-        reg_source = class_subset if len(class_subset) >= 4 else all_subset
+        # Do not mix classes to conceal missing data in the selected class.
+        reg_source = class_subset
         fit_m0 = fit_regression([(r['m0'], r[key]) for r in reg_source if r.get('m0')])
         fit_b = fit_regression([(r['b'], r[key]) for r in reg_source if r.get('b')])
 
         # Evaluation against typical literature range
-        typ_min, typ_max, lit_note = info['typical_ranges'].get(ac_type, (class_stats['min'], class_stats['max'], 'Wg próby empirycznej'))
+        typ_min, typ_max, lit_note = info['typical_ranges'][ac_type]
         if key == 'dihedral_deg' and ac_type in ('piston_ga', 'turboprop_regional'):
             if wing_cfg in ('high', 'braced_high'):
                 typ_min, typ_max = 0.0, 2.5
@@ -322,19 +340,19 @@ def analyze_geometry_trends(params, geom_res=None):
 
         if is_in_range:
             status = 'ok'
-            verdict = f'W normie literaturowej i empirycznej dla klasy ({lit_note}).'
+            verdict = f'W typowym zakresie literaturowym ({lit_note}); skuteczność wymaga osobnego sprawdzenia.'
         elif proj_val is not None and proj_val < typ_min:
             status = 'warning'
             verdict = f'Poniżej typowego zakresu ({lit_note}); zweryfikuj zapas stateczności lub skuteczność.'
         elif proj_val is not None and proj_val > typ_max:
             status = 'info' if key in ('aileron_span_fraction', 'aileron_chord_ratio') else 'warning'
-            verdict = f'Powyżej wartości przeciętnej ({lit_note}); zwiększona skuteczność sterowania.'
+            verdict = f'Powyżej typowego zakresu ({lit_note}); sprawdź skuteczność i opór.'
         else:
             status = 'unknown'
             verdict = 'Brak danych do weryfikacji.'
 
         # Samples for inspection
-        samples = sorted(class_subset, key=lambda r: abs(r[key] - (proj_val if proj_val is not None else class_stats['mean'])))[:8]
+        samples = sorted(class_subset, key=lambda r: abs(r[key] - (proj_val if proj_val is not None else class_stats['mean'])))[:3]
 
         metrics_analysis.append({
             'key': key,
@@ -390,6 +408,10 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     prediction = predict(mass_fit, m0)
     trend_value = prediction * k_vs if prediction is not None else None
     warnings = []
+    if len(counts) < MIN_AIRCRAFT:
+        warnings.append(f'Wymaganie prowadzącego: minimum 8 podobnych konstrukcji. Wybrano {len(counts)} rodzin; uzupełnij próbę.')
+    if mass_fit and mass_fit['C'] >= 0:
+        warnings.append('Trend OEW/MTOW nie jest malejący (C ≥ 0). Sprawdź dobór podobnych konstrukcji, definicje mas i źródła; nie odwracaj sztucznie regresji.')
     if len(rows) < 20:
         warnings.append(f'Wybrano {len(rows)} konstrukcji. Materiał BIPOL_1 zaleca co najmniej 20 podobnych samolotów; poszerz dobór lub uzupełnij źródła.')
     if rows and len(counts) < 20:
@@ -417,13 +439,19 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     if max((t['available_n'] for t in time_trends), default=0) < 20:
         warnings.append('Za mało udokumentowanych dat dla pełnej analizy czasowej. Dat certyfikacji nie zastępujemy domyślnym rokiem produkcji.')
     relationships = []
-    x_keys = ['ar', 'wing_loading_kg_m2', 'thrust_to_weight' if params.get('engine_type') == 'jet' else 'power_loading_kg_kw']
+    x_keys = ['ar', 'wing_loading_kg_m2']
+    if params.get('engine_type') == 'jet':
+        x_keys.append('thrust_to_weight')
+    elif params.get('engine_type', 'prop') == 'prop':
+        x_keys.extend(['power_loading_kg_kw', 'specific_power_kw_kg'])
     x_labels = {'ar': ('Wydłużenie AR', '−'), 'wing_loading_kg_m2': ('Obciążenie powierzchni', 'kg/m²'),
-                'thrust_to_weight': ('T / W', '−'), 'power_loading_kg_kw': ('Obciążenie mocy m₀ / P', 'kg/kW')}
+                'thrust_to_weight': ('T / W', '−'), 'power_loading_kg_kw': ('Obciążenie mocy m₀ / P', 'kg/kW'),
+                'specific_power_kw_kg': ('Moc jednostkowa P / m₀', 'kW/kg')}
     if any(r.get('prop_diameter_m') is not None for r in rows):
         x_keys.append('prop_diameter_m')
         x_labels['prop_diameter_m'] = ('Średnica śmigła d_prop', 'm')
-    y_keys = ['v_cruise_kmh', 'cruise_mach', 'range_km', 'takeoff_m']
+    y_keys = ['v_cruise_kmh', 'cruise_mach', 'range_km', 'takeoff_distance_m', 'landing_distance_m', 'climb_rate_ms', 'ld_max',
+              'v_h', 'aileron_span_fraction', 'aileron_chord_ratio', 'dihedral_deg']
     if any(r.get('prop_diameter_m') is not None for r in rows):
         y_keys.append('prop_diameter_m')
     for x_key in x_keys:
@@ -445,12 +473,55 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
 
     geometry_trends_analysis = analyze_geometry_trends(params, geom_res)
 
+    # A fixed report structure: one mass plot, two plots against year and
+    # three physical relationships. Missing observations remain explicit.
+    def time_chart(key):
+        t = next(t for t in time_trends if t['key'] == key)
+        return {'mode': key, 'kind': 'time', 'label': f"{t['label']} w funkcji roku",
+                'n': t['available_n'], 'fit': t['fit']}
+
+    def relation_chart(x, y):
+        r = next(r for r in relationships if r['x_key'] == x and r['y_key'] == y)
+        return {'mode': f'{x}:{y}', 'kind': 'relation', 'label': f"{r['y_label']} a {r['x_label']}",
+                'n': len(r['points']), 'fit': r['fit']}
+
+    propulsion_key = 'thrust_to_weight' if params.get('engine_type') == 'jet' else 'power_loading_kg_kw'
+    performance_key = ('cruise_mach' if sum(r.get('cruise_mach') is not None for r in rows) >
+                       sum(r.get('v_cruise_kmh') is not None for r in rows) else 'v_cruise_kmh')
+    time_options = [time_chart(key) for key in (performance_key, 'ar', 'wing_loading_kg_m2', 'v_h', 'dihedral_deg')]
+    # Prefer complete observations instead of a blank speed/year plot when
+    # speed and certification dates belong to different source records.
+    time_options.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
+    report_charts = [{'mode': 'mass', 'kind': 'mass', 'label': 'Udział masy pustej w funkcji masy startowej',
+                      'n': len(valid_mass), 'fit': mass_fit}, *time_options[:2]]
+    if params.get('engine_type') == 'none':
+        choices = [('ar','ld_max'), ('wing_loading_kg_m2','v_cruise_kmh'),
+                   ('ar','v_h'), ('ar','aileron_chord_ratio'), ('wing_loading_kg_m2','dihedral_deg')]
+        candidates = [relation_chart(x, y) for x, y in choices]
+        candidates.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
+        report_charts.extend(candidates[:3])
+    else:
+        report_charts.append(relation_chart('ar', 'range_km'))
+        climb_chart = relation_chart(propulsion_key, 'climb_rate_ms')
+        # Choose another meaningful performance relationship when catalogues
+        # omit climb; the missing requested climb analysis stays visible below.
+        airport_options = [relation_chart('wing_loading_kg_m2', key) for key in ('takeoff_distance_m', performance_key, 'v_h')]
+        airport_options.sort(key=lambda c: not (c['n'] >= MIN_AIRCRAFT and c['fit']))
+        report_charts.extend([climb_chart if climb_chart['n'] >= MIN_AIRCRAFT else relation_chart(propulsion_key, 'range_km'),
+                              airport_options[0]])
+        if climb_chart['n'] < MIN_AIRCRAFT:
+            warnings.append('Wznoszenie a obciążenie napędu: uzupełnij katalogowe prędkości wznoszenia. Do zestawu sześciu wykresów przyjęto zasięg a obciążenie napędu, jeśli danych wznoszenia brakuje.')
+    if any(c['n'] < MIN_AIRCRAFT for c in report_charts):
+        warnings.append('Część sześciu wymaganych wykresów ma mniej niż 8 par danych. Uzupełnij dane źródłowe; nie zastępuj pełnego startu rozbiegiem ani wznoszenia opadaniem.')
+
     return {'database_total': len(load_aircraft()), 'selected_n': len(rows), 'families_n': len(counts),
         'class_label': CLASSES[params.get('aircraft_type', 'piston_ga')], 'weighting': weighting,
         'reg_A': mass_fit['A'] if mass_fit else None, 'reg_C': mass_fit['C'] if mass_fit else None,
         'mass_fit': mass_fit, 'k_vs': k_vs, 'we_wo_trend': trend_value, 'we_wo_actual': m_empty/m0 if m0 else None,
         'similar_aircraft': rows, 'averages': averages, 'warnings': warnings,
         'time_trends': time_trends, 'relationships': relationships, 'sources': SOURCES,
+        'report_charts': report_charts,
+        'mass_trend_decreasing': mass_fit['C'] < 0 if mass_fit else None,
         'year_basis': 'Rok certyfikacji wariantu (nie rok produkcji)',
         'method': 'Ważona regresja log(OEW/MTOW) = log(A) + C·log(m₀ [kg]). Domyślnie rodziny mają równą wagę.',
         'limitations': 'OEW obejmuje wyposażenie operacyjne i nie jest tożsama z masą własną każdego projektu. Cechy geometryczne i sterów (V_H, lotki, stery, wznios) oparto na 82 certyfikowanych konstrukcjach (Raymer, Roskam, Corke, TCDS, MEiL PW). Rodziny są grupowane heurystycznie. Korelacja nie dowodzi przyczynowości.',

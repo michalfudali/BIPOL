@@ -19,3 +19,5 @@
 <tr><td>Cięciwa steru kierunku / cięciwa usterzenia</td><td class="number">{{ cs.rudder.cr_over_cv|reportnum(3) }}</td></tr>
 </tbody></table>
 <p>Wskaźnik skuteczności lotek \(pb/(2V)\) wynosi {{ cs.ailerons.roll_helix_pb_2v|reportnum(3) }}, przy przyjętym kryterium {{ cs.ailerons.min_pb_2v_req|reportnum(3) }}. {% if cs.ailerons.roll_authority_ok %}Kryterium jest spełnione.{% else %}Kryterium nie jest spełnione.{% endif %} Jest to oszacowanie wstępne, zależne od wymiarów lotek i dopuszczalnego wychylenia.</p>
+
+<p>Przy doborze mechanizacji uwzględniono kompromis między nośnością i oporem; samo zwiększanie Cz,max nie jest celem projektu. Slot oznacza szczelinę lub przedskrzydło krawędzi natarcia, nie instalację odlodzeniową. Względna rozpiętość lotki odnosi się do jednej półrozpiętości skrzydła; względna cięciwa — do lokalnej cięciwy płata.</p>

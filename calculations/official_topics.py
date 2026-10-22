@@ -312,7 +312,7 @@ def topic_parameters(topic):
     p = {**AIRCRAFT_PRESETS[baseline], **{k: v for k, v in d.items() if v is not None}}
     passengers = d['n_pax']
     p.update(name=topic['title'], topic_id=topic['num'], topic_origin='official',
-             n_crew=2 if passengers > 19 else 1, m_pax=100.0, m_bag=0.0,
+             n_crew=2 if passengers > 19 else 1, m_pax=115.0, m_bag=0.0,
              wingspan_m=d.get('span_limit') or 0, wing_area_m2=0,
              wing_input_mode='span_aspect' if d.get('span_limit') else 'loading',
              payload_input_mode='seats', power_input_mode='sized', engine_power_kw=0,
@@ -336,6 +336,11 @@ def topic_parameters(topic):
     else:
         p.update(flap_type='single_slotted', aileron_type='differential', slat_type='none',
                  v_stall_kmh=90.0, takeoff_run_m=280.0)
+    # Full obstacle distances are distinct working assumptions, not renamed ground rolls.
+    p['takeoff_distance_m'] = {'motoglider': 500, 'jet_transport': 2200,
+                             'jet_business': 1600, 'turboprop_regional': 1300}.get(d['aircraft_type'], 600)
+    p['landing_distance_m'] = {'jet_transport': 1800, 'jet_business': 1200,
+                             'turboprop_regional': 1100}.get(d['aircraft_type'], 600)
     return p
 
 

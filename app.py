@@ -16,6 +16,7 @@ from calculations.trend_report import trend_chart
 from calculations.report_assets import math_assets
 from calculations.report_document import report_document, report_number, report_metadata, tex_number
 from calculations.report_sketch import report_sketch
+from calculations.drawing_sheet import drawing_sheet
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -26,6 +27,7 @@ app.jinja_env.filters['texnum'] = tex_number
 app.jinja_env.filters['trendnum'] = lambda v, digits=3: f'{v:.{digits}f}' if isinstance(v, (int, float)) else '—'
 app.jinja_env.globals['report_metadata'] = report_metadata
 app.jinja_env.globals['report_sketch'] = report_sketch
+app.jinja_env.globals['drawing_sheet'] = drawing_sheet
 
 
 @app.context_processor
@@ -92,6 +94,23 @@ def get_constraint_suggestions():
 @app.route('/api/aircraft', methods=['GET'])
 def aircraft_catalog():
     return jsonify(reference_catalog())
+
+
+@app.post('/api/trends/import')
+def import_trend_observations():
+    from calculations.trend_observations import import_observations
+    try:
+        if request.content_length and request.content_length > 1_100_000:
+            raise ValueError('Plik uzupełnień może mieć maksymalnie 1 MB.')
+        upload = request.files.get('file')
+        if not upload:
+            raise ValueError('Wybierz plik CSV wyeksportowany z arkusza.')
+        text = upload.read(1_000_001).decode('utf-8-sig')
+        if not text.strip():
+            raise ValueError('Plik CSV jest pusty.')
+        return jsonify(observations=import_observations(text))
+    except (ValueError, UnicodeError) as error:
+        return jsonify(error=str(error)), 400
 
 
 @app.route('/download/aircraft/<source>/<kind>')

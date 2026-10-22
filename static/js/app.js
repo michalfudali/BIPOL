@@ -89,7 +89,7 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   const acType = acEl ? acEl.value : 'piston_ga';
   const isGlider = eng === 'none';
   window.BipolDesignBasis?.propulsion('');
-  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
+  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['takeoff_distance_m', 0, 600], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById(field);
     if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
   }
@@ -1200,7 +1200,7 @@ function populateP1P2Tables(res) {
       ${occRows}
       <tr><td>Prędkość przelotowa</td><td><b>V_cr</b></td><td class="num"><b>${fd.cruise_speed_kmh}</b></td><td>km/h</td><td>Prędkość marszowa w konfiguracji gładkiej</td></tr>
       <tr><td>Maks. prędkość przeciągnięcia</td><td><b>V_s0</b></td><td class="num"><b>${fd.v_stall_kmh}</b></td><td>km/h</td><td>Prędkość przeciągnięcia z pełnymi klapami lądowania</td></tr>
-      <tr><td>Dopuszczalny rozbieg</td><td><b>S_to</b></td><td class="num"><b>${fd.takeoff_run_m}</b></td><td>m</td><td>Maksymalna długość rozbiegu z nawierzchni trawiastej/utwardzonej</td></tr>
+      <tr><td>Całkowita długość startu</td><td><b>S_to</b></td><td class="num"><b>${fd.takeoff_distance_m}</b></td><td>m</td><td>Start do wysokości przeszkody 15 m</td></tr>
       <tr><td>Wznoszenie przy ziemi</td><td><b>w_y</b></td><td class="num"><b>${fd.climb_rate_ms}</b></td><td>m/s</td><td>Minimalna prędkość wznoszenia w warunkach ISA MSL</td></tr>
     `;
   }
@@ -1495,10 +1495,11 @@ function populateP5Tables(res) {
   if (p5Tolnd) {
     const to = res.performance?.takeoff || {};
     const lnd = res.performance?.landing || {};
+    const runwayNumber=v=>v==null?'nieosiągalny':Number(v).toFixed(1);
     p5Tolnd.innerHTML = `
-      <tr><td><b>1. Rozbieg samolotu</b> (Ground Roll S_g)</td><td class="num"><b>${(to.ground_roll_m ?? 0).toFixed(1)}</b></td><td>0 &rarr; V_LOF (efekt ziemi McCormicka)</td><td>Fiszdon / Raymer &bull; tarcie toczne i opór w efekcie ziemi</td></tr>
+      <tr><td><b>1. Rozbieg samolotu</b> (Ground Roll S_g)</td><td class="num"><b>${runwayNumber(to.ground_roll_m)}</b></td><td>0 &rarr; V_LOF (efekt ziemi McCormicka)</td><td>Fiszdon / Raymer &bull; tarcie toczne i opór w efekcie ziemi</td></tr>
       <tr><td><b>2. Odcinek przejściowy i wznoszenie</b> (S_tr + S_climb)</td><td class="num"><b>${(to.air_distance_m ?? ((to.distance_to_15m ?? 0) - (to.ground_roll_m ?? 0))).toFixed(1)}</b></td><td>V_LOF &rarr; V₂ (kąt &gamma; = ${(to.climb_angle_deg ?? 0).toFixed(1)}&deg;)</td><td>Łuk wyrównania R_tr (${(to.transition_m ?? 0).toFixed(1)} m) + wznoszenie (${(to.climb_to_15m_m ?? 0).toFixed(1)} m)</td></tr>
-      <tr style="background:#f8fafc;"><td><b>Całkowita droga startu nad H = 15 m</b></td><td class="num"><b>${(to.distance_to_15m ?? 0).toFixed(1)}</b></td><td>Wysokość ekranu H = 15 m (50 ft)</td><td>Wymóg certyfikacyjny CS-23.53</td></tr>
+      <tr style="background:#f8fafc;"><td><b>Całkowita droga startu nad H = 15 m</b></td><td class="num"><b>${runwayNumber(to.distance_to_15m)}</b></td><td>Wysokość ekranu H = 15 m (50 ft)</td><td>Wymóg certyfikacyjny CS-23.53</td></tr>
       <tr><td><b>3. Zniżanie z H = 15 m i wyrównanie</b> (S_air,lnd)</td><td class="num"><b>${(lnd.air_approach_m ?? 0).toFixed(1)}</b></td><td>V_app = 1.3 V_s0 &rarr; V_TD = 1.15 V_s0</td><td>Ścieżka podejścia i wytrzymanie nad pasem</td></tr>
       <tr><td><b>4. Dobieg na ziemi</b> (1.5s swobodny + hamowanie)</td><td class="num"><b>${(lnd.ground_roll_m ?? 0).toFixed(1)}</b></td><td>V_TD &rarr; 0 (${(lnd.free_roll_m ?? 0).toFixed(1)} m + ${(lnd.braking_roll_m ?? 0).toFixed(1)} m)</td><td>Hamowanie aerodynamiczne i kołowe (&mu;_ham = 0.40)</td></tr>
       <tr style="background:#f8fafc;"><td><b>Całkowita droga lądowania znad H = 15 m</b></td><td class="num"><b>${(lnd.distance_from_15m ?? 0).toFixed(1)}</b></td><td>Wysokość ekranu H = 15 m (50 ft)</td><td>Wymóg certyfikacyjny CS-23.73</td></tr>
@@ -2321,7 +2322,7 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
   const acType = acEl ? acEl.value : 'piston_ga';
   const isGlider = eng === 'none';
   window.BipolDesignBasis?.propulsion('wiz_');
-  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['climb_rate_ms', 1.5, 4.1]]) {
+  for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['takeoff_distance_m', 0, 600], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById('wiz_' + field);
     if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
   }
@@ -2787,7 +2788,7 @@ function renderWizardStep5Summary() {
   const H = getN('wiz_cruise_altitude_m');
   const Vcr = getN('wiz_cruise_speed_kmh');
   const Vs0 = getN('wiz_v_stall_kmh');
-  const Sto = getN('wiz_takeoff_run_m');
+  const Sto = getN('wiz_takeoff_distance_m');
   const wy = getN('wiz_climb_rate_ms');
   const engType = getV('wiz_engine_type');
   const engLoc = getV('wiz_engine_location');
@@ -2832,7 +2833,7 @@ function renderWizardStep5Summary() {
     <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Ładunek</td><td class="num"><b>${occSummaryText}</b></td><td>Ładunek płatny</td></tr>
     <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
     <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
-    <tr><td><b>Osiągi lotniskowe</b></td><td>Rozbieg Sto / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
+    <tr><td><b>Osiągi lotniskowe</b></td><td>Całkowity start do 15 m / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
     <tr><td><b>Zespół Napędowy</b></td><td>Rodzaj, zabudowa i zużycie paliwa</td><td class="num"><b>${propSummaryText}</b></td><td>Zespół napędowy</td></tr>
     <tr><td><b>Założenia skrzydła</b></td><td>${escapeHtml(document.getElementById('wiz_wing_input_mode').selectedOptions[0].textContent)}</td><td class="num"><b>b = ${document.getElementById('wiz_wingspan_m').value} m; S = ${document.getElementById('wiz_wing_area_m2').value} m²; Λ = ${AR}</b></td><td>Wielkości zależne są obliczane</td></tr>
     <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>Klapa: ${flap} &bull; Slot: ${slat}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
@@ -3801,8 +3802,8 @@ function hydrateSemesterProjectsData(res) {
       const el = document.getElementById(id);
       if (el && val !== undefined && val !== null) el.textContent = val;
     };
-    setTxt('p5_sto_ground', `${tl.ground_roll_m} m`);
-    setTxt('p5_sto_15m', `${tl.takeoff_to_15m_m} m`);
+    setTxt('p5_sto_ground', tl.ground_roll_m==null?'Nieosiągalny':`${tl.ground_roll_m} m`);
+    setTxt('p5_sto_15m', tl.takeoff_to_15m_m==null?'Nieosiągalny':`${tl.takeoff_to_15m_m} m`);
     setTxt('p5_slnd_ground', `${tl.landing_ground_roll_m} m`);
     setTxt('p5_slnd_15m', `${tl.landing_from_15m_m} m`);
 

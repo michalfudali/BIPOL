@@ -74,6 +74,10 @@
     const oldGrid = stats.parentElement;
     charts.append(stats, time, relation); oldGrid.remove();
     selection.append($('trendControls'), catalog);
+    const importCard = $('trendObservationFile')?.closest('section');
+    if(importCard)selection.append(importCard);
+    const reportPlan = $('trendReportPlan')?.closest('section');
+    if(reportPlan)charts.append(reportPlan);
     method.append(averages, prelim, sources);
     mount.append(charts, selection, method);root.append(mount);
     tabset(mount, [{title:'Wyniki',panel:charts},{title:'Dobór samolotów',panel:selection},{title:'Metoda i źródła',panel:method}], 'Analiza trendów');

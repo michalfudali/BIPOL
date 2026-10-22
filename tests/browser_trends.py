@@ -94,7 +94,10 @@ with sync_playwright() as p:
     reveal_details(page.locator('#trendMissionApply'))
     mass_before = page.evaluate('currentResults.mass.m0')
     page.locator('#fuel_reserve_factor').fill('1.10')
-    page.locator('#mission_phase_model').select_option('galinski')
+    assert page.locator('#mission_phase_model').is_disabled()
+    assert page.locator('#mission_phase_model').input_value() == 'galinski'
+    assert page.locator('#mission_ld_factor').input_value() == '0.94'
+    assert not page.locator('#mission_ld_factor').is_editable()
     page.locator('#trendMissionApply').click()
     page.wait_for_function("currentResults.mass.mission_assumptions.reserve_factor === 1.1 && currentResults.params.mission_phase_model === 'galinski'")
     assert page.evaluate('currentResults.mass.m0') > mass_before

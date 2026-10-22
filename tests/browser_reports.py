@@ -29,7 +29,7 @@ with sync_playwright() as p:
         assert page.locator('[data-report-section]').count() == (6 if part == 'full' else 1)
         assert 'Anna Nowak' in page.locator('.cover').inner_text()
         assert 'Dane na stronie tytułowej są uzupełnione' in page.locator('#metadata-status').inner_text()
-        page.locator('.report-toolbar summary').click()
+        page.locator('.report-toolbar summary').first.click()
         page.locator('[data-report-meta-input=student_name]').fill('Jan Nowak')
         assert 'Jan Nowak' in page.locator('.cover').inner_text()
         overflow = page.evaluate('''() => [...document.querySelectorAll('table,figure,.equation')].some(el=>{

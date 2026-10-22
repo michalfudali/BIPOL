@@ -111,7 +111,7 @@ def import_fast(path):
                 p_kw=round(power * count, 3) if power and count else None,
                 t_kn=round(thrust * count / 1000, 4) if thrust and count else None,
                 cruise_mach=num('M_Cr'), mmo=num('M_MO'), v_cruise_kmh=None, v_max=None,
-                range_km=num('DesignRange'), takeoff_m=num('TakeoffDistance'),
+                range_km=num('DesignRange'), takeoff_m=num('TakeoffDistance'), takeoff_basis='field_length',
                 h_tail_area=None, v_tail_area=None))
     return result
 
@@ -143,7 +143,8 @@ def import_cado(path):
             mmo=vmax if vmax and vmax < 2 else None,
             v_cruise_kmh=cruise if cruise and cruise >= 2 else None,
             v_max=vmax if vmax and vmax >= 2 else None,
-            range_km=number(row['nominal_range']), takeoff_m=number(row['tofl']),
+            range_km=number(row['nominal_range']), takeoff_m=number(row['tofl']), takeoff_basis='field_length',
+            landing_m=number(row['lfl']), landing_basis='field_length',
             h_tail_area=number(row['htp_area']), v_tail_area=number(row['vtp_area'])))
     return result
 

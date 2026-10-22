@@ -384,3 +384,16 @@ AIRCRAFT_PRESETS = {
         "ar_v": 1.6
     }
 }
+
+# Course working assumptions for new projects. Existing saved passenger loads
+# remain explicit inputs and are checked against the lecture's 115 kg rule.
+for _preset in AIRCRAFT_PRESETS.values():
+    _preset['m_pax'] = 115.0
+    _preset['m_bag'] = 0.0
+    _preset['mission_ld_factor'] = 0.94
+    _preset['mission_phase_model'] = 'galinski'
+    _kind = _preset['aircraft_type']
+    _preset['takeoff_distance_m'] = (0 if _preset['engine_type'] == 'none' else
+        {'jet_transport': 2200, 'jet_business': 1600, 'turboprop_regional': 1300}.get(_kind, 600))
+    _preset['landing_distance_m'] = {'jet_transport': 1800, 'jet_business': 1200,
+        'turboprop_regional': 1100}.get(_kind, 600)

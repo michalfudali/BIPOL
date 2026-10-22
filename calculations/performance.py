@@ -17,6 +17,7 @@ Obliczenia:
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 from calculations.paturski_ml import paturski_project_6_performance
+from calculations.runway import takeoff_distance
 
 
 def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, params: dict):
@@ -140,56 +141,15 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     h_pract = ceilings["h_p_practical_m"]
     h_absolute = ceilings["h_t_theoretical_m"]
 
-    # 8. Start (Fiszdon / Raymer / Paturski)
-    v_lof_ms = 1.15 * vs_to_ms
-    v_2_ms = 1.20 * vs_to_ms
-    mu_roll = 0.03
-    cx0_to = aero["cx0_to"]
-    k_to = aero["k_to"]
-
-    h_wing_m = 0.10 * math.sqrt(S * AR)
-    b_span = math.sqrt(S * AR)
-    phi_ge = ((16.0 * h_wing_m / b_span) ** 2) / (1.0 + (16.0 * h_wing_m / b_span) ** 2)
-
-    v_rms_to = v_lof_ms / math.sqrt(2.0)
-    q_rms_to = 0.5 * RHO0 * (v_rms_to ** 2)
-    cz_roll = 0.25
-    cx_roll = cx0_to + phi_ge * k_to * (cz_roll ** 2)
-    drag_roll = q_rms_to * S * cx_roll
-    lift_roll = q_rms_to * S * cz_roll
-
-    if is_glider:
-        thrust_rms_to = 0.0
-        a_mean_to = 1.0
-        s_g_to = 0.0
-        s_tr_to = 0.0
-        s_climb_to = 0.0
-        s_air_to = 0.0
-        gamma_to_rad = 0.0
-        s_to_15 = 0.0
-    else:
-        thrust_rms_to = T0_avail if engine_type == "jet" else (P0_avail * eta_p) / v_rms_to
-        f_net = thrust_rms_to - drag_roll - mu_roll * (W - lift_roll)
-        a_mean_to = max(0.5, (f_net / m0))
-        s_g_to = (v_lof_ms ** 2) / (2.0 * a_mean_to)
-
-        v_tr_ms = 1.175 * vs_to_ms
-        r_tr = (v_tr_ms ** 2) / (G0 * 0.15)
-        thrust_climb = T0_avail if engine_type == "jet" else (P0_avail * eta_p) / v_2_ms
-        drag_climb = 0.5 * RHO0 * (v_2_ms ** 2) * S * (cx0_to + k_to * ((ws / (0.5 * RHO0 * (v_2_ms ** 2))) ** 2))
-        sin_gamma = max(0.015, (thrust_climb - drag_climb) / W)
-        gamma_to_rad = math.asin(min(0.35, sin_gamma))
-        h_tr = r_tr * (1.0 - math.cos(gamma_to_rad))
-        s_tr_to = r_tr * math.sin(gamma_to_rad)
-
-        if h_tr >= 15.0:
-            s_climb_to = 0.0
-            gamma_to_rad = math.acos(max(0.0, 1.0 - 15.0 / r_tr))
-            s_air_to = r_tr * math.sin(gamma_to_rad)
-        else:
-            s_climb_to = (15.0 - h_tr) / math.tan(gamma_to_rad)
-            s_air_to = s_tr_to + s_climb_to
-        s_to_15 = s_g_to + s_air_to
+    # 8. Full take-off distance; same model as the matching chart.
+    v_lof_ms, v_2_ms = 1.15 * vs_to_ms, 1.20 * vs_to_ms
+    k_to = aero['k_to']
+    phi_ge = 1.6**2 / (1 + 1.6**2)
+    takeoff = takeoff_distance(ws, cz_max_to, aero['cx0_to'], k_to, engine_type,
+        (dp.get('tw') if engine_type == 'jet' else dp.get('pw')) or 0.,
+        eta_p, float(params.get('prop_eff_to', .65)))
+    takeoff = {key: round(value, 1) if isinstance(value, float) else value
+               for key, value in takeoff.items()}
 
     # 9. Lądowanie (Fiszdon / Raymer)
     v_app_ms = 1.30 * vs_lnd_ms
@@ -257,14 +217,7 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
             "time_to_service_ceiling_min": ceilings.get("t_hp_climb_to_practical_ceiling_min", 0.0),
             "model_upper_limit_m": 20000
         },
-        "takeoff": {
-            "ground_roll_m": round(s_g_to, 1),
-            "transition_m": round(s_tr_to, 1),
-            "climb_to_15m_m": round(s_climb_to, 1),
-            "air_distance_m": round(s_air_to, 1),
-            "climb_angle_deg": round(math.degrees(gamma_to_rad), 1),
-            "distance_to_15m": round(s_to_15, 1)
-        },
+        "takeoff": takeoff,
         "landing": {
             "air_approach_m": round(s_air_lnd, 1),
             "free_roll_m": round(s_free_lnd, 1),

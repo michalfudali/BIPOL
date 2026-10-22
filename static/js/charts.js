@@ -50,7 +50,7 @@ function drawMatchingChart(canvasId, sizing) {
   const isJet = sizing.engine_type === 'jet';
   const allY = [...sizing.curve_takeoff, ...sizing.curve_climb, ...sizing.curve_cruise];
   const yMin = 0;
-  const yMax = Math.max(...allY) * 1.15;
+  const yMax = Math.max(1, ...allY.filter(Number.isFinite)) * 1.15;
   
   function toX(val) { return pad.left + ((val - xMin) / (xMax - xMin)) * plotW; }
   function toY(val) { return pad.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH; }
@@ -103,16 +103,19 @@ function drawMatchingChart(canvasId, sizing) {
     ctx.strokeStyle = color;
     ctx.lineWidth = 2.2;
     ctx.beginPath();
+    let pen = false;
     wsVals.forEach((ws, idx) => {
+      if(!Number.isFinite(yArr[idx])) {pen=false;return;}
       const x = toX(ws);
       const y = toY(yArr[idx]);
-      if (idx === 0) ctx.moveTo(x, y);
+      if (!pen) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
+      pen=true;
     });
     ctx.stroke();
   }
   
-  drawLine(sizing.curve_takeoff, '#dc2626', 'Rozbieg');
+  drawLine(sizing.curve_takeoff, '#dc2626', sizing.takeoff_basis==='15m'?'Start do 15 m':'Rozbieg');
   drawLine(sizing.curve_climb, '#2563eb', 'Wznoszenie');
   drawLine(sizing.curve_cruise, '#059669', 'Przelot');
   

@@ -5,6 +5,7 @@
 <li><em>BIPOL_2</em>, materiały dydaktyczne BIPOL I, PW. Profil misji, bilans masy i parametryczne szacowanie kosztów.</li>
 <li>Paturski, Z., <em>Mechanika Lotu I — materiały do projektów 2–6</em>, PW. Aerodynamika płata i samolotu, lot ślizgowy, charakterystyki napędu i osiągi.</li>
 <li>Danilecki, S., <em>Konstruowanie samolotów</em>. Materiał udostępniony w zasobach dydaktycznych projektu.</li>
+<li>Wytyczne przekazane na zajęciach BIPOL I, notatki udostępnione przez autora projektu: fotografie IMG20261021122713–IMG20261021122751. Założenia misji, dobór próby, zakres wykresów i forma rysunków.</li>
 {% if 'p1' in selected_sections %}{% set ta=res.bipol_projects.p1.trend_analysis %}{% for source in ta.sources.values() %}<li><a href="{{ source.url }}">{{ source.name }}</a>. {{ source.citation }} Licencja: {{ source.license }}. {{ source.get('attribution','') }}</li>{% endfor %}{% endif %}
 </ol>
 {% if params.get('source_notes') %}<section id="author-sources"><h4>Źródła uzupełniające</h4><p class="author-text">{{ params.source_notes }}</p></section>{% endif %}

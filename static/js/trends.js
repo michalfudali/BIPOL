@@ -4,7 +4,7 @@
   const {escape: esc, format: fmt, csv, filename} = BipolStudio;
   const $ = id => document.getElementById(id);
   const defaults = {trend_source:'all', trend_count:50, trend_engine_count:0, trend_year_min:0, trend_year_max:0,
-    trend_weighting:'family', mission_phase_model:'standard', fuel_reserve_factor:1.06, mission_ld_factor:0.8};
+    trend_weighting:'family', mission_phase_model:'galinski', fuel_reserve_factor:1.06, mission_ld_factor:0.94};
   let result, catalog, catalogPromise, page = 0, selected = new Set(), visible = [];
   const size = 20;
   function download(name, content, type) {
@@ -13,7 +13,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   function syncControls() {
-    for (const [key, fallback] of Object.entries(defaults)) if ($(key)) $(key).value = formBaseParams[key] ?? fallback;
+    for (const [key, fallback] of Object.entries(defaults)) if ($(key)) $(key).value = ['mission_phase_model','mission_ld_factor'].includes(key)?fallback:formBaseParams[key]??fallback;
   }
   function status(message, error = false) {
     $('trendStatus').textContent = message; $('trendStatus').classList.toggle('trend-error', error);
@@ -90,6 +90,9 @@
     const a=res.bipol_projects.p1.trend_analysis,p=res.bipol_projects.p1.preliminary;
     selected=new Set(a.similar_aircraft.map(r=>r.id));
     status('Analiza aktualna.');
+    const review=res.instructor_review;
+    if(review&&$('instructorReview'))$('instructorReview').innerHTML=`<details><summary>Wytyczne prowadzącego: ${review.passed}/${review.total} sprawdzeń</summary><ul>${review.checks.map(c=>`<li><strong>${c.passed?'Spełnione':'Do uzupełnienia'}: ${esc(c.label)}</strong> — ${esc(c.detail)}</li>`).join('')}</ul><p>${review.manual.map(esc).join(' ')}</p></details>`;
+    if($('trendReportPlan'))$('trendReportPlan').innerHTML=a.report_charts.map(c=>`<li>${esc(c.label)} — n=${c.n}${c.n<8?' · uzupełnij dane':''}</li>`).join('');
     $('p1_we_trend').textContent=fmt(a.we_wo_trend,3);$('p1_we_actual').textContent=fmt(a.we_wo_actual,3);
     $('p1_trend_summary').textContent=`Baza: ${a.database_total} pozycji · próba: ${a.selected_n} wariantów / ${a.families_n} rodzin · regresja masowa: n=${a.mass_fit?.n??0}. ${a.warnings[0]||''}`;
     $('trendClassDescription').textContent=`${a.class_label} · napęd ${res.params.engine_type==='jet'?'odrzutowy':res.params.engine_type==='none'?'bez napędu':'śmigłowy'} · masa projektu ${fmt(res.mass.m0,1)} kg.`;
@@ -98,9 +101,9 @@
     $('trendMassStats').innerHTML=`<p class="studio-equation">OEW / MTOW = ${fmt(a.reg_A,4)} · m₀<sup>${fmt(a.reg_C,4)}</sup> · ${fmt(a.k_vs,2)}</p><p>${fitText(a.mass_fit)} · projekt ${fmt(a.we_wo_actual,3)} · trend ${fmt(a.we_wo_trend,3)}</p><p>${esc(a.method)}</p>`;
     const metric=$('trendTimeMetric').value;
     $('trendTimeMetric').innerHTML=a.time_trends.map(t=>`<option value="${esc(t.key)}">${esc(t.label)} [${esc(t.unit)}] · n=${t.available_n}</option>`).join('');
-    $('trendTimeMetric').value=metric||'m0';
+    $('trendTimeMetric').value=metric||'ar';
     const labels={empty_fraction:'OEW / MTOW [−]',ar:'Wydłużenie AR [−]',wing_loading_kg_m2:'Obciążenie powierzchni [kg/m²]',h_tail_area:'Powierzchnia usterzenia poziomego [m²]',v_tail_area:'Powierzchnia usterzenia pionowego [m²]'};
-    $('trendAverages').innerHTML='<div class="trend-table-scroll"><table class="b-table"><thead><tr><th>Parametr</th><th>Średnia ważona</th><th>n</th></tr></thead><tbody>'+Object.entries(a.averages).map(([key,value])=>`<tr><td>${esc(labels[key])}</td><td>${fmt(value.mean,3)}</td><td>${value.n}</td></tr>`).join('')+'</tbody></table></div>';
+    $('trendAverages').innerHTML='<div class="trend-table-scroll"><table class="b-table"><thead><tr><th>Parametr</th><th>Średnia ważona</th><th>n</th></tr></thead><tbody>'+Object.entries(a.averages).map(([key,value])=>`<tr><td>${esc(labels[key]||a.time_trends.find(t=>t.key===key)?.label||key)}</td><td>${fmt(value.mean,3)}</td><td>${value.n}</td></tr>`).join('')+'</tbody></table></div>';
     const turn=p.turn_45,mission=res.mass.mission_assumptions;
     $('trendPreliminary').innerHTML=`<p><strong>Kmax = ${fmt(p.k_max,2)}</strong> · Cx₀ z odwróconego wzoru = ${fmt(p.cx0_from_kmax,4)} · wydłużenie omywane AR/(Swet/S) = ${fmt(p.wetted_aspect_ratio,2)}.</p><div class="trend-table-scroll"><table class="b-table"><thead><tr><th>Warunek analityczny</th><th>Cz</th><th>K</th><th>V TAS [km/h]</th><th>Granica Czmax</th></tr></thead><tbody>${p.operating_points.map(v=>`<tr><td>${esc(v.label)}<small>${esc(v.formula)}</small></td><td>${fmt(v.cl,3)}</td><td>${fmt(v.ld,2)}</td><td>${fmt(v.v_tas_kmh,1)}</td><td>${v.below_stall_limit?'W zakresie':'Punkt nieosiągalny'}</td></tr>`).join('')}</tbody></table></div><p>Wznoszenie: <code>${esc(p.climb.formula)}</code> → minimum T/W = ${fmt(p.climb.tw_lower_bound,4)}.</p><p>Zakręt poziomy 45° przy prędkości przelotowej: n = ${fmt(turn.load_factor,3)}, r = ${fmt(turn.radius_m,0)} m, ω = ${fmt(turn.rate_deg_s,2)} °/s. Wymagany T/W = ${fmt(turn.tw_required,4)}, Cz = ${fmt(turn.cl_required,3)} ${turn.cl_required>res.aerodynamics.cz_max_clean?'— powyżej Czmax; zakręt nieosiągalny.':''}</p><p>Bilans misji: K przelotu = ${fmt(res.mass.ld_cruise_used,2)}, współczynnik rezerwy = ${fmt(mission.reserve_factor,2)}; względna reszta równania masowego = ${fmt(mission.mass_residual_relative*100,5)}% (cel PDF: ≤0,1%).</p><p class="studio-fine-print">${esc(p.limitations)}</p>`;
     $('trendSources').innerHTML=Object.entries(a.sources).map(([id,s])=>`<p><a href="${esc(s.url)}" target="_blank" rel="noopener"><strong>${esc(s.name)}</strong></a><br>${esc(s.citation)}<br>${s.attribution?esc(s.attribution)+'<br>':''}<a href="/download/aircraft/${id}/data">Dane JSON</a> · <a href="/download/aircraft/${id}/license">Licencja ${esc(s.license)}</a></p>`).join('')+`<p class="studio-fine-print">${esc(a.limitations)}</p>`;
@@ -108,8 +111,8 @@
   }
   function exportRows() {
     const a=result.bipol_projects.p1.trend_analysis;
-    const rows=[['Model','Rodzina','Klasa','Rok certyfikacji','MTOW [kg]','OEW [kg]','S [m²]','b [m]','AR','Moc łączna [kW]','Ciąg łączny [kN]','V przelotowa [km/h]','Mach przelotu','Zasięg [km]','Źródło','Lokalizacja danych','Licencja','Definicja masy','Atrybucja']];
-    for(const r of a.similar_aircraft)rows.push([r.model,r.family,r.aircraft_type,r.year,r.m0,r.me,r.s,r.b,r.ar,r.p_kw,r.t_kn,r.v_cruise_kmh,r.cruise_mach,r.range_km,a.sources[r.source_id].url,r.source_locator,a.sources[r.source_id].license,r.empty_mass_definition,a.sources[r.source_id].attribution||a.sources[r.source_id].citation]);
+    const rows=[['Model','Rodzina','Klasa','Rok certyfikacji','MTOW [kg]','OEW [kg]','S [m²]','b [m]','AR','Moc łączna [kW]','Ciąg łączny [kN]','V przelotowa [km/h]','Mach przelotu','Zasięg [km]','m₀/S [kg/m²]','m₀/P [kg/kW]','P/m₀ [kW/kg]','Wznoszenie [m/s]','Całkowity start wg źródła [m]','Całkowite lądowanie wg źródła [m]','Źródło','Lokalizacja danych','Licencja','Definicja masy','Atrybucja']];
+    for(const r of a.similar_aircraft)rows.push([r.model,r.family,r.aircraft_type,r.year,r.m0,r.me,r.s,r.b,r.ar,r.p_kw,r.t_kn,r.v_cruise_kmh,r.cruise_mach,r.range_km,r.wing_loading_kg_m2,r.power_loading_kg_kw,r.specific_power_kw_kg,r.climb_rate_ms,r.takeoff_distance_m,r.landing_distance_m,a.sources[r.source_id].url,r.source_locator,a.sources[r.source_id].license,r.empty_mass_definition,a.sources[r.source_id].attribution||a.sources[r.source_id].citation]);
     return rows;
   }
   document.addEventListener('bipol:project',()=>{syncControls();status('Projekt zmieniony — oczekiwanie na nową analizę.');});
@@ -135,6 +138,33 @@
     $('trendClearSelection').addEventListener('click',()=>{selected.clear();renderCatalog();});
     $('trendPrev').addEventListener('click',()=>{page--;renderCatalog();});$('trendNext').addEventListener('click',()=>{page++;renderCatalog();});
     for(const id of ['trendTimeMetric','trendRelationX','trendRelationY'])$(id).addEventListener('change',renderPlots);
+    $('trendObservationTemplate').addEventListener('click',()=>{
+      if(!result)return;
+      const saved=new Map((result.params.trend_observations||[]).map(r=>[r.id,r]));
+      const fields=['id','model','climb_rate_ms','takeoff_distance_m','landing_distance_m','year','source'];
+      const rows=[fields,...result.bipol_projects.p1.trend_analysis.similar_aircraft.map(r=>fields.map(k=>k==='id'||k==='model'?r[k]:saved.get(r.id)?.[k]??''))];
+      download('uzupelnienia-proby.csv',csv(rows),'text/csv;charset=utf-8');
+    });
+    $('trendObservationFile').addEventListener('change',async event=>{
+      const file=event.target.files[0];if(!file)return;
+      const notice=$('trendObservationStatus');
+      try {
+        if(file.size>1000000)throw new Error('Plik może mieć maksymalnie 1 MB.');
+        const body=new FormData();body.append('file',file);
+        const response=await fetch('/api/trends/import',{method:'POST',body});
+        const data=await response.json();if(!response.ok)throw new Error(data.error);
+        const merged=new Map((formBaseParams.trend_observations||[]).map(r=>[r.id,r]));
+        data.observations.forEach(r=>merged.set(r.id,{...merged.get(r.id),...r}));
+        formBaseParams.trend_observations=[...merged.values()];
+        await performCalculation();
+        notice.textContent=`Wczytano ${data.observations.length} wierszy. Uzupełnienia zapisują się z projektem.`;
+      } catch(error){notice.textContent=error.message;}
+      event.target.value='';
+    });
+    $('trendObservationClear').addEventListener('click',()=>{
+      delete formBaseParams.trend_observations;performCalculation();
+      $('trendObservationStatus').textContent='Przywrócono dane katalogowe.';
+    });
     $('trendExportCsv').addEventListener('click',async()=>{await performCalculation();if(currentResults&&$('openReportBtn').dataset.resultsStale==='false'){result=currentResults;download(`${filename(result.params.name)}-proba-trendow.csv`,csv(exportRows()),'text/csv;charset=utf-8');}});
     $('trendExportJson').addEventListener('click',async()=>{await performCalculation();if(currentResults&&$('openReportBtn').dataset.resultsStale==='false')download(`${filename(currentResults.params.name)}-analiza-trendow.json`,JSON.stringify({params:currentResults.params,analysis:currentResults.bipol_projects.p1},null,2),'application/json');});
   });

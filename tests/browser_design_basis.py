@@ -21,6 +21,9 @@ with sync_playwright() as p:
         step(5);page.locator('#wizFinishBtn').click()
         page.wait_for_function('!document.getElementById("projectWizardBackdrop").classList.contains("active")')
     wizard();page.locator('#wiz_topic').select_option('topic_7')
+    page.locator('#wiz_basis_range_km').fill('800')
+    assert page.locator('#wiz_range_km').input_value()=='800'
+    assert page.locator('#wiz_lock_range_km').is_checked()
     assert page.locator('#wiz_wing_input_mode').input_value()=='span_aspect'
     assert not page.locator('#wiz_wing_area_m2').is_editable()
     page.locator('#wiz_wingspan_m').fill('22');page.locator('#wiz_aspect_ratio').fill('25')
@@ -34,6 +37,12 @@ with sync_playwright() as p:
     assert float(page.locator('#wiz_m_cargo').input_value())==60
     page.locator('#wiz_name').fill('Motoszybowiec 22 m')
     step(2);page.locator('#wiz_range_km').fill('650')
+    assert page.locator('#wiz_basis_range_km').input_value()=='650'
+    page.get_by_role('button',name='Automatycznie zasugeruj typowe osiągi').click()
+    assert page.locator('#wiz_range_km').input_value()=='650'
+    step(1)
+    assert page.locator('#wiz_basis_range_km').input_value()=='650'
+    step(2)
     step(3);page.locator('#wiz_power_input_mode').select_option('fixed');page.locator('#wiz_engine_power_kw').fill('60')
     finish()
     page.wait_for_function('currentResults.params.name==="Motoszybowiec 22 m"')

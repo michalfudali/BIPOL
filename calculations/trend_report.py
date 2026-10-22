@@ -11,6 +11,14 @@ def trend_chart(analysis, mode):
         fit = analysis['mass_fit']
         title, xlabel, ylabel = 'Korelacja masowa', 'MTOW [kg]', 'OEW / MTOW'
         forecast = None
+    elif ':' in mode:
+        xkey, ykey = mode.split(':', 1)
+        trend = next(t for t in analysis['relationships'] if t['x_key'] == xkey and t['y_key'] == ykey)
+        points = [(p['x'], p['y'], p['model']) for p in trend['points']]
+        fit = trend['fit']
+        title = f"{trend['y_label']} a {trend['x_label']}"
+        xlabel, ylabel = f"{trend['x_label']} [{trend['x_unit']}]", f"{trend['y_label']} [{trend['y_unit']}]"
+        forecast = None
     else:
         trend = next(t for t in analysis['time_trends'] if t['key'] == mode)
         points = [(p['x'], p['y'], p['model']) for p in trend['points']]
@@ -18,7 +26,7 @@ def trend_chart(analysis, mode):
         title, xlabel, ylabel = trend['label'], 'Rok certyfikacji', trend['unit']
         forecast = (trend['forecast_year'], trend['forecast']) if trend['forecast_physical'] else None
     if not points:
-        return Markup('<p>Brak kompletnych danych do wykresu.</p>')
+        return Markup('<p class="missing-chart">Brak kompletnych danych źródłowych do tej zależności. Wykres wymaga uzupełnienia próby.</p>')
     xmin, xmax = min(p[0] for p in points), max(p[0] for p in points)
     ymin, ymax = min(p[1] for p in points), max(p[1] for p in points)
     if forecast:
@@ -30,7 +38,8 @@ def trend_chart(analysis, mode):
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 290" role="img" aria-label="{html.escape(title)}" style="width:100%;max-height:290px"><title>{html.escape(title)}</title>']
     for i in range(5):
         xv, yv = xmin+(xmax-xmin)*i/4, ymin+(ymax-ymin)*i/4
-        svg.append(f'<path d="M{x(xv):.2f} 25V240M65 {y(yv):.2f}H620" stroke="#d6e2e6" stroke-dasharray="3 4"/><text x="{x(xv):.2f}" y="260" text-anchor="middle" font-size="11">{xv:.0f}</text><text x="58" y="{y(yv)+4:.2f}" text-anchor="end" font-size="11">{yv:.3g}</text>')
+        xtick = f'{xv:.2f}' if abs(xv) < 10 else f'{xv:.0f}'
+        svg.append(f'<path d="M{x(xv):.2f} 25V240M65 {y(yv):.2f}H620" stroke="#d6e2e6" stroke-dasharray="3 4"/><text x="{x(xv):.2f}" y="260" text-anchor="middle" font-size="11">{xtick.replace(".", ",")}</text><text x="58" y="{y(yv)+4:.2f}" text-anchor="end" font-size="11">{format(yv, ".3g").replace(".", ",")}</text>')
     if fit:
         path = []
         for i in range(51):

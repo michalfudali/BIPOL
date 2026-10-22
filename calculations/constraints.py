@@ -278,7 +278,7 @@ def resolve_and_lock_parameters(params: dict, locked_keys: list = None) -> tuple
     else:
         locked.discard('engine_power_kw')
     if p['engine_type'] == 'none':
-        for key in ('sfc','engine_power_kw','takeoff_run_m','climb_rate_ms'):
+        for key in ('sfc','engine_power_kw','takeoff_run_m','takeoff_distance_m','climb_rate_ms'):
             state(key, 0.0, 'Nie dotyczy lotu bez napędu', ('engine_type',))
         p['engine_location'] = 'none'
         p['power_input_mode'] = 'sized'

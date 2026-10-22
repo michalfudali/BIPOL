@@ -14,6 +14,8 @@ from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
 from calculations.validation import validate_parameters
 from calculations.glide import calculate_glide_polar
+from calculations.runway import refine_takeoff_sizing
+from calculations.instructor import review_coursework
 from calculations.official_topics import validate_topic_geometry
 from calculations.constraints import resolve_and_lock_parameters, finalize_parameter_states, get_initial_constraint_suggestions, WING_PLANFORMS
 
@@ -43,11 +45,13 @@ def run_bipol_project(params: dict):
     geom_res = calculate_geometry(m0, ws, params)
     validate_topic_geometry(params, geom_res)
 
-    finalize_parameter_states(params, param_states, mass_res, sizing_res, geom_res)
 
     # Etap P4: Charakterystyki aerodynamiczne (biegunowe, doskonałość)
     aero_res = calculate_aerodynamics(geom_res, params, m0=m0)
     
+    refine_takeoff_sizing(sizing_res, geom_res, aero_res, params, m0)
+    finalize_parameter_states(params, param_states, mass_res, sizing_res, geom_res)
+
     # Etap P5: Osiągi samolotu (prędkości, wznoszenie, pułap, start, lądowanie)
     perf_res = calculate_performance(m0, geom_res, aero_res, sizing_res, params)
     perf_res["glide"] = calculate_glide_polar(m0, geom_res, aero_res, params["cruise_altitude_m"], params=params)
@@ -82,17 +86,21 @@ def run_bipol_project(params: dict):
         "note": "Bezpieczeństwo przy odejściu na drugi krąg i przewyższenie przeszkód"
     })
     
-    # 3. Zgodność z drogą rozbiegu
-    req_to = float(params.get("takeoff_run_m", 500.0))
-    act_to = perf_res["takeoff"]["ground_roll_m"]
-    checks.append({
-        "parameter": "Długość rozbiegu Sto",
-        "required": f"≤ {req_to} m",
-        "actual": f"{act_to} m",
-        "passed": act_to <= req_to * 1.05,
-        "note": "Wymóg operacyjny dla założonej klasy lotnisk"
-    })
-    
+    # Full distances are not interchangeable with ground roll.
+    if params['engine_type'] != 'none':
+        req_to = params.get('takeoff_distance_m', 0)
+        act_to = perf_res['takeoff']['distance_to_15m']
+        checks.append(dict(parameter='Całkowita długość startu do 15 m',
+            required=f'≤ {req_to:g} m' if req_to else 'Podaj założenie',
+            actual=f'{act_to:g} m' if act_to is not None else 'Start nieosiągalny',
+            passed=bool(req_to and act_to is not None and act_to <= req_to),
+            note='Rozbieg + odcinek powietrzny do wysokości 15 m.'))
+    req_lnd = params.get('landing_distance_m', 0)
+    act_lnd = perf_res['landing']['distance_from_15m']
+    checks.append(dict(parameter='Całkowita długość lądowania znad 15 m',
+        required=f'≤ {req_lnd:g} m' if req_lnd else 'Podaj założenie', actual=f'{act_lnd:g} m',
+        passed=bool(req_lnd and act_lnd <= req_lnd), note='Podejście + wyrównanie + dobieg do zatrzymania.'))
+
     # 4. Zapas stateczności statycznej w skrajnym tylnym położeniu ŚM
     act_sm = balance_res["stability"]["static_margin_aft_pct"]
     checks.append({
@@ -120,7 +128,7 @@ def run_bipol_project(params: dict):
             "note": c["source"] + (" (zalecenie)" if c["severity"] == "warning" else "")
         })
 
-    return {
+    result = {
         "status": "success",
         "params": params,
         "mass": mass_res,
@@ -142,3 +150,6 @@ def run_bipol_project(params: dict):
             "warnings": constraint_warnings
         }
     }
+
+    result["instructor_review"] = review_coursework(result)
+    return result

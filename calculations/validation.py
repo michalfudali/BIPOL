@@ -1,5 +1,6 @@
 """Wspólne wartości wejściowe i walidacja przed uruchomieniem obliczeń."""
 import math
+from calculations.instructor import CRUISE_LD_FACTOR, PASSENGER_WITH_BAG_KG
 
 NUMERIC_LIMITS = {
     "n_pax": (0, 1000), "n_crew": (0, 20), "m_pax": (0, 500),
@@ -7,6 +8,7 @@ NUMERIC_LIMITS = {
     "range_km": (0, 30000), "cruise_altitude_m": (0, 20000),
     "cruise_speed_kmh": (1, 1200), "v_stall_kmh": (1, 400),
     "takeoff_run_m": (0, 10000), "climb_rate_ms": (0, 100),
+    "takeoff_distance_m": (0, 20000), "landing_distance_m": (0, 20000),
     "aspect_ratio": (2, 35), "taper_ratio": (0, 1),
     "sweep_quarter_deg": (-30, 60), "dihedral_deg": (-15, 20),
     "cx0": (0.001, 0.3), "oswald_e": (0.1, 1),
@@ -29,7 +31,7 @@ NUMERIC_LIMITS = {
 
 DEFAULTS = {
     "aircraft_type": "piston_ga", "engine_type": "prop", "engine_location": "nose",
-    "category": "cs23_level2", "n_pax": 4, "n_crew": 1, "m_pax": 80,
+    "category": "cs23_level2", "n_pax": 4, "n_crew": 1, "m_pax": PASSENGER_WITH_BAG_KG,
     "m_bag": 0, "m_cargo": 0, "m_crew_person": 90,
     "range_km": 1200, "cruise_altitude_m": 3000, "cruise_speed_kmh": 250,
     "v_stall_kmh": 100, "takeoff_run_m": 500, "climb_rate_ms": 4,
@@ -41,6 +43,9 @@ DEFAULTS = {
     "flap_span_ratio": 0.60, "flap_chord_ratio": 0.25,
     "aileron_span_ratio": 0.28, "aileron_chord_ratio": 0.22,
     "wing_planform": "trapezoidal", "break_span_ratio": 0.40,
+    "mission_phase_model": "galinski", "mission_ld_factor": CRUISE_LD_FACTOR,
+    "gear_attachment": "fuselage",
+    "takeoff_distance_m": 0, "landing_distance_m": 0,
 }
 
 
@@ -96,10 +101,11 @@ def validate_parameters(data):
     for key in ('trend_count', 'trend_engine_count', 'trend_year_min', 'trend_year_max'):
         if key in p and not float(p[key]).is_integer():
             raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
-    for key, allowed in {'trend_source': ('all', 'fast', 'cado'),
+    for key, allowed in {'trend_source': ('all', 'fast', 'cado', 'motogliders', 'geometry_trends'),
                          'wing_input_mode': ('loading', 'span_aspect', 'span_area', 'area_aspect'),
                          'payload_input_mode': ('seats', 'total'),
                          'power_input_mode': ('sized', 'fixed'),
+                         'gear_attachment': ('fuselage', 'wing'),
                          'trend_weighting': ('family', 'variant'),
                          'mission_phase_model': ('standard', 'galinski'),
                          'flap_type': ('plain', 'split', 'junkers', 'single_slotted', 'fowler', 'double_slotted', 'flaperon'),
@@ -132,4 +138,11 @@ def validate_parameters(data):
         raise ValueError("Pole takeoff_run_m: wymagana skończona liczba od 50 do 10000.")
     if p["cz_max_to"] < p["cz_max_clean"] or p["cz_max_lnd"] < p["cz_max_to"]:
         raise ValueError("Wymagane Cz max: konfiguracja gładka ≤ startowa ≤ lądowania.")
+    # The lecture supersedes the older PDF's 0.8 factor and phase defaults.
+    # Validate submitted data above, then canonicalize the course assumptions.
+    p['mission_ld_factor'] = CRUISE_LD_FACTOR
+    p['mission_phase_model'] = 'galinski'
+    if 'trend_observations' in p:
+        from calculations.trend_observations import validate_observations
+        p['trend_observations'] = validate_observations(p['trend_observations'])
     return p

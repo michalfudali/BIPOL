@@ -2071,7 +2071,7 @@
           <div class="input-row" id="wiz_row_occupants_2">
             <div class="input-group" id="wiz_group_m_pax">
               <label for="wiz_m_pax">Masa 1 osoby z bagażem [kg]:</label>
-              <input step="any" required type="number" id="wiz_m_pax" min="0" max="150" value="100">
+              <input step="any" required type="number" id="wiz_m_pax" min="0" max="150" value="115">
             </div>
             <div class="input-group" id="wiz_group_m_cargo">
               <label for="wiz_m_cargo" id="label_wiz_m_cargo">Dodatkowy ładunek handlowy cargo [kg]:</label>
@@ -2129,10 +2129,10 @@
           </div>
 
           <div class="input-row">
-            <div class="input-group">
+            <div class="input-group" data-param="takeoff_distance_m"><label for="wiz_takeoff_distance_m">Maks. całkowita długość startu [m]</label><input type="number" id="wiz_takeoff_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><div class="input-group" data-param="landing_distance_m"><label for="wiz_landing_distance_m">Maks. całkowita długość lądowania [m]</label><input type="number" id="wiz_landing_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><details class="legacy-runway"><summary>Dodatkowe ograniczenie rozbiegu</summary><div class="input-group">
               <label for="wiz_takeoff_run_m">Wymagana droga rozbiegu Sto [m]:</label>
               <input step="any" required type="number" id="wiz_takeoff_run_m" min="60" max="3000" value="210">
-            </div>
+            </div></details>
             <div class="input-group">
               <label for="wiz_climb_rate_ms">Min. wznoszenie przy ziemi wy [m/s]:</label>
               <input step="any" required type="number" id="wiz_climb_rate_ms" min="1.5" max="30" value="4.1">
@@ -2211,7 +2211,7 @@
 
           <div class="input-group"><label for="wiz_wing_planform">Obrys skrzydła</label><select id="wiz_wing_planform"><option value="trapezoidal">Trapezowy</option><option value="rectangular">Prostokątny</option><option value="compound_trapezoid">Prostokątno-trapezowy</option><option value="elliptical">Eliptyczny</option><option value="swept_trapezoidal">Skośny trapezowy</option></select></div>
           <div class="input-row">
-            <div class="input-group">
+            <div class="input-group"><label for="wiz_gear_attachment">Mocowanie podwozia głównego</label><select id="wiz_gear_attachment"><option value="fuselage">Do kadłuba</option><option value="wing">Do skrzydła</option></select></div><div class="input-group">
               <label for="wiz_wing_config">Układ pionowy skrzydła:</label>
               <select id="wiz_wing_config">
                 <option value="low">Dolnopłat wolnonośny (łatwe chowanie podwozia, bezpieczeństwo)</option>
@@ -2340,12 +2340,12 @@
   <script src="/static/js/studio-core.js?v=1"></script>
   <script src="/static/js/studio-visuals.js?v=1"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
-  <script src="/static/js/charts.js?v=13"></script>
-  <script src="/static/js/app.js?v=17"></script>
+  <script src="/static/js/charts.js?v=14"></script>
+  <script src="/static/js/app.js?v=18"></script>
   <script src="/static/js/constraints-ui.js?v=3"></script>
-  <script src="/static/js/design-basis.js?v=1"></script>
+  <script src="/static/js/design-basis.js?v=2"></script>
   <script src="/static/js/studio.js?v=3"></script>
-  <script src="/static/js/trends.js?v=2"></script>
-  <script src="/static/js/workspace.js?v=1"></script>
+  <script src="/static/js/trends.js?v=3"></script>
+  <script src="/static/js/workspace.js?v=2"></script>
 </body>
 </html>

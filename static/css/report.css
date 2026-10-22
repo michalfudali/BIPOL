@@ -85,6 +85,8 @@ svg .axis-label { font: 12px Arial, sans-serif; fill: #222; }
 .metadata-grid label { display: grid; gap: 4px; }
 .metadata-grid input { width: 100%; padding: 7px; border: 1px solid #aaa; border-radius: 3px; font: inherit; }
 .metadata-status { margin: 8px 0 0; font-size: 13px; }
+.drawing-page { display:none; }
+.missing-chart { padding:12mm 6mm; border:1px solid #aaa; }
 @media screen and (max-width: 850px) {
   .document { width: auto; margin: 12px; padding: 20px; }
   .cover { height: 245mm; }
@@ -95,6 +97,10 @@ svg .axis-label { font: 12px Arial, sans-serif; fill: #222; }
   .equation { font-size: 9pt; }
 }
 @media print {
+  body.print-drawing .document { display:none; }
+  body.print-drawing .drawing-page { display:block; width:190mm; height:270mm; }
+  .drawing-page svg { width:190mm; height:270mm; max-height:none; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  body.plain-drawing .drawing-grid { display:none; }
   html, body { background: white; padding: 0; margin: 0; }
   .no-print { display: none !important; }
   .document { width: auto; margin: 0; padding: 0; box-shadow: none; }

@@ -2,8 +2,8 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const extraKeys = ['wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
-    'wing_area_m2','m_payload','engine_power_kw','wing_planform','dihedral_deg','aileron_type'];
+  const extraKeys = ['gear_attachment','wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
+    'takeoff_distance_m','landing_distance_m','wing_area_m2','m_payload','engine_power_kw','wing_planform','dihedral_deg','aileron_type'];
   const wingSources = {loading:['aspect_ratio'],span_aspect:['wingspan_m','aspect_ratio'],
     span_area:['wingspan_m','wing_area_m2'],area_aspect:['wing_area_m2','aspect_ratio']};
   let wizardBase = {};
@@ -64,13 +64,14 @@
   function propulsion(prefix='') {
     const engine=value(prefix,'engine_type'), none=engine==='none', prop=engine==='prop';
     if (!prop) set(prefix,'power_input_mode','sized');
-    for (const key of ['engine_location','sfc','prop_efficiency','engine_power_kw','power_input_mode','loiter_time_min','prop_eff_to','takeoff_run_m','climb_rate_ms']) {
+    for (const key of ['engine_location','sfc','prop_efficiency','engine_power_kw','power_input_mode','loiter_time_min','prop_eff_to','takeoff_run_m','takeoff_distance_m','climb_rate_ms']) {
       const input=$(prefix+key);if(!input)continue;
+      if(key==='takeoff_run_m')input.closest('.legacy-runway')?.toggleAttribute('hidden',none);
       const hide=none||(!prop&&['prop_efficiency','engine_power_kw','power_input_mode','prop_eff_to'].includes(key));
       const group=input.closest('.input-group'); if(group){group.hidden=hide;group.style.display=hide?'none':'';}
       input.disabled=hide;
-      if(['sfc','takeoff_run_m','climb_rate_ms'].includes(key))input.readOnly=none;
-      if (none&&['sfc','engine_power_kw','takeoff_run_m','climb_rate_ms'].includes(key))input.value=0;
+      if(['sfc','takeoff_run_m','takeoff_distance_m','climb_rate_ms'].includes(key))input.readOnly=none;
+      if (none&&['sfc','engine_power_kw','takeoff_run_m','takeoff_distance_m','climb_rate_ms'].includes(key))input.value=0;
     }
     const loc=$(prefix+'engine_location');
     if (loc) {
@@ -96,6 +97,8 @@
     if(!('wing_area_m2' in p))set('','wing_area_m2',0);
     if(!('wingspan_m' in p))set('','wingspan_m',p.span_limit||0);
     if(!('engine_power_kw' in p))set('','engine_power_kw',0);
+    for(const key of ['takeoff_distance_m','landing_distance_m'])set('',key,p[key]||0);
+    set('','gear_attachment',p.gear_attachment||'fuselage');
     sync();propulsion();
   }
   function openWizard() {

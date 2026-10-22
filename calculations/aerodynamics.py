@@ -66,7 +66,7 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
 
     delta_cz_slat = 0.0
     delta_cx_slat = 0.0
-    if slat_type == "auto_slat":
+    if slat_type in ("auto_slat", "slats_auto"):
         delta_cz_slat = 0.35
         delta_cx_slat = 0.008
     elif slat_type == "fixed_slot":

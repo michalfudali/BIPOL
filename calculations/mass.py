@@ -6,6 +6,7 @@ oraz szczegółowy rozkład mas składowych według zaleceń ZSiS MEiL PW / E. T
 import math
 from calculations.atmosphere import isa_atmosphere, G0
 from calculations.polish_law import is_unmanned, resolve_category, SUBCATEGORIES
+from calculations.instructor import CRUISE_LD_FACTOR, MIN_MASS_ITERATIONS
 
 def calculate_mass_sizing(params: dict):
     """
@@ -63,8 +64,8 @@ def calculate_mass_sizing(params: dict):
 
     k_max_theo = 0.5 * math.sqrt((math.pi * AR * oswald_e) / max(0.008, cx0_eff))
     if "aspect_ratio" in params and "cx0" in params:
-        # BIPOL_1, s. 5: konserwatywne K przelotu = 0.8 Kmax; osobno od optimum zasięgu.
-        ld_cr = round(k_max_theo * float(params.get('mission_ld_factor', 0.8)), 2)
+        # Lecture note IMG20261021122751: K_cr = 0.94 Kmax, superseding 0.8 in the PDF.
+        ld_cr = k_max_theo * float(params.get('mission_ld_factor', CRUISE_LD_FACTOR))
     else:
         ld_cr = float(params.get("ld_cruise", 12.0))
     
@@ -101,7 +102,7 @@ def calculate_mass_sizing(params: dict):
         # Etap 3: Wznoszenie (Climb)
         ff_climb = 0.988 if engine_type == "prop" else 0.978
         ff_landing = 0.995
-        if params.get('mission_phase_model', 'standard') == 'galinski':
+        if params.get('mission_phase_model', 'galinski') == 'galinski':
             # BIPOL_1, pp. 4–6: 0.970–0.975 for start and landing.
             # Treat start/taxi as one phase so it is not counted twice.
             ff_warmup, ff_takeoff, ff_landing = 1.0, 0.975, 0.975
@@ -194,8 +195,8 @@ def calculate_mass_sizing(params: dict):
         empty_fraction = empty_share(m0)
         residual = m0 * (1 - fuel_fraction - empty_fraction) - useful_mass
         history.append({"iter": i + 1, "m0": round(m0, 1),
-                        "empty_fraction": round(empty_fraction, 4), "diff": round(abs(residual), 2)})
-        if abs(residual) < 0.001:
+                        "empty_fraction": round(empty_fraction, 4), "diff": round(abs(residual), 6)})
+        if i + 1 >= MIN_MASS_ITERATIONS and abs(residual) < 0.001:
             break
         if residual > 0:
             high = m0
@@ -250,6 +251,21 @@ def calculate_mass_sizing(params: dict):
     
     # Masa bez paliwa (Zero Fuel Weight)
     m_zfw = m_empty + m_payload + m_crew
+
+    # Passenger/cargo/fuel trade at fixed MTOW (lecture note IMG...122735).
+    # This is a mass-limited envelope; tank volume is not known at this stage.
+    payload_range = []
+    if engine_type != 'none' and ac_type != 'glider' and n_pax:
+        other_phases = ff_warmup * ff_takeoff * ff_climb * ff_descent * ff_loiter * ff_landing
+        range_scale = (v_cr_ms / c_t_sec if engine_type == 'jet' else eta_p / (c_p * G0)) * ld_cr
+        for passengers in sorted({n_pax, max(0, n_pax - 1), n_pax // 2, 0}, reverse=True):
+            payload = passengers * (m_pax + m_bag) + m_cargo
+            fuel = m0 - m_empty - m_crew - payload
+            cruise_fraction = (1 - fuel / (m0 * f_trapped)) / other_phases
+            available_range = (-range_scale * math.log(cruise_fraction) / 1000
+                               if 0 < cruise_fraction <= 1 else None)
+            payload_range.append({'passengers': passengers, 'payload_kg': round(payload, 1),
+                                  'fuel_kg': round(fuel, 1), 'range_km': round(available_range, 1) if available_range is not None else None})
     
     return {
         "m0": round(m0, 1),
@@ -266,11 +282,12 @@ def calculate_mass_sizing(params: dict):
         "payload_fraction": round(m_payload / m0, 4),
         "ld_cruise_used": round(ld_cr, 2),
         "mission_assumptions": {
-            "phase_model": params.get('mission_phase_model', 'standard'),
+            "phase_model": params.get('mission_phase_model', 'galinski'),
             "reserve_factor": float(params.get('fuel_reserve_factor', 1.06)),
-            "ld_factor": float(params.get('mission_ld_factor', 0.8)),
+            "ld_factor": float(params.get('mission_ld_factor', CRUISE_LD_FACTOR)),
+            "k_max_preliminary": k_max_theo,
             "mass_residual_relative": abs(m0 - m_empty - m_fuel - m_payload - m_crew) / m0,
-            "source": "BIPOL_1.pdf, s. 4–6, wzory (4)–(5)",
+            "source": "BIPOL_1.pdf, s. 4–6; wytyczne prowadzącego, IMG20261021122751.jpg (K=0,94 Kmax)",
             "note": "Metoda proporcji: bez zrzutu ładunku. Start/wznoszenie/zniżanie/lądowanie są przybliżeniami. Krążenie jest oddzielną fazą; współczynnik 1,06 dodaje rezerwę i paliwo nieużywalne.",
         },
         "fuel_fractions_detail": {
@@ -284,5 +301,6 @@ def calculate_mass_sizing(params: dict):
             "total_mff": round(m_ff, 4)
         },
         "breakdown": mass_components,
-        "iterations": history
+        "iterations": history,
+        "payload_range": payload_range
     }

@@ -28,6 +28,7 @@
     "v_max": null,
     "range_km": 12400.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -60,6 +61,7 @@
     "v_max": null,
     "range_km": 12400.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -92,6 +94,7 @@
     "v_max": null,
     "range_km": 12400.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -124,6 +127,7 @@
     "v_max": null,
     "range_km": 13500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -156,6 +160,7 @@
     "v_max": null,
     "range_km": 13500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -188,6 +193,7 @@
     "v_max": null,
     "range_km": 13500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -220,6 +226,7 @@
     "v_max": null,
     "range_km": 16670.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -252,6 +259,7 @@
     "v_max": null,
     "range_km": 16670.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -284,6 +292,7 @@
     "v_max": null,
     "range_km": 14450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -316,6 +325,7 @@
     "v_max": null,
     "range_km": 14450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -348,6 +358,7 @@
     "v_max": null,
     "range_km": 15927.0,
     "takeoff_m": 2800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -380,6 +391,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": 2800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -412,6 +424,7 @@
     "v_max": null,
     "range_km": 15387.443453,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -444,6 +457,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -476,6 +490,7 @@
     "v_max": null,
     "range_km": 3700.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -508,6 +523,7 @@
     "v_max": null,
     "range_km": 3700.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -540,6 +556,7 @@
     "v_max": null,
     "range_km": 3500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -572,6 +589,7 @@
     "v_max": null,
     "range_km": 3500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -604,6 +622,7 @@
     "v_max": null,
     "range_km": 3500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -636,6 +655,7 @@
     "v_max": null,
     "range_km": 3750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -668,6 +688,7 @@
     "v_max": null,
     "range_km": 5125.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -700,6 +721,7 @@
     "v_max": null,
     "range_km": 5125.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -732,6 +754,7 @@
     "v_max": null,
     "range_km": 5125.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -764,6 +787,7 @@
     "v_max": null,
     "range_km": 5125.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -796,6 +820,7 @@
     "v_max": null,
     "range_km": 5000.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -828,6 +853,7 @@
     "v_max": null,
     "range_km": 5000.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -860,6 +886,7 @@
     "v_max": null,
     "range_km": 6500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -892,6 +919,7 @@
     "v_max": null,
     "range_km": 6500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -924,6 +952,7 @@
     "v_max": null,
     "range_km": 5750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -956,6 +985,7 @@
     "v_max": null,
     "range_km": 5750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -988,6 +1018,7 @@
     "v_max": null,
     "range_km": 6500.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1020,6 +1051,7 @@
     "v_max": null,
     "range_km": 5750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1052,6 +1084,7 @@
     "v_max": null,
     "range_km": 6250.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1084,6 +1117,7 @@
     "v_max": null,
     "range_km": 5750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1116,6 +1150,7 @@
     "v_max": null,
     "range_km": 6250.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1148,6 +1183,7 @@
     "v_max": null,
     "range_km": 6250.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1180,6 +1216,7 @@
     "v_max": null,
     "range_km": 5130.0,
     "takeoff_m": 1480.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1212,6 +1249,7 @@
     "v_max": null,
     "range_km": 6410.0,
     "takeoff_m": 1640.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1244,6 +1282,7 @@
     "v_max": null,
     "range_km": 6410.0,
     "takeoff_m": 1640.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1276,6 +1315,7 @@
     "v_max": null,
     "range_km": 5180.0,
     "takeoff_m": 1410.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1308,6 +1348,7 @@
     "v_max": null,
     "range_km": 5180.0,
     "takeoff_m": 1410.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1340,6 +1381,7 @@
     "v_max": null,
     "range_km": 8340.0,
     "takeoff_m": 1860.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1372,6 +1414,7 @@
     "v_max": null,
     "range_km": 7960.0,
     "takeoff_m": 2110.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1404,6 +1447,7 @@
     "v_max": null,
     "range_km": 7790.0,
     "takeoff_m": 1840.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1436,6 +1480,7 @@
     "v_max": null,
     "range_km": 7790.0,
     "takeoff_m": 1840.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1468,6 +1513,7 @@
     "v_max": null,
     "range_km": 9540.0,
     "takeoff_m": 2660.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1500,6 +1546,7 @@
     "v_max": null,
     "range_km": 5741.2,
     "takeoff_m": 2150.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1532,6 +1579,7 @@
     "v_max": null,
     "range_km": 5741.2,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1564,6 +1612,7 @@
     "v_max": null,
     "range_km": 5556.0,
     "takeoff_m": 2250.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1596,6 +1645,7 @@
     "v_max": null,
     "range_km": 5556.0,
     "takeoff_m": 1850.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1628,6 +1678,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 2320.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1660,6 +1711,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1960.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1692,6 +1744,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1724,6 +1777,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1756,6 +1810,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1788,6 +1843,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1820,6 +1876,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1910.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1852,6 +1909,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1640.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1884,6 +1942,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1916,6 +1975,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1948,6 +2008,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -1980,6 +2041,7 @@
     "v_max": null,
     "range_km": 9817.0,
     "takeoff_m": 1840.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2012,6 +2074,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2044,6 +2107,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2076,6 +2140,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2108,6 +2173,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2140,6 +2206,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2172,6 +2239,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2204,6 +2272,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2236,6 +2305,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2268,6 +2338,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2300,6 +2371,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2332,6 +2404,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2364,6 +2437,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2396,6 +2470,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2428,6 +2503,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1650.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2460,6 +2536,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2492,6 +2569,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2524,6 +2602,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2240.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2556,6 +2635,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2588,6 +2668,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2620,6 +2701,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2652,6 +2734,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2240.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2684,6 +2767,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 2240.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2716,6 +2800,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2748,6 +2833,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2780,6 +2866,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2812,6 +2899,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2844,6 +2932,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2876,6 +2965,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2908,6 +2998,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2940,6 +3031,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -2972,6 +3064,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3004,6 +3097,7 @@
     "v_max": null,
     "range_km": 4444.8,
     "takeoff_m": 1930.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3036,6 +3130,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3068,6 +3163,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3100,6 +3196,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3132,6 +3229,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3164,6 +3262,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3196,6 +3295,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3228,6 +3328,7 @@
     "v_max": null,
     "range_km": 13450.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3260,6 +3361,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3292,6 +3394,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3324,6 +3427,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3356,6 +3460,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3388,6 +3493,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3420,6 +3526,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3452,6 +3559,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3484,6 +3592,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3516,6 +3625,7 @@
     "v_max": null,
     "range_km": 11750.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3548,6 +3658,7 @@
     "v_max": null,
     "range_km": 4000.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3580,6 +3691,7 @@
     "v_max": null,
     "range_km": 13900.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3612,6 +3724,7 @@
     "v_max": null,
     "range_km": 12130.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3644,6 +3757,7 @@
     "v_max": null,
     "range_km": 6667.2,
     "takeoff_m": 2500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3676,6 +3790,7 @@
     "v_max": null,
     "range_km": 7037.6,
     "takeoff_m": 3200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3708,6 +3823,7 @@
     "v_max": null,
     "range_km": 8519.2,
     "takeoff_m": 3300.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3740,6 +3856,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": 3400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3772,6 +3889,7 @@
     "v_max": null,
     "range_km": 5556.0,
     "takeoff_m": 3400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3804,6 +3922,7 @@
     "v_max": null,
     "range_km": 5556.0,
     "takeoff_m": 3400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3836,6 +3955,7 @@
     "v_max": null,
     "range_km": 2645.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3868,6 +3988,7 @@
     "v_max": null,
     "range_km": 3815.0,
     "takeoff_m": 2400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3900,6 +4021,7 @@
     "v_max": null,
     "range_km": 3055.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3932,6 +4054,7 @@
     "v_max": null,
     "range_km": 3148.4,
     "takeoff_m": 2400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3964,6 +4087,7 @@
     "v_max": null,
     "range_km": 3518.8,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -3996,6 +4120,7 @@
     "v_max": null,
     "range_km": 3889.2,
     "takeoff_m": 2400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4028,6 +4153,7 @@
     "v_max": null,
     "range_km": 2778.0,
     "takeoff_m": 2550.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4060,6 +4186,7 @@
     "v_max": null,
     "range_km": 2407.6,
     "takeoff_m": 2900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4092,6 +4219,7 @@
     "v_max": null,
     "range_km": 2963.2,
     "takeoff_m": 2500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4124,6 +4252,7 @@
     "v_max": null,
     "range_km": 3333.6,
     "takeoff_m": 2600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4156,6 +4285,7 @@
     "v_max": null,
     "range_km": 2037.2,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4188,6 +4318,7 @@
     "v_max": null,
     "range_km": 1296.4,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4220,6 +4351,7 @@
     "v_max": null,
     "range_km": 2685.4,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4252,6 +4384,7 @@
     "v_max": null,
     "range_km": 3028.02,
     "takeoff_m": 1981.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4284,6 +4417,7 @@
     "v_max": null,
     "range_km": 3531.764,
     "takeoff_m": 2240.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4316,6 +4450,7 @@
     "v_max": null,
     "range_km": 2620.58,
     "takeoff_m": 1792.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4348,6 +4483,7 @@
     "v_max": null,
     "range_km": 3704.0,
     "takeoff_m": 1300.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4380,6 +4516,7 @@
     "v_max": null,
     "range_km": 7222.8,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4412,6 +4549,7 @@
     "v_max": null,
     "range_km": 6389.4,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4444,6 +4582,7 @@
     "v_max": null,
     "range_km": 6296.8,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4476,6 +4615,7 @@
     "v_max": null,
     "range_km": 6111.6,
     "takeoff_m": 1800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4508,6 +4648,7 @@
     "v_max": null,
     "range_km": 9260.0,
     "takeoff_m": 2300.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4540,6 +4681,7 @@
     "v_max": null,
     "range_km": 5185.6,
     "takeoff_m": 2400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4572,6 +4714,7 @@
     "v_max": null,
     "range_km": 5000.0,
     "takeoff_m": 2750.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4604,6 +4747,7 @@
     "v_max": null,
     "range_km": 8704.4,
     "takeoff_m": 2000.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4636,6 +4780,7 @@
     "v_max": null,
     "range_km": 10186.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4668,6 +4813,7 @@
     "v_max": null,
     "range_km": 6482.0,
     "takeoff_m": 2450.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4700,6 +4846,7 @@
     "v_max": null,
     "range_km": 5926.4,
     "takeoff_m": 3200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4732,6 +4879,7 @@
     "v_max": null,
     "range_km": 7408.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4764,6 +4912,7 @@
     "v_max": null,
     "range_km": 9815.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4796,6 +4945,7 @@
     "v_max": null,
     "range_km": 2963.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4828,6 +4978,7 @@
     "v_max": null,
     "range_km": 3333.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4860,6 +5011,7 @@
     "v_max": null,
     "range_km": 9815.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4892,6 +5044,7 @@
     "v_max": null,
     "range_km": 9630.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4924,6 +5077,7 @@
     "v_max": null,
     "range_km": 9815.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4956,6 +5110,7 @@
     "v_max": null,
     "range_km": 10186.0,
     "takeoff_m": 3400.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -4988,6 +5143,7 @@
     "v_max": null,
     "range_km": 12038.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5020,6 +5176,7 @@
     "v_max": null,
     "range_km": 9260.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5052,6 +5209,7 @@
     "v_max": null,
     "range_km": 9260.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5084,6 +5242,7 @@
     "v_max": null,
     "range_km": 11112.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5116,6 +5275,7 @@
     "v_max": null,
     "range_km": 11112.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5148,6 +5308,7 @@
     "v_max": null,
     "range_km": 11482.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5180,6 +5341,7 @@
     "v_max": null,
     "range_km": 9260.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5212,6 +5374,7 @@
     "v_max": null,
     "range_km": 11482.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5244,6 +5407,7 @@
     "v_max": null,
     "range_km": 10741.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5276,6 +5440,7 @@
     "v_max": null,
     "range_km": 10926.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5308,6 +5473,7 @@
     "v_max": null,
     "range_km": 11482.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5340,6 +5506,7 @@
     "v_max": null,
     "range_km": 11482.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5372,6 +5539,7 @@
     "v_max": null,
     "range_km": 11482.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5404,6 +5572,7 @@
     "v_max": null,
     "range_km": 10741.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5436,6 +5605,7 @@
     "v_max": null,
     "range_km": 10926.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5468,6 +5638,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5500,6 +5671,7 @@
     "v_max": null,
     "range_km": 7778.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5532,6 +5704,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5564,6 +5737,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5596,6 +5770,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5628,6 +5803,7 @@
     "v_max": null,
     "range_km": 11112.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5660,6 +5836,7 @@
     "v_max": null,
     "range_km": 10186.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5692,6 +5869,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5724,6 +5902,7 @@
     "v_max": null,
     "range_km": 11260.0,
     "takeoff_m": 2815.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5756,6 +5935,7 @@
     "v_max": null,
     "range_km": 11250.0,
     "takeoff_m": 2815.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5788,6 +5968,7 @@
     "v_max": null,
     "range_km": 11030.0,
     "takeoff_m": 2830.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5820,6 +6001,7 @@
     "v_max": null,
     "range_km": 10741.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5852,6 +6034,7 @@
     "v_max": null,
     "range_km": 10741.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5884,6 +6067,7 @@
     "v_max": null,
     "range_km": 10741.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5916,6 +6100,7 @@
     "v_max": null,
     "range_km": 13334.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5948,6 +6133,7 @@
     "v_max": null,
     "range_km": 5870.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -5980,6 +6166,7 @@
     "v_max": null,
     "range_km": 4270.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6012,6 +6199,7 @@
     "v_max": null,
     "range_km": 13880.0,
     "takeoff_m": 3320.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6044,6 +6232,7 @@
     "v_max": null,
     "range_km": 14000.0,
     "takeoff_m": 3260.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6076,6 +6265,7 @@
     "v_max": null,
     "range_km": 14816.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6108,6 +6298,7 @@
     "v_max": null,
     "range_km": 9220.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6140,6 +6331,7 @@
     "v_max": null,
     "range_km": 9230.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6172,6 +6364,7 @@
     "v_max": null,
     "range_km": 11667.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6204,6 +6397,7 @@
     "v_max": null,
     "range_km": 2000.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6236,6 +6430,7 @@
     "v_max": null,
     "range_km": 14816.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6268,6 +6463,7 @@
     "v_max": null,
     "range_km": 13890.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6300,6 +6496,7 @@
     "v_max": null,
     "range_km": 4200.0,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6332,6 +6529,7 @@
     "v_max": null,
     "range_km": 4550.0,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6364,6 +6562,7 @@
     "v_max": null,
     "range_km": 7037.0,
     "takeoff_m": 2500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6396,6 +6595,7 @@
     "v_max": null,
     "range_km": 6295.0,
     "takeoff_m": 2635.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6428,6 +6628,7 @@
     "v_max": null,
     "range_km": 5910.0,
     "takeoff_m": 2605.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6460,6 +6661,7 @@
     "v_max": null,
     "range_km": 3704.0,
     "takeoff_m": 1500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6492,6 +6694,7 @@
     "v_max": null,
     "range_km": 7223.0,
     "takeoff_m": 1800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6524,6 +6727,7 @@
     "v_max": null,
     "range_km": 7778.0,
     "takeoff_m": 2200.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6556,6 +6760,7 @@
     "v_max": null,
     "range_km": 12223.0,
     "takeoff_m": 2900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6588,6 +6793,7 @@
     "v_max": null,
     "range_km": 7408.0,
     "takeoff_m": 2750.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6620,6 +6826,7 @@
     "v_max": null,
     "range_km": 8590.0,
     "takeoff_m": 2285.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6652,6 +6859,7 @@
     "v_max": null,
     "range_km": 10600.0,
     "takeoff_m": 2710.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6684,6 +6892,7 @@
     "v_max": null,
     "range_km": 10186.0,
     "takeoff_m": 2800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6716,6 +6925,7 @@
     "v_max": null,
     "range_km": 11112.0,
     "takeoff_m": 2800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6748,6 +6958,7 @@
     "v_max": null,
     "range_km": 11112.0,
     "takeoff_m": 2800.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6780,6 +6991,7 @@
     "v_max": null,
     "range_km": 10185.0,
     "takeoff_m": 3290.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6812,6 +7024,7 @@
     "v_max": null,
     "range_km": 10080.0,
     "takeoff_m": 3320.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6844,6 +7057,7 @@
     "v_max": null,
     "range_km": 9500.0,
     "takeoff_m": 2500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6876,6 +7090,7 @@
     "v_max": null,
     "range_km": 12000.0,
     "takeoff_m": 3000.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6908,6 +7123,7 @@
     "v_max": null,
     "range_km": 9565.0,
     "takeoff_m": 2575.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6940,6 +7156,7 @@
     "v_max": null,
     "range_km": 10675.0,
     "takeoff_m": 1600.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -6972,6 +7189,7 @@
     "v_max": null,
     "range_km": 9700.0,
     "takeoff_m": 2500.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7004,6 +7222,7 @@
     "v_max": null,
     "range_km": 10785.0,
     "takeoff_m": 2560.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7036,6 +7255,7 @@
     "v_max": null,
     "range_km": 11165.0,
     "takeoff_m": 3595.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7068,6 +7288,7 @@
     "v_max": null,
     "range_km": 10675.0,
     "takeoff_m": 3290.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7100,6 +7321,7 @@
     "v_max": null,
     "range_km": 11120.0,
     "takeoff_m": 3730.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7132,6 +7354,7 @@
     "v_max": null,
     "range_km": 16045.0,
     "takeoff_m": 2955.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7164,6 +7387,7 @@
     "v_max": null,
     "range_km": 14685.0,
     "takeoff_m": 3215.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7196,6 +7420,7 @@
     "v_max": null,
     "range_km": 15186.0,
     "takeoff_m": 3108.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7228,6 +7453,7 @@
     "v_max": null,
     "range_km": 13620.0,
     "takeoff_m": 3048.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7260,6 +7486,7 @@
     "v_max": null,
     "range_km": 14140.0,
     "takeoff_m": 3018.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7292,6 +7519,7 @@
     "v_max": null,
     "range_km": 11910.0,
     "takeoff_m": 3018.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7324,6 +7552,7 @@
     "v_max": null,
     "range_km": 2592.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7356,6 +7585,7 @@
     "v_max": null,
     "range_km": 4389.24,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7388,6 +7618,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7420,6 +7651,7 @@
     "v_max": null,
     "range_km": 2666.88,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7452,6 +7684,7 @@
     "v_max": null,
     "range_km": 4481.84,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7484,6 +7717,7 @@
     "v_max": null,
     "range_km": 4315.16,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7516,6 +7750,7 @@
     "v_max": null,
     "range_km": 8889.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7548,6 +7783,7 @@
     "v_max": null,
     "range_km": 5741.2,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7580,6 +7816,7 @@
     "v_max": null,
     "range_km": 4241.08,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7612,6 +7849,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7644,6 +7882,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7676,6 +7915,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7708,6 +7948,7 @@
     "v_max": null,
     "range_km": 3555.84,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7740,6 +7981,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7772,6 +8014,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7804,6 +8047,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7836,6 +8080,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7868,6 +8113,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7900,6 +8146,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7932,6 +8179,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7964,6 +8212,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -7996,6 +8245,7 @@
     "v_max": null,
     "range_km": 5278.0,
     "takeoff_m": 1615.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8028,6 +8278,7 @@
     "v_max": null,
     "range_km": 4815.0,
     "takeoff_m": 1805.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8060,6 +8311,7 @@
     "v_max": null,
     "range_km": 3889.0,
     "takeoff_m": 1151.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8092,6 +8344,7 @@
     "v_max": null,
     "range_km": 3334.0,
     "takeoff_m": 1151.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8124,6 +8377,7 @@
     "v_max": null,
     "range_km": 3982.0,
     "takeoff_m": 1266.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8156,6 +8410,7 @@
     "v_max": null,
     "range_km": 3458.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8188,6 +8443,7 @@
     "v_max": null,
     "range_km": 4370.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8220,6 +8476,7 @@
     "v_max": null,
     "range_km": 4537.0,
     "takeoff_m": 1267.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8252,6 +8509,7 @@
     "v_max": null,
     "range_km": 4445.0,
     "takeoff_m": 1267.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8284,6 +8542,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8316,6 +8575,7 @@
     "v_max": null,
     "range_km": 4370.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8348,6 +8608,7 @@
     "v_max": null,
     "range_km": 4260.0,
     "takeoff_m": 1432.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8380,6 +8641,7 @@
     "v_max": null,
     "range_km": 3704.0,
     "takeoff_m": 1432.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8412,6 +8674,7 @@
     "v_max": null,
     "range_km": 4334.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8444,6 +8707,7 @@
     "v_max": null,
     "range_km": 2409.0,
     "takeoff_m": 1320.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8476,6 +8740,7 @@
     "v_max": null,
     "range_km": 3243.0,
     "takeoff_m": 1330.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8508,6 +8773,7 @@
     "v_max": null,
     "range_km": 3741.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8540,6 +8806,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8572,6 +8839,7 @@
     "v_max": null,
     "range_km": 2130.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8604,6 +8872,7 @@
     "v_max": null,
     "range_km": 2364.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8636,6 +8905,7 @@
     "v_max": null,
     "range_km": 2224.0,
     "takeoff_m": 1410.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8668,6 +8938,7 @@
     "v_max": null,
     "range_km": 2873.0,
     "takeoff_m": 1380.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8700,6 +8971,7 @@
     "v_max": null,
     "range_km": 2973.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8732,6 +9004,7 @@
     "v_max": null,
     "range_km": 2241.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8764,6 +9037,7 @@
     "v_max": null,
     "range_km": 2354.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8796,6 +9070,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8828,6 +9103,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8860,6 +9136,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8892,6 +9169,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8924,6 +9202,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8956,6 +9235,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -8988,6 +9268,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9020,6 +9301,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9052,6 +9334,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9084,6 +9367,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9116,6 +9400,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9148,6 +9433,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9180,6 +9466,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9212,6 +9499,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9244,6 +9532,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9276,6 +9565,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9308,6 +9598,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9340,6 +9631,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9372,6 +9664,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9404,6 +9697,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9436,6 +9730,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9468,6 +9763,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9500,6 +9796,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9532,6 +9829,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9564,6 +9862,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9596,6 +9895,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9628,6 +9928,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9660,6 +9961,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9692,6 +9994,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9724,6 +10027,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9756,6 +10060,7 @@
     "v_max": null,
     "range_km": 7778.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9788,6 +10093,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9820,6 +10126,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9852,6 +10159,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9884,6 +10192,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9916,6 +10225,7 @@
     "v_max": null,
     "range_km": 5556.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9948,6 +10258,7 @@
     "v_max": null,
     "range_km": 8704.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -9980,6 +10291,7 @@
     "v_max": null,
     "range_km": 5926.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10012,6 +10324,7 @@
     "v_max": null,
     "range_km": 4259.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10044,6 +10357,7 @@
     "v_max": null,
     "range_km": 9630.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10076,6 +10390,7 @@
     "v_max": null,
     "range_km": 5926.4,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10108,6 +10423,7 @@
     "v_max": null,
     "range_km": 7408.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10140,6 +10456,7 @@
     "v_max": null,
     "range_km": 4259.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10172,6 +10489,7 @@
     "v_max": null,
     "range_km": 6482.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10204,6 +10522,7 @@
     "v_max": null,
     "range_km": 5370.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10236,6 +10555,7 @@
     "v_max": null,
     "range_km": 9815.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10268,6 +10588,7 @@
     "v_max": null,
     "range_km": 7222.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10300,6 +10621,7 @@
     "v_max": null,
     "range_km": 8334.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10332,6 +10654,7 @@
     "v_max": null,
     "range_km": 5370.8,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10364,6 +10687,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10396,6 +10720,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10428,6 +10753,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10460,6 +10786,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10492,6 +10819,7 @@
     "v_max": null,
     "range_km": 2407.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10524,6 +10852,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10556,6 +10885,7 @@
     "v_max": null,
     "range_km": 2778.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10588,6 +10918,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10620,6 +10951,7 @@
     "v_max": null,
     "range_km": 2407.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10652,6 +10984,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10684,6 +11017,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10716,6 +11050,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10748,6 +11083,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10780,6 +11116,7 @@
     "v_max": null,
     "range_km": 2037.2,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10812,6 +11149,7 @@
     "v_max": null,
     "range_km": 2407.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10844,6 +11182,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10876,6 +11215,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10908,6 +11248,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10940,6 +11281,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -10972,6 +11314,7 @@
     "v_max": null,
     "range_km": 4630.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11004,6 +11347,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11036,6 +11380,7 @@
     "v_max": null,
     "range_km": 8334.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11068,6 +11413,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11100,6 +11446,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11132,6 +11479,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11164,6 +11512,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11196,6 +11545,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11228,6 +11578,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11260,6 +11611,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11292,6 +11644,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11324,6 +11677,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11356,6 +11710,7 @@
     "v_max": null,
     "range_km": 4963.0,
     "takeoff_m": 2350.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11388,6 +11743,7 @@
     "v_max": null,
     "range_km": 4963.0,
     "takeoff_m": 2350.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11420,6 +11776,7 @@
     "v_max": null,
     "range_km": 6667.0,
     "takeoff_m": 2350.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11452,6 +11809,7 @@
     "v_max": null,
     "range_km": 9899.0,
     "takeoff_m": 2426.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11484,6 +11842,7 @@
     "v_max": null,
     "range_km": 2222.4,
     "takeoff_m": 1700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11516,6 +11875,7 @@
     "v_max": null,
     "range_km": 3704.0,
     "takeoff_m": 1900.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11548,6 +11908,7 @@
     "v_max": null,
     "range_km": 4139.22,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11580,6 +11941,7 @@
     "v_max": null,
     "range_km": 5576.372,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11612,6 +11974,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11644,6 +12007,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11676,6 +12040,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11708,6 +12073,7 @@
     "v_max": null,
     "range_km": 14816.0,
     "takeoff_m": 2700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11740,6 +12106,7 @@
     "v_max": null,
     "range_km": 14816.0,
     "takeoff_m": 2700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11772,6 +12139,7 @@
     "v_max": null,
     "range_km": 14816.0,
     "takeoff_m": 2700.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11804,6 +12172,7 @@
     "v_max": null,
     "range_km": 6482.0,
     "takeoff_m": 2450.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11836,6 +12205,7 @@
     "v_max": null,
     "range_km": 844.512,
     "takeoff_m": 1090.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11868,6 +12238,7 @@
     "v_max": null,
     "range_km": 850.068,
     "takeoff_m": 1041.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11900,6 +12271,7 @@
     "v_max": null,
     "range_km": 1111.2,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11932,6 +12304,7 @@
     "v_max": null,
     "range_km": 1470.49,
     "takeoff_m": 1120.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11964,6 +12337,7 @@
     "v_max": null,
     "range_km": 1326.03,
     "takeoff_m": 1126.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -11996,6 +12370,7 @@
     "v_max": null,
     "range_km": 1326.03,
     "takeoff_m": 1165.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12028,6 +12403,7 @@
     "v_max": null,
     "range_km": 1614.94,
     "takeoff_m": 1207.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12060,6 +12436,7 @@
     "v_max": null,
     "range_km": 1481.6,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12092,6 +12469,7 @@
     "v_max": null,
     "range_km": 1490.86,
     "takeoff_m": 1052.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12124,6 +12502,7 @@
     "v_max": null,
     "range_km": 1453.82,
     "takeoff_m": 1048.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12156,6 +12535,7 @@
     "v_max": null,
     "range_km": 1527.9,
     "takeoff_m": 1067.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12188,6 +12568,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12220,6 +12601,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12252,6 +12634,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12284,6 +12667,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12316,6 +12700,7 @@
     "v_max": null,
     "range_km": 2472.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12348,6 +12733,7 @@
     "v_max": null,
     "range_km": 4425.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12380,6 +12766,7 @@
     "v_max": null,
     "range_km": 1279.43,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12412,6 +12799,7 @@
     "v_max": null,
     "range_km": 1279.43,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12444,6 +12832,7 @@
     "v_max": null,
     "range_km": 1279.43,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12476,6 +12865,7 @@
     "v_max": null,
     "range_km": 1279.43,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12508,6 +12898,7 @@
     "v_max": null,
     "range_km": 1279.43,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12540,6 +12931,7 @@
     "v_max": null,
     "range_km": 2018.68,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12572,6 +12964,7 @@
     "v_max": null,
     "range_km": 2018.68,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12604,6 +12997,7 @@
     "v_max": null,
     "range_km": 2018.68,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12636,6 +13030,7 @@
     "v_max": null,
     "range_km": 1555.68,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12668,6 +13063,7 @@
     "v_max": null,
     "range_km": 1555.68,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12700,6 +13096,7 @@
     "v_max": null,
     "range_km": 1518.64,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12732,6 +13129,7 @@
     "v_max": null,
     "range_km": 1518.64,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12764,6 +13162,7 @@
     "v_max": null,
     "range_km": 1518.64,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12796,6 +13195,7 @@
     "v_max": null,
     "range_km": 1518.64,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12828,6 +13228,7 @@
     "v_max": null,
     "range_km": 2518.72,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12860,6 +13261,7 @@
     "v_max": null,
     "range_km": 2518.72,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12892,6 +13294,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12924,6 +13327,7 @@
     "v_max": null,
     "range_km": 1592.72,
     "takeoff_m": 1640.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12956,6 +13360,7 @@
     "v_max": null,
     "range_km": 2778.0,
     "takeoff_m": 1640.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -12988,6 +13393,7 @@
     "v_max": null,
     "range_km": 1611.24,
     "takeoff_m": 1440.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13020,6 +13426,7 @@
     "v_max": null,
     "range_km": 1963.12,
     "takeoff_m": 793.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13052,6 +13459,7 @@
     "v_max": null,
     "range_km": 1963.12,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13084,6 +13492,7 @@
     "v_max": null,
     "range_km": 1963.12,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13116,6 +13525,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13148,6 +13558,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13180,6 +13591,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13212,6 +13624,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13244,6 +13657,7 @@
     "v_max": null,
     "range_km": 2700.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13276,6 +13690,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13308,6 +13723,7 @@
     "v_max": null,
     "range_km": 2700.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13340,6 +13756,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13372,6 +13789,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13404,6 +13822,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13436,6 +13855,7 @@
     "v_max": null,
     "range_km": 2315.0,
     "takeoff_m": 793.0,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13468,6 +13888,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13500,6 +13921,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13532,6 +13954,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13564,6 +13987,7 @@
     "v_max": null,
     "range_km": 815.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13596,6 +14020,7 @@
     "v_max": null,
     "range_km": 1280.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13628,6 +14053,7 @@
     "v_max": null,
     "range_km": 3817.0,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13660,6 +14086,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   },
@@ -13692,6 +14119,7 @@
     "v_max": null,
     "range_km": null,
     "takeoff_m": null,
+    "takeoff_basis": "field_length",
     "h_tail_area": null,
     "v_tail_area": null
   }

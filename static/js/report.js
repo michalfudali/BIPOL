@@ -12,7 +12,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   fields.forEach(input => input.addEventListener('input', sync));
   sync();
+  const resetDrawing = () => {
+    document.body.classList.remove('print-drawing','plain-drawing');
+    document.getElementById('drawing-page-size')?.remove();
+  };
+  window.addEventListener('afterprint', resetDrawing);
+  for (const [id, plain] of [['print-drawing-plain',true],['print-drawing-grid',false]]) {
+    document.getElementById(id)?.addEventListener('click', async () => {
+      resetDrawing();
+      document.body.classList.add('print-drawing');
+      document.body.classList.toggle('plain-drawing',plain);
+      const style=document.createElement('style');style.id='drawing-page-size';
+      style.textContent='@page {size:A4 portrait;margin:10mm;@bottom-center{content:none;}}';document.head.append(style);
+      await document.fonts.ready;window.print();
+    });
+  }
   document.getElementById('print-report')?.addEventListener('click', async () => {
+    resetDrawing();
     await document.fonts.ready;
     window.print();
   });

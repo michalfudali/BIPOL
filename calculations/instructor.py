@@ -1,0 +1,56 @@
+"""Course requirements transcribed from the five lecture-note photographs.
+
+See docs/WYTYCZNE_PROWADZACEGO.md for the source and ambiguous annotations.
+These requirements assess coursework, not airworthiness certification.
+"""
+MIN_AIRCRAFT = 8
+CRUISE_LD_FACTOR = 0.94
+PASSENGER_WITH_BAG_KG = 115.0
+TAKEOFF_MASS_FRACTION = 0.975
+MIN_MASS_ITERATIONS = 5
+
+
+def review_coursework(result):
+    p, mass = result['params'], result['mass']
+    trends = result['bipol_projects']['p1']['trend_analysis']
+    fit = trends['mass_fit']
+    charts = trends['report_charts']
+    checks = []
+
+    def check(key, label, passed, detail):
+        checks.append(dict(key=key, label=label, passed=bool(passed), detail=detail))
+
+    check('sample', 'Co najmniej 8 podobnych konstrukcji', trends['families_n'] >= MIN_AIRCRAFT,
+          f"{trends['families_n']} rodzin; {trends['selected_n']} wariantów tej samej klasy i napędu.")
+    check('charts', '6 wykresów: 1 masowy i 5 parametrów',
+          len(charts) == 6 and all(c['n'] >= MIN_AIRCRAFT and c['fit'] for c in charts),
+          f"Kompletne wykresy (minimum 8 par): {sum(c['n'] >= MIN_AIRCRAFT and bool(c['fit']) for c in charts)}/6. Braki wymagają danych źródłowych.")
+    check('mass_trend', 'Malejący udział masy pustej w funkcji MTOW', fit and fit['C'] < 0,
+          f"C = {fit['C']:.4f}." if fit else 'Brak regresji masowej.')
+    check('iteration', 'Bilans masy: minimum 5 iteracji i zbieżność',
+          len(mass['iterations']) >= MIN_MASS_ITERATIONS and mass['mission_assumptions']['mass_residual_relative'] <= .001,
+          f"{len(mass['iterations'])} iteracji; kryterium reszty równania ≤0,1%.")
+    if p['engine_type'] != 'none':
+        drive_key = 'thrust_to_weight' if p['engine_type'] == 'jet' else 'power_loading_kg_kw'
+        climb = next(c for c in trends['relationships'] if c['x_key'] == drive_key and c['y_key'] == 'climb_rate_ms')
+        check('climb_data', 'Dane do zależności wznoszenia od obciążenia napędu',
+              len(climb['points']) >= MIN_AIRCRAFT,
+              f"{len(climb['points'])} par. Brakujące wartości można wczytać z CSV wraz ze źródłem.")
+        check('cruise', 'Doskonałość przelotowa 0,94 Kmax',
+              abs(mass['mission_assumptions']['ld_factor'] - CRUISE_LD_FACTOR) < 1e-9,
+              'Założenie do równania Bregueta, odrębne od doskonałości przy zadanej prędkości.')
+        check('start_fraction', 'Ułamek masy po starcie 0,970–0,975',
+              .970 <= mass['fuel_fractions_detail']['takeoff'] <= .975,
+              'Rozruch i start liczone łącznie, bez podwójnego zużycia paliwa.')
+        check('takeoff', 'Wymagana całkowita długość startu', p.get('takeoff_distance_m', 0) > 0,
+              'Od postoju do wysokości 15 m; rozbieg jest tylko składową.')
+    check('landing', 'Wymagana całkowita długość lądowania', p.get('landing_distance_m', 0) > 0,
+          'Od wysokości 15 m do zatrzymania; dobieg jest tylko składową.')
+    if p['n_pax']:
+        check('passenger', '115 kg na pasażera z bagażem',
+              abs(p['m_pax'] + p.get('m_bag', 0) - PASSENGER_WITH_BAG_KG) < 1e-6,
+              'Inna wartość wymaga uzasadnienia w założeniach tematu; załogę liczono oddzielnie.')
+    return {'checks': checks, 'passed': sum(c['passed'] for c in checks), 'total': len(checks),
+            'manual': ['P1: odręczny szkic w trzech rzutach na gładkim A4.',
+                       'P3: rysunek na papierze milimetrowym; wskazać mocowanie podwozia.',
+                       'Dane katalogowe sprawdzić w źródłach (np. Jane’s/AFM); arkusz CSV otwiera się w Excelu.']}
