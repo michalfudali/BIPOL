@@ -1,0 +1,15 @@
+<section id="tab-calculation-tree" class="tab-content studio-panel">
+  <div class="studio-heading calc-tree-heading">
+    <div><p class="studio-eyebrow">ŚCIEŻKA OBLICZEŃ / P1–P6</p><h1>Drzewo obliczeń</h1>
+      <p>Zacznij od danych niezależnych. Kolejne poziomy pokazują wyniki możliwe do wyznaczenia z wcześniejszych parametrów.</p></div>
+    <button type="button" class="btn btn-outline" data-studio-target="tab-inputs">Zmień założenia</button>
+  </div>
+  <div class="calc-tree-toolbar" role="group" aria-label="Przechodzenie przez drzewo obliczeń">
+    <button type="button" class="btn btn-primary" data-tree-action="next">Pokaż następny krok</button>
+    <button type="button" class="btn btn-outline" data-tree-action="all">Pokaż całe drzewo</button>
+    <button type="button" class="btn btn-outline" data-tree-action="reset">Wróć do początku</button>
+    <span id="calculationTreeStatus" role="status" aria-live="polite">Oczekiwanie na obliczenia.</span>
+  </div>
+  <div id="calculationTreeRoot" class="calc-tree-root" aria-label="Zależności parametrów projektu"></div>
+  <p class="calc-tree-footnote">Liczba parametrów oznacza niezależne wejścia pokazane na danej ścieżce. Karty pokazują główne zależności, a wartości pochodzą z bieżących obliczeń projektu. Szczegółowe modele są dostępne w analizach P1–P6.</p>
+</section>

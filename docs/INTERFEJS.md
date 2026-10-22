@@ -7,6 +7,10 @@ bazę geometryczną, motoszybowce i metodykę Paturskiego.
 
 - Przegląd otwiera zapisany projekt bez obowiązkowego okna startowego.
   Pokazuje cztery główne wskaźniki, rysunek i bilans masy.
+- Drzewo obliczeń prowadzi od niezależnych założeń przez kolejne poziomy wyników.
+  Pokazuje wartości, wzory i główne zależności bieżącego projektu. Uwzględnia wybrany
+  tryb skrzydła, masy płatnej i napędu; nawigacja po poprzednikach otwiera również
+  schowane założenia. Edycja danych oznacza widoczne wyniki jako wymagające przeliczenia.
 - Założenia mają własną stronę; formularz nie poprzedza analiz na telefonie.
   Główna grupa misji jest rozwinięta, pozostałe grupy otwiera użytkownik.
   Tryb zaawansowany, blokady i sugerowane ograniczenia pozostają dostępne.

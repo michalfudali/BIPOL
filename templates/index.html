@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/studio.css?v=1">
   <link rel="stylesheet" href="/static/css/trends.css?v=1">
   <link rel="stylesheet" href="/static/css/workspace.css?v=1">
+  <link rel="stylesheet" href="/static/css/calculation-tree.css?v=1">
 </head>
 <body class="studio-layout">
   {% include "studio_sidebar.html" %}
@@ -148,6 +149,7 @@
           <div class="bipol-tabs">
           <button class="bipol-tab" data-target="tab-inputs">Założenia</button>
           <button class="bipol-tab active" data-target="tab-overview">Przegląd</button>
+          <button class="bipol-tab" data-target="tab-calculation-tree">Drzewo obliczeń</button>
           <button class="bipol-tab" data-target="tab-variants">Warianty</button>
           <button class="bipol-tab" data-target="tab-reports">Raporty</button>
           <button class="bipol-tab" data-target="tab-glide">Lot szybowy</button>
@@ -167,6 +169,7 @@
 
         {% include "inputs_panel.html" %}
         {% include "studio_panels.html" %}
+        {% include "calculation_tree.html" %}
 
         <!-- MODUŁ CAD: RYSUNEK ZESTAWIENIOWY WG POLSKICH NORM CAD (ZPK MEiL PW / PN-EN ISO) -->
         <div id="tab-cad" class="tab-content">
@@ -2347,5 +2350,6 @@
   <script src="/static/js/studio.js?v=3"></script>
   <script src="/static/js/trends.js?v=3"></script>
   <script src="/static/js/workspace.js?v=2"></script>
+  <script src="/static/js/calculation-tree.js?v=1"></script>
 </body>
 </html>

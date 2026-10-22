@@ -3,7 +3,7 @@
   'use strict';
   const {escape: esc, format: fmt, filename, snapshot, metrics, csv, resultRows} = BipolStudio;
   const VARIANTS_KEY = 'bipol_studio_variants_v1';
-  const wideTabs = new Set(['tab-overview', 'tab-inputs', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
+  const wideTabs = new Set(['tab-overview', 'tab-inputs', 'tab-calculation-tree', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
   let view = 'iso', fresh = false, resultProject = null, messageTimer;
   const $ = id => document.getElementById(id);
   const announce = (message, error = false) => {
