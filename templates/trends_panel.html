@@ -1,6 +1,6 @@
 <section id="tab-trends" class="tab-content studio-panel">
   <div class="studio-heading"><div><p class="studio-eyebrow">PROJEKT 1 / ANALIZY WSTĘPNE</p><h1>Baza i analiza trendów</h1><p>Dobierz podobne konstrukcje, sprawdź źródła i oprzyj założenia na jawnej próbie.</p></div><div class="studio-actions"><button type="button" class="btn btn-primary" id="trendExportCsv">Pobierz próbę CSV</button><button type="button" class="btn btn-outline" id="trendExportJson">Analiza JSON</button></div></div>
-  <button type="button" class="btn btn-outline" id="trendOpenDatabase">Otwórz edytor bazy samolotów</button>
+  <div class="studio-catalog-invitation"><div><strong>Masz dane konkretnego samolotu?</strong><p>Znajdź go w bazie, sprawdź parametry lub dodaj własną konstrukcję.</p></div><button type="button" class="btn btn-outline" id="trendOpenDatabase">Przeglądaj i edytuj bazę <span aria-hidden="true">→</span></button></div>
   <div id="trendStatus" role="status" aria-live="polite">Oczekiwanie na obliczenia projektu.</div>
   <section class="studio-card" id="instructorReview" aria-live="polite"></section>
   <div id="trendSummary" class="studio-mini-metrics"></div>
@@ -22,12 +22,12 @@
   <section class="studio-card" id="trendSuggestionsPanel">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
-        <h2 style="margin:0;">📊 Sugestie parametrów początkowych z analizy trendów (BIPOL I)</h2>
+        <h2 style="margin:0;">Parametry na podstawie podobnych samolotów</h2>
         <p style="margin:4px 0 0 0; font-size:0.85rem; color:#64748b;">Wyznaczone empirycznie na bazie certyfikowanych konstrukcji dla wybranej klasy samolotu.</p>
       </div>
       <div class="studio-actions">
         <button type="button" class="btn btn-primary" id="btnApplyAllTrendSuggestions" title="Przenieś wszystkie kluczowe sugestie do założeń projektu">
-          🚀 Zastosuj sugestie do projektu
+          Zastosuj do projektu
         </button>
       </div>
     </div>

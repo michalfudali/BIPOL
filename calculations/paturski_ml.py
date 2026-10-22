@@ -1091,7 +1091,6 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
 
     # 6.5 Zasięg i długotrwałość lotu — Tabela 6.3 oraz wykres T(V) i L(V) (wzory 6.13 – 6.38)
     h_range_m = float(params.get("cruise_altitude_m", 8000.0 if engine_type == "jet" else 2500.0))
-    rho_range = isa_atmosphere(h_range_m)["rho"]
 
     m_fuel_cruise = max(0.35 * m_fuel, m_fuel * 0.78)
     m_start_cr = m0 - 0.08 * m_fuel
@@ -1109,8 +1108,12 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
         else:
             qe_paturski = 0.265
 
-    table_6_3_range = []
-    if not is_glider and m_fuel > 0:
+    def range_rows(h_m):
+        """Tabela 6.3 (zasięg i długotrwałość w funkcji prędkości) na wysokości h_m."""
+        rho_range = isa_atmosphere(h_m)["rho"]
+        rows = []
+        if is_glider or m_fuel <= 0:
+            return rows
         cz_samples_6_3 = [round(cz_max_clean - i * 0.12, 2) for i in range(10) if (cz_max_clean - i * 0.12) >= 0.18]
         for lp_i, cz_val in enumerate(cz_samples_6_3, start=1):
             cx_val = cx0_approx + k_ind_clean * (cz_val ** 2)
@@ -1152,7 +1155,7 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
                 )
                 l_const_v_km = 3.6 * v_ms * t_const_v_h
 
-            table_6_3_range.append({
+            rows.append({
                 "lp": lp_i,
                 "cz": round(cz_val, 3),
                 "cx": round(cx_val, 5),
@@ -1166,6 +1169,31 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
                 "t_const_v_h": round(t_const_v_h, 2),
                 "l_const_v_km": round(l_const_v_km, 1),
             })
+        return rows
+
+    table_6_3_range = range_rows(h_range_m)
+
+    # BIPOL_5 (T. Grabowski): obliczenia dla wysokości 0, przelotowej i pułapu praktycznego, w zakresie
+    # prędkości z wykresu ofertowego, metodą stałej wysokości i prędkości (wzory 5.10–5.16).
+    range_by_altitude = []
+    for label, h in (("0 m", 0.0), ("wysokość przelotowa", h_range_m), ("pułap praktyczny", h_p_practical_m)):
+        if is_glider or m_fuel <= 0 or (label == "pułap praktyczny" and h_p_practical_m <= 0):
+            continue
+        speeds = eval_climb_at_alt(h)
+        rows = [r for r in range_rows(h) if speeds["v_min_kmh"] <= r["v_kmh"] <= speeds["v_max_kmh"]]
+        best_t = max(rows, key=lambda r: r["t_const_v_h"], default=None)
+        best_l = max(rows, key=lambda r: r["l_const_v_km"], default=None)
+        range_by_altitude.append({
+            "label": label,
+            "h_m": round(h),
+            "v_min_kmh": round(speeds["v_min_kmh"], 1),
+            "v_max_kmh": round(speeds["v_max_kmh"], 1),
+            "rows": rows,
+            "t_max_h": best_t["t_const_v_h"] if best_t else None,
+            "v_t_max_kmh": best_t["v_kmh"] if best_t else None,
+            "l_max_km": best_l["l_const_v_km"] if best_l else None,
+            "v_l_max_kmh": best_l["v_kmh"] if best_l else None,
+        })
 
     if table_6_3_range:
         best_t_row = max(table_6_3_range, key=lambda x: x["t_breguet_h"])
@@ -1215,6 +1243,8 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
             "l_max_km": best_l_row["l_breguet_km"],
             "v_l_max_kmh": best_l_row["v_kmh"],
             "table_6_3": table_6_3_range,
+            "by_altitude": range_by_altitude,
+            "by_altitude_method": "Stała wysokość i prędkość (BIPOL_5, wzory 5.10–5.16); prędkości z zakresu wykresu ofertowego.",
         },
     }
 

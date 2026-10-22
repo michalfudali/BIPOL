@@ -67,99 +67,110 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         mom_wing_offset = (bd["m_wing"] * 0.38 + bd["m_gear"] * 0.45 - bd["m_propulsion"] * 0.15) * mac
 
     denom_m = max(1.0, m_empty - m_wing_group)
-    x_lemac = (mom_fus_fixed + mom_wing_offset - target_oew_mac * mac * m_empty) / denom_m
-    x_lemac = max(0.28 * l_f, min(0.56 * l_f, x_lemac))
-    x_le_wing = x_lemac - x_le_mac_offset
+    x_lemac_initial = (mom_fus_fixed + mom_wing_offset - target_oew_mac * mac * m_empty) / denom_m
+    x_lemac_bounds = (0.28 * l_f, 0.56 * l_f)
+    x_lemac_initial = max(x_lemac_bounds[0], min(x_lemac_bounds[1], x_lemac_initial))
 
-    if engine_loc == "nose":
-        x_prop = 0.10 * l_f
-    elif engine_loc == "rear":
-        x_prop = 0.76 * l_f
-    else:
-        x_prop = x_lemac - 0.15 * mac
-        
-    x_arms = {
-        "fuselage": round(x_fus, 2),
-        "wing": round(x_lemac + 0.38 * mac, 2),
-        "tail": round(x_tail, 2),
-        "propulsion": round(x_prop, 2),
-        "gear": round(x_lemac + 0.45 * mac, 2),
-        "systems": round(x_sys, 2),
-        "crew": round(x_lemac - 0.18 * mac, 2),
-        "pax_front": round(x_lemac + 0.12 * mac, 2),
-        "pax_rear": round(x_lemac + 0.48 * mac, 2),
-        "baggage": round(x_lemac + 0.75 * mac, 2),
-        "fuel": round(x_lemac + 0.32 * mac, 2)
-    }
-    
-    # 1. Moment masy pustej (OEW)
-    mom_empty = (
-        bd["m_fuselage"] * x_arms["fuselage"] +
-        bd["m_wing"] * x_arms["wing"] +
-        bd["m_tail"] * x_arms["tail"] +
-        bd["m_propulsion"] * x_arms["propulsion"] +
-        bd["m_gear"] * x_arms["gear"] +
-        bd["m_systems"] * x_arms["systems"]
-    )
-    x_cg_empty = mom_empty / max(1.0, m_empty)
-    
-    # 2. Stan: Samolot pusty + załoga
     unmanned = bool(m_sizing.get("unmanned", False)) or params.get("aircraft_type") == "uav"
-    m_crew_state = m_empty + m_crew
-    mom_crew_state = mom_empty + m_crew * x_arms["crew"]
-    x_cg_crew = mom_crew_state / max(1.0, m_crew_state)
-    
-    # 3. Stan: Bez paliwa (ZFW = Empty + Crew + Payload)
-    if unmanned:
-        # UAV: wyposażenie zadaniowe (głowica optoelektroniczna w dziobie/pod kadłubem + awionika misji w okolicy ŚM)
-        x_arms["payload_sensor"] = round(x_lemac - 0.35 * mac, 2)
-        x_arms["payload_bay"] = round(x_lemac + 0.20 * mac, 2)
-        mom_zfw = mom_crew_state + (m_payload * 0.60) * x_arms["payload_sensor"] + (m_payload * 0.40) * x_arms["payload_bay"]
-    else:
-        m_pax = m_payload * 0.80
-        m_bag = m_payload * 0.20
-        mom_zfw = mom_crew_state + (m_pax * 0.45) * x_arms["pax_front"] + (m_pax * 0.55) * x_arms["pax_rear"] + m_bag * x_arms["baggage"]
-    m_zfw = m_crew_state + m_payload
-    x_cg_zfw = mom_zfw / max(1.0, m_zfw)
-    
-    # 4. Stan: Pełna masa startowa (MTOW = ZFW + Fuel)
-    mom_mtow = mom_zfw + m_fuel * x_arms["fuel"]
-    m_mtow = m_zfw + m_fuel
-    x_cg_mtow = mom_mtow / max(1.0, m_mtow)
-    
-    # 5. Stan: Lądowanie z rezerwą paliwa (MLW: 15% paliwa)
-    m_fuel_res = 0.15 * m_fuel
-    mom_mlw = mom_zfw + m_fuel_res * x_arms["fuel"]
-    m_mlw = m_zfw + m_fuel_res
-    x_cg_mlw = mom_mlw / max(1.0, m_mlw)
-    
-    # Funkcja pomocnicza: przeliczenie na % ŚDA (MAC)
-    def to_percent_mac(x):
-        return round(((x - x_lemac) / mac) * 100.0, 1)
-        
-    loading_states = [
-        {"name": "Masa pusta (OEW)", "mass_kg": round(m_empty, 1), "xcg_m": round(x_cg_empty, 3), "xcg_mac_pct": to_percent_mac(x_cg_empty)},
-    ]
-    if not unmanned:
-        loading_states.append({"name": "Pusty + załoga", "mass_kg": round(m_crew_state, 1), "xcg_m": round(x_cg_crew, 3), "xcg_mac_pct": to_percent_mac(x_cg_crew)})
-    else:
-        # UAV: pusty + pełne paliwo bez wyposażenia zadaniowego (lot techniczny / przebazowanie)
-        m_ferry = m_empty + m_fuel
-        x_cg_ferry = (mom_empty + m_fuel * x_arms["fuel"]) / max(1.0, m_ferry)
-        loading_states.append({"name": "Pusty + paliwo, bez wyposażenia zadaniowego", "mass_kg": round(m_ferry, 1), "xcg_m": round(x_cg_ferry, 3), "xcg_mac_pct": to_percent_mac(x_cg_ferry)})
-    loading_states += [
-        {"name": "Masa bez paliwa (ZFW)" if not unmanned else "Pusty + wyposażenie zadaniowe (ZFW)", "mass_kg": round(m_zfw, 1), "xcg_m": round(x_cg_zfw, 3), "xcg_mac_pct": to_percent_mac(x_cg_zfw)},
-        {"name": "Masa lądowania (MLW)", "mass_kg": round(m_mlw, 1), "xcg_m": round(x_cg_mlw, 3), "xcg_mac_pct": to_percent_mac(x_cg_mlw)},
-        {"name": "Masa startowa (MTOW)", "mass_kg": round(m_mtow, 1), "xcg_m": round(x_cg_mtow, 3), "xcg_mac_pct": to_percent_mac(x_cg_mtow)},
-    ]
-    
-    # Zakres zmienności położenia środka ciężkości
-    all_pct = [s["xcg_mac_pct"] for s in loading_states]
-    cg_forward_limit = min(all_pct)
-    cg_aft_limit = max(all_pct)
-    
+    n_crew = int(m_sizing.get("n_crew") or 0)
+    m_fuel_res = 0.15 * m_fuel  # paliwo przy lądowaniu (rezerwa)
+
+    def layout(x_lemac):
+        """Ramiona mas, stany załadowania i zakres ŚC w locie dla danego położenia ŚDA."""
+        if engine_loc == "nose":
+            x_prop = 0.10 * l_f
+        elif engine_loc == "rear":
+            x_prop = 0.76 * l_f
+        else:
+            x_prop = x_lemac - 0.15 * mac
+
+        x_arms = {
+            "fuselage": round(x_fus, 2),
+            "wing": round(x_lemac + 0.38 * mac, 2),
+            "tail": round(x_tail, 2),
+            "propulsion": round(x_prop, 2),
+            "gear": round(x_lemac + 0.45 * mac, 2),
+            "systems": round(x_sys, 2),
+            "crew": round(x_lemac - 0.18 * mac, 2),
+            "pax_front": round(x_lemac + 0.12 * mac, 2),
+            "pax_rear": round(x_lemac + 0.48 * mac, 2),
+            "baggage": round(x_lemac + 0.75 * mac, 2),
+            "fuel": round(x_lemac + 0.32 * mac, 2)
+        }
+
+        # 1. Moment masy pustej (OEW)
+        mom_empty = (
+            bd["m_fuselage"] * x_arms["fuselage"] +
+            bd["m_wing"] * x_arms["wing"] +
+            bd["m_tail"] * x_arms["tail"] +
+            bd["m_propulsion"] * x_arms["propulsion"] +
+            bd["m_gear"] * x_arms["gear"] +
+            bd["m_systems"] * x_arms["systems"]
+        )
+
+        if unmanned:
+            # UAV: wyposażenie zadaniowe (głowica optoelektroniczna w dziobie/pod kadłubem + awionika misji w okolicy ŚM)
+            x_arms["payload_sensor"] = round(x_lemac - 0.35 * mac, 2)
+            x_arms["payload_bay"] = round(x_lemac + 0.20 * mac, 2)
+            mom_payload = (m_payload * 0.60) * x_arms["payload_sensor"] + (m_payload * 0.40) * x_arms["payload_bay"]
+        else:
+            m_pax = m_payload * 0.80
+            m_bag = m_payload * 0.20
+            mom_payload = (m_pax * 0.45) * x_arms["pax_front"] + (m_pax * 0.55) * x_arms["pax_rear"] + m_bag * x_arms["baggage"]
+
+        # Funkcja pomocnicza: przeliczenie na % ŚDA (MAC)
+        def to_percent_mac(x):
+            return round(((x - x_lemac) / mac) * 100.0, 1)
+
+        def state(key, name, crew=0.0, payload=False, fuel=0.0):
+            """Stan załadowania złożony z masy pustej, załogi, ładunku i paliwa (BIPOL_3, wzór 3.1)."""
+            mass = m_empty + crew + (m_payload if payload else 0.0) + fuel
+            mom = mom_empty + crew * x_arms["crew"] + (mom_payload if payload else 0.0) + fuel * x_arms["fuel"]
+            x_cg = mom / max(1.0, mass)
+            return {"key": key, "name": name, "mass_kg": round(mass, 1), "xcg_m": round(x_cg, 3),
+                    "xcg_mac_pct": to_percent_mac(x_cg), "_payload": payload, "_fuel": fuel}
+
+        # Warianty wg BIPOL_3: MTOW, lądowanie, start i lądowanie bez ładunku płatnego, samolot pusty.
+        # MTOW pozostaje ostatni (odczytują go widoki rysunku).
+        states = [state("oew", "Masa pusta (OEW)")]
+        if not unmanned:
+            states.append(state("crew", "Pusty + załoga", crew=m_crew))
+        else:
+            # UAV: pusty + pełne paliwo bez wyposażenia zadaniowego (lot techniczny / przebazowanie)
+            states.append(state("ferry", "Pusty + paliwo, bez wyposażenia zadaniowego", fuel=m_fuel))
+        states += [
+            state("zfw", "Masa bez paliwa (ZFW)" if not unmanned else "Pusty + wyposażenie zadaniowe (ZFW)",
+                  crew=m_crew, payload=True),
+            state("mlw", "Masa lądowania (MLW)", crew=m_crew, payload=True, fuel=m_fuel_res),
+        ]
+        if m_fuel > 0 and m_payload > 0:
+            if not unmanned:
+                states.append(state("tow_no_payload", "Start bez ładunku płatnego", crew=m_crew, fuel=m_fuel))
+            states.append(state("mlw_no_payload", "Lądowanie bez ładunku płatnego", crew=m_crew, fuel=m_fuel_res))
+        states.append(state("mtow", "Masa startowa (MTOW)", crew=m_crew, payload=True, fuel=m_fuel))
+
+        # BIPOL_3, Tab. 3.1–3.2: obliczenia powtarza się dla lekkiego (55 kg) i ciężkiego (110 kg) pilota.
+        variants = []
+        if not unmanned and n_crew and m_crew > 0:
+            for s in states[1:]:
+                light, heavy = (state(s["key"], s["name"], crew=n_crew * pilot, payload=s["_payload"], fuel=s["_fuel"])
+                                for pilot in (55.0, 110.0))
+                variants.append({"key": s["key"], "name": s["name"],
+                                 "light_pct": light["xcg_mac_pct"], "heavy_pct": heavy["xcg_mac_pct"]})
+        for s in states:
+            del s["_payload"], s["_fuel"]
+
+        # Zakres położeń środka ciężkości w locie (samolot pusty nie lata; BIPOL_3, pkt 7)
+        flight = ([s["xcg_mac_pct"] for s in states if s["key"] != "oew"]
+                  + [v[k] for v in variants for k in ("light_pct", "heavy_pct")])
+        return x_arms, states, variants, min(flight), max(flight)
+
+    def criterion(fwd, aft):
+        # Dopuszcza się przednie położenie przed 25% ŚDA, jeśli zakres w locie przekracza 10% ŚDA.
+        return fwd >= 25.0 or aft - fwd > 10.0, aft <= 35.0
+
     # 6. Punkt neutralny płatowca (Neutral Point x_N) wg równania stateczności podłużnej (Mechanika Lotu I - Projekt 6):
-    # x_N/MAC = x_ac_wbn + eta_H * V_H * (a_H / a_W) * (1 - d_epsilon / d_alpha)
+    # x_N/MAC = x_ac_wbn + eta_H * V_H * (a_H / a_W) * (1 - d_epsilon / d_alpha); nie zależy od położenia skrzydła.
     vh = float(geom["horizontal_tail"]["vh_coeff"])
     ar_h = float(geom["horizontal_tail"]["AR_h"])
     a_w = (2.0 * math.pi * AR) / (AR + 2.0)
@@ -178,8 +189,45 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         delta_xac_prop = 0.030 if engine_loc in ["nose", "wing"] else 0.010
     x_ac_wbn_pct = (0.25 - delta_xac_fus - delta_xac_prop) * 100.0
     delta_xn_tail_pct = (eta_h_eff * vh * (a_h / a_w) * (1.0 - de_da)) * 100.0
-
     neutral_point_pct = round(x_ac_wbn_pct + delta_xn_tail_pct, 1)
+
+    # BIPOL_3, pkt 8: jeśli zakres wychodzi poza 25–35% ŚDA, przesuwa się skrzydło (zmiana rysunku):
+    # przednie ŚC w locie na 25% ŚDA; przy zakresie > 10% ŚDA tylne na 35% ŚDA,
+    # ale nie bliżej niż 5% ŚDA przed punktem neutralnym (zapas stateczności).
+    x_lemac = x_lemac_initial
+    x_arms, loading_states, pilot_variants, cg_forward_limit, cg_aft_limit = layout(x_lemac)
+    if not all(criterion(cg_forward_limit, cg_aft_limit)):
+        aft_target = min(35.0, neutral_point_pct - 5.0)
+
+        def miss(x):  # > 0: skrzydło za bardzo z przodu (ŚC zbyt daleko do tyłu w % ŚDA)
+            _, _, _, fwd, aft = layout(x)
+            return aft - aft_target if aft - fwd > 10.0 else fwd - 25.0
+        low, high = x_lemac_bounds  # %ŚDA maleje, gdy skrzydło przesuwa się do tyłu
+        if miss(low) >= 0 >= miss(high):
+            for _ in range(40):
+                middle = 0.5 * (low + high)
+                low, high = (middle, high) if miss(middle) > 0 else (low, middle)
+            x_lemac = high
+        else:
+            x_lemac = low if miss(low) < 0 else high
+        x_arms, loading_states, pilot_variants, cg_forward_limit, cg_aft_limit = layout(x_lemac)
+    x_le_wing = x_lemac - x_le_mac_offset
+
+    cg_span = round(cg_aft_limit - cg_forward_limit, 1)
+    forward_ok, aft_ok = criterion(cg_forward_limit, cg_aft_limit)
+    cg_check = {
+        "required": "25–35% ŚDA w locie; przednie przed 25% dopuszczalne przy zakresie > 10% ŚDA",
+        "source": "BIPOL_3.pdf (T. Grabowski, C. Galiński), analiza masowa, pkt 7–8",
+        "forward_ok": forward_ok,
+        "aft_ok": aft_ok,
+        "passed": forward_ok and aft_ok,
+        "wing_shift_m": round(x_lemac - x_lemac_initial, 3),
+        "note": ("Położenie skrzydła dobrano do kryterium BIPOL_3." if abs(x_lemac - x_lemac_initial) > 1e-3 else
+                 "Wstępne położenie skrzydła spełnia kryterium BIPOL_3.")
+                if forward_ok and aft_ok else
+                "Kryterium niespełnione w dopuszczalnym zakresie położenia skrzydła; zmień rozmieszczenie mas.",
+    }
+
     neutral_point_m = round(x_lemac + (neutral_point_pct / 100.0) * mac, 3)
     
     # Zapas stateczności statycznej (Static Margin K_n = (x_N - x_CG)/MAC)
@@ -193,11 +241,14 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         "x_lemac_m": round(x_lemac, 3),
         "arms": x_arms,
         "loading_states": loading_states,
+        "pilot_variants": pilot_variants,
         "cg_range": {
             "forward_pct": cg_forward_limit,
             "aft_pct": cg_aft_limit,
-            "delta_pct": round(cg_aft_limit - cg_forward_limit, 1)
+            "delta_pct": cg_span,
+            "basis": "stany w locie (bez samolotu pustego), z lekkim i ciężkim pilotem"
         },
+        "cg_check": cg_check,
         "neutral_point": {
             "x_n_m": neutral_point_m,
             "x_n_mac_pct": neutral_point_pct

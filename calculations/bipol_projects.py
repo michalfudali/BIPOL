@@ -354,7 +354,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     ]
     
     # Obliczenie momentów bezwładności w środku ciężkości Jx, Jy, Jz i dewiacji Jxz (wzory 2.3 - 2.4 z BIPOL_3_2010.pdf)
-    xcg_mtow = float(bal_res["loading_states"][4]["xcg_m"])
+    xcg_mtow = float(next(s for s in bal_res["loading_states"] if s["key"] == "mtow")["xcg_m"])
     ycg_mtow = 0.0
     zcg_mtow = 0.0
     

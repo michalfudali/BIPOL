@@ -38,7 +38,7 @@ def run_bipol_project(params: dict):
     # Kategoria operacji UAS zależy od ryzyka operacji, a nie od progu masy 600 kg.
     
     # Etap P2: Dobór obciążenia powierzchni skrzydła i ciągu/mocy (Matching Chart)
-    sizing_res = calculate_matching_chart(params, m0=m0)
+    sizing_res = calculate_matching_chart(params, m0=m0, mass=mass_res)
     ws = sizing_res["design_point"]["ws"]
     
     # Etap P3: Wymiarowanie zespołów (skrzydło, kadłub, usterzenia, Schrenk)
@@ -109,6 +109,14 @@ def run_bipol_project(params: dict):
         "actual": f"{act_sm}% ŚDA",
         "passed": act_sm >= 5.0,
         "note": "Kryterium stateczności podłużnej bez autopilota"
+    })
+    cg = balance_res["cg_range"]
+    checks.append({
+        "parameter": "Zakres położeń ŚC w locie (BIPOL_3)",
+        "required": balance_res["cg_check"]["required"],
+        "actual": f"{cg['forward_pct']}–{cg['aft_pct']}% ŚDA (zakres {cg['delta_pct']}%)",
+        "passed": balance_res["cg_check"]["passed"],
+        "note": "Stany w locie z lekkim (55 kg) i ciężkim (110 kg) pilotem; poza zakresem zmień położenie skrzydła lub rozmieszczenie mas."
     })
 
     # Obliczenia dedykowane dla projektów semestralnych BIPOL I (P1 do P6)

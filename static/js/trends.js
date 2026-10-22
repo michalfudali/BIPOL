@@ -7,6 +7,10 @@
     trend_weighting:'family', mission_phase_model:'galinski', fuel_reserve_factor:1.06, mission_ld_factor:0.94};
   let result, catalog, catalogPromise, page = 0, selected = new Set(), visible = [];
   let latestSuggestions = null;
+  const suggestionLabels = {ws:'Obciążenie powierzchni skrzydła', ar:'Wydłużenie skrzydła', me_m0:'Udział masy pustej',
+    pw:'Obciążenie napędu', tw:'Stosunek ciągu do ciężaru', v_h:'Objętość względna usterzenia poziomego',
+    v_v:'Objętość względna usterzenia pionowego', dihedral_deg:'Wznios skrzydła', b_ail_ratio:'Względna rozpiętość lotek',
+    c_ail_ratio:'Względna cięciwa lotek', c_e_ratio:'Względna cięciwa steru wysokości', c_r_ratio:'Względna cięciwa steru kierunku'};
   const size = 20;
 
   function download(name, content, type) {
@@ -85,7 +89,7 @@
         const fitInfo = s.r2 != null ? `R² = ${fmt(s.r2, 3)} (n = ${s.n})` : `${s.model_type || 'mediana'} (n = ${s.n})`;
         const typical = s.typical_range ? `${s.typical_range[0]} – ${s.typical_range[1]} ${s.unit !== '−' ? s.unit : ''}` : '—';
         rows.push(`<tr>
-          <td><strong>${esc(s.name)}</strong></td>
+          <td><strong>${esc(suggestionLabels[k] || s.name)}</strong></td>
           <td><code>${esc(s.symbol)}</code></td>
           <td><span style="font-size:1.05rem; font-weight:700; color:#0369a1;">${fmt(s.suggested_value, 2)}</span> <small>${esc(s.unit)}</small></td>
           <td>${esc(typical)}</td>
@@ -109,7 +113,7 @@
     if (!latestSuggestions || !latestSuggestions[key]) return;
     const s = latestSuggestions[key];
     const val = s.suggested_value;
-    let appliedName = s.name;
+    let appliedName = suggestionLabels[key] || s.name;
 
     if (key === 'ar') {
       const el = $('aspect_ratio');

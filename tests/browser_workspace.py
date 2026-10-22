@@ -17,8 +17,14 @@ with sync_playwright() as p:
     assert page.locator('.project-modal-backdrop.active,.wizard-backdrop.active').count()==0
     assert not page.locator('#designForm').is_visible()
     assert page.locator('.kpi-card:visible').count()==4
-    assert page.locator('.studio-nav-item:visible').count()==6
+    assert page.locator('.studio-nav-item:visible').count()==7
     assert page.locator('#studioAircraft svg').count()==1
+    assert page.locator('#studioAircraftProportions').input_value()=='concept'
+    original_geometry=page.evaluate('JSON.stringify(currentResults.geometry)')
+    page.locator('#studioAircraftProportions').select_option('calculated')
+    assert page.locator('#studioAircraft svg').get_attribute('data-proportions')=='calculated'
+    page.locator('#studioAircraftProportions').select_option('concept')
+    assert page.evaluate('JSON.stringify(currentResults.geometry)')==original_geometry
     assert page.evaluate('document.body.scrollHeight')<2000
     duplicates=page.evaluate("Object.entries([...document.querySelectorAll('[id]')].reduce((m,e)=>(m[e.id]=(m[e.id]||0)+1,m),{})).filter(([id,n])=>n>1).map(([id])=>id)")
     assert not duplicates,duplicates
@@ -27,12 +33,13 @@ with sync_playwright() as p:
     page.wait_for_function("document.getElementById('projectManagerModalBackdrop').classList.contains('active')")
     page.locator('#closeProjectManagerBtn').click()
     page.wait_for_function("document.activeElement.matches('.quiet-project-menu>summary')")
-    page.locator('.quiet-project-menu>summary').click()
+    assert page.locator('#btnNewProjectWizard').is_visible()
     page.locator('#btnNewProjectWizard').click()
     page.locator('#closeWizardBtn').click()
-    page.wait_for_function("document.activeElement.matches('.quiet-project-menu>summary')")
+    page.wait_for_function("document.activeElement.id === 'btnNewProjectWizard'")
+    navigate(page,'tab-overview')
     page.screenshot(path=out/'overview-desktop.png',full_page=True,animations='disabled')
-    print('DIRECT START, SIX NAV ITEMS, FOUR METRICS, NO DUPLICATE IDS: OK',flush=True)
+    print('DIRECT START, SEVEN NAV ITEMS, FOUR METRICS, NO DUPLICATE IDS: OK',flush=True)
 
     page.get_by_role('button',name='Edytuj założenia',exact=True).click()
     assert page.locator('#designForm').is_visible()
@@ -40,6 +47,15 @@ with sync_playwright() as p:
     header=page.locator('#accordion_mod2 .module-header')
     header.focus();page.keyboard.press('Enter');assert page.locator('#body_mod2').is_visible()
     page.keyboard.press('Space');assert not page.locator('#body_mod2').is_visible()
+    page.locator('#studioParameterSearch').fill('rozpietosc')
+    page.locator('#studioParameterResults button').first.click()
+    page.wait_for_function("document.activeElement.id === 'wingspan_m'")
+    assert page.locator('#body_mod2').is_visible()
+    page.locator('#studioParameterSearch').fill('nieistniejacyparametr')
+    assert 'Nie znaleziono' in page.locator('#studioParameterCount').inner_text()
+    page.locator('#studioParameterSearch').fill('')
+    page.locator('[data-input-section=mod4]').click()
+    assert page.locator('#body_mod4').is_visible()
     field=edit_inputs(page,'aspect_ratio');field.fill('9.5');page.locator('#calcBtn').click()
     page.wait_for_function('currentResults.params.aspect_ratio === 9.5')
     page.locator('#lock_btn_aspect_ratio').click()
@@ -48,6 +64,7 @@ with sync_playwright() as p:
     page.wait_for_function("document.getElementById('openReportBtn').dataset.resultsStale === 'false'")
     field.fill('0');page.locator('#calcBtn').click()
     page.wait_for_function("document.getElementById('calculationStatus').classList.contains('is-error')")
+    page.wait_for_function("document.getElementById('studioProjectHealth').dataset.state === 'error'")
     navigate(page,'tab-overview');assert page.locator('#workspaceNotice').is_visible()
     page.get_by_role('button',name='Sprawdź założenia').click()
     assert page.locator('#aspect_ratio').is_visible()

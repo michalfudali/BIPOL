@@ -1,5 +1,19 @@
 <section id="tab-inputs" class="tab-content studio-panel quiet-inputs">
-  <div class="studio-heading"><div><h1>Założenia projektu</h1><p>Zmień parametry i przelicz wyniki.</p></div><button type="button" class="btn btn-outline" data-studio-target="tab-overview">Przegląd wyników</button></div>
+  <div class="studio-heading"><div><h1>Jaki samolot projektujesz?</h1><p>Zacznij od misji. Uzupełnij znane wartości, a resztę dobierzemy w obliczeniach.</p></div><button type="button" class="btn btn-outline" data-studio-target="tab-overview">Wróć do wyników</button></div>
+  <section class="studio-input-guide" aria-label="Poruszanie się po parametrach">
+    <div class="studio-parameter-search">
+      <label for="studioParameterSearch">Znajdź parametr</label>
+      <input type="search" id="studioParameterSearch" placeholder="np. rozpiętość, zasięg, klapy" autocomplete="off" aria-controls="studioParameterResults" aria-describedby="studioParameterCount">
+      <p id="studioParameterCount" role="status" aria-live="polite">Wpisz nazwę, aby przejść prosto do pola.</p>
+      <ul id="studioParameterResults" hidden></ul>
+    </div>
+    <nav class="studio-input-sections" aria-label="Grupy parametrów">
+      <button type="button" data-input-section="mod1" aria-controls="body_mod1">Misja</button>
+      <button type="button" data-input-section="mod2" aria-controls="body_mod2">Skrzydło</button>
+      <button type="button" data-input-section="mod3" aria-controls="body_mod3">Aerodynamika</button>
+      <button type="button" data-input-section="mod4" aria-controls="body_mod4">Napęd</button>
+    </nav>
+  </section>
 
         <div class="b-card">
           <div class="b-card-header" style="background:linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%); color:#fff;">
@@ -15,7 +29,7 @@
                   Podstawowe
                 </button>
                 <button type="button" class="mode-btn" id="modeAdvancedBtn" onclick="setSidebarMode('advanced')">
-                  Zaawansowane
+                  Wszystkie parametry
                 </button>
               </div>
 

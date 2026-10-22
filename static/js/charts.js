@@ -115,20 +115,38 @@ function drawMatchingChart(canvasId, sizing) {
     ctx.stroke();
   }
   
-  drawLine(sizing.curve_takeoff, '#dc2626', sizing.takeoff_basis==='15m'?'Start do 15 m':'Rozbieg');
+  const takeoffLabel = sizing.takeoff_basis === '15m' ? 'Start na 15 m' : 'Rozbieg (brak startu na 15 m)';
+  drawLine(sizing.curve_takeoff, '#dc2626', takeoffLabel);
   drawLine(sizing.curve_climb, '#2563eb', 'Wznoszenie');
   drawLine(sizing.curve_cruise, '#059669', 'Przelot');
-  
-  // Stall vertical limit
-  const xStall = toX(sizing.ws_stall_max);
-  ctx.strokeStyle = '#9333ea';
-  ctx.setLineDash([4, 4]);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(xStall, pad.top);
-  ctx.lineTo(xStall, pad.top + plotH);
-  ctx.stroke();
-  ctx.setLineDash([]);
+
+  // BIPOL_2: (8) minimum T/W for climb; (10) minimum speed; (3) landing; (11)/(12) best range
+  if (Number.isFinite(sizing.climb_min)) {
+    ctx.strokeStyle = '#2563eb';
+    ctx.setLineDash([2, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, toY(sizing.climb_min));
+    ctx.lineTo(pad.left + plotW, toY(sizing.climb_min));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  const verticals = [
+    { ws: sizing.ws_stall_max, color: '#9333ea', dash: [4, 4] },
+    { ws: sizing.ws_landing, color: '#0f766e', dash: [8, 4] },
+    { ws: sizing.ws_max_range, color: '#64748b', dash: [2, 3] }
+  ];
+  verticals.forEach(({ ws, color, dash }) => {
+    if (!Number.isFinite(ws) || ws < xMin || ws > xMax) return;
+    ctx.strokeStyle = color;
+    ctx.setLineDash(dash);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toX(ws), pad.top);
+    ctx.lineTo(toX(ws), pad.top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
   
   // Design Point
   const dp = sizing.design_point;
@@ -150,10 +168,12 @@ function drawMatchingChart(canvasId, sizing) {
   
   // Legend
   const leg = [
-    { label: 'Rozbieg (Sto)', color: '#dc2626' },
+    { label: takeoffLabel, color: '#dc2626' },
     { label: 'Wznoszenie (wy)', color: '#2563eb' },
     { label: 'Przelot (Vcr)', color: '#059669' },
-    { label: 'Granica przeciągnięcia', color: '#9333ea' }
+    { label: 'Vmin (Cz,max/1,1)', color: '#9333ea' },
+    ...(Number.isFinite(sizing.ws_landing) ? [{ label: 'Lądowanie', color: '#0f766e' }] : []),
+    ...(Number.isFinite(sizing.ws_max_range) ? [{ label: 'Max zasięg (B)', color: '#64748b' }] : [])
   ];
   let legX = pad.left + 10;
   leg.forEach((item) => {

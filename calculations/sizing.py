@@ -1,9 +1,14 @@
 """
 Moduł wyboru obciążenia powierzchni skrzydła (W/S) i obciążenia ciągu (T/W) lub mocy (P/W)
-Matching Chart / Diagram doboru parametrów płatowca i napędu wg BIPOL I
+Wykres doboru wg BIPOL_2.pdf (C. Galiński, „Studium wykonalności”), wzory (1)–(12):
+start na 15 m, lądowanie, wznoszenie, prędkość minimalna, przelot i największy zasięg.
 """
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
+
+SIGMA_AIRFIELD = 1.0  # BIPOL_2: lotnisko na poziomie morza (σ = 1)
+CZ_SAFETY = 1.1       # BIPOL_2 (10): przy prędkości minimalnej 1,1·Cz = Cz,max
+MU_GROUND = 0.04      # tarcie kół, tylko w zastępczym ograniczeniu rozbiegu
 
 
 def takeoff_mean_speed(ws, cz_max_to):
@@ -15,36 +20,55 @@ def takeoff_mean_speed(ws, cz_max_to):
     return 1.12 * math.sqrt(max(1.0, 2.0 * ws / (RHO0 * cz_max_to))) / math.sqrt(2.0)
 
 
-def calculate_matching_chart(params: dict, m0: float = None):
+def takeoff_tw(ws, cz_max_to, s_to, sigma=SIGMA_AIRFIELD):
+    """BIPOL_2 eq. (2): T/W for a take-off distance to 15 m s_to [m] at W/S [N/m²].
+
+    Metric form of s = 20.9·TOP + 87·sqrt(TOP·T/W) [ft, lb/ft²]. None where the
+    distance cannot be reached at this W/S whatever the thrust.
+    """
+    top = ws / (cz_max_to * sigma)
+    margin = s_to - 3.834 * math.sqrt(top)
+    return 0.133 * top / margin if margin > 0 else None
+
+
+def landing_ws(cz_max_lnd, s_l, sigma=SIGMA_AIRFIELD):
+    """BIPOL_2 eq. (3): highest W/S [N/m²] at landing weight for a landing distance from 15 m s_l [m]."""
+    return sigma * cz_max_lnd * (s_l - 122.0) / 0.75
+
+
+def climb_tw(ws, q, cx0, k_ind, gradient):
+    """BIPOL_2 eq. (9): T/W giving climb gradient G = w/V at dynamic pressure q."""
+    return q * cx0 / ws + ws * k_ind / q + gradient
+
+
+def calculate_matching_chart(params: dict, m0: float = None, mass: dict = None):
     """
     Parametry wejściowe:
       - engine_type: 'jet' lub 'prop'
-      - v_stall_kmh: prędkość przeciągnięcia / podejścia [km/h] (np. 110 km/h)
-      - takeoff_run_m: wymagana droga rozbiegu [m] (np. 450 m)
-      - climb_rate_ms: wymagana prędkość wznoszenia przy ziemi [m/s] (np. 6.0 m/s)
-      - cruise_speed_kmh: prędkość przelotowa [km/h]
-      - cruise_altitude_m: wysokość przelotu [m]
-      - aspect_ratio: wydłużenie skrzydła Lambda (np. 8.5)
-      - oswald_e: współczynnik Oswalda e (np. 0.8)
-      - cx0: współczynnik oporu szkodliwego cx0 (np. 0.024)
-      - cz_max_clean: cz_max profilu gładkiego (np. 1.5)
-      - cz_max_to: cz_max z klapami do startu (np. 1.8)
-      - cz_max_lnd: cz_max z klapami do lądowania (np. 2.2)
-      - prop_efficiency: sprawność śmigła (np. 0.82)
-      - prop_eff_to: sprawność śmigła na rozbiegu (np. 0.65)
+      - v_stall_kmh: wymagana prędkość minimalna VS0 [km/h]
+      - takeoff_distance_m: długość startu na 15 m [m] (BIPOL_2 wzór 2)
+      - takeoff_run_m: rozbieg [m], używany tylko bez długości startu na 15 m
+      - landing_distance_m: długość lądowania z 15 m [m] (BIPOL_2 wzór 3)
+      - climb_rate_ms: wymagana prędkość wznoszenia przy ziemi [m/s]
+      - cruise_speed_kmh, cruise_altitude_m: przelot
+      - aspect_ratio, oswald_e, cx0: biegunowa analityczna Cx = Cx0 + Cz²/(πAe)
+      - cz_max_to, cz_max_lnd: Cz,max do startu i do lądowania
+      - prop_efficiency, prop_eff_to: sprawność śmigła w locie i na rozbiegu
+    mass: wynik bilansu masy (P1/P2); daje masę do lądowania i w połowie przelotu.
     """
     ac_type = params.get("aircraft_type", "piston_ga")
     engine_type = "none" if ac_type == "glider" else params.get("engine_type", "prop")
-    v_stall_kmh = float(params.get("v_stall_kmh", 100.0))
-    v_stall_ms = v_stall_kmh / 3.6
-    
-    s_to_req = float(params.get("takeoff_run_m", 500.0))
+    v_min_ms = float(params.get("v_stall_kmh", 100.0)) / 3.6
+
+    s_to = float(params.get("takeoff_distance_m") or 0.0)
+    s_run = float(params.get("takeoff_run_m", 500.0))
+    s_l = float(params.get("landing_distance_m") or 0.0)
     wy_req = float(params.get("climb_rate_ms", 5.0))
-    
+
     v_cr_kmh = float(params.get("cruise_speed_kmh", 240.0))
     v_cr_ms = v_cr_kmh / 3.6
     h_cr = float(params.get("cruise_altitude_m", 3000.0))
-    
+
     AR = float(params.get("aspect_ratio", 8.0))
     e = float(params.get("oswald_e", 0.80))
     cx0_base = float(params.get("cx0", 0.025))
@@ -59,146 +83,109 @@ def calculate_matching_chart(params: dict, m0: float = None):
         cx0 += 0.0025
     if slat_type == "fixed_slot":
         cx0 += 0.0030
-    
+
     cz_max_to = float(params.get("cz_max_to", 1.8))
     cz_max_lnd = float(params.get("cz_max_lnd", 2.2))
-    
+
     eta_p = float(params.get("prop_efficiency", 0.82))
     eta_to = float(params.get("prop_eff_to", 0.65))
-    
+
     # Warunki atmosferyczne na przelocie
     isa_cr = isa_atmosphere(h_cr)
     rho_cr = isa_cr["rho"]
     sigma_cr = isa_cr["sigma"]
-    
-    # 1. Ograniczenie prędkości przeciągnięcia w konfiguracji do lądowania (Stall speed limit)
-    # W/S <= 0.5 * rho0 * Vs0^2 * Cz_max_lnd
-    ws_stall_max = 0.5 * RHO0 * (v_stall_ms ** 2) * cz_max_lnd
+    k_ind = 1.0 / (math.pi * AR * e)
+
+    # Ciężary z projektu 1: lądowanie (z rezerwą paliwa) i połowa przelotu (BIPOL_2, uwagi do (3) i (11)–(12))
+    m_landing = m_mid_cruise = m0
+    if m0 is not None and mass:
+        fractions = mass.get("fuel_fractions_detail") or {}
+        if fractions.get("total_mff") and fractions.get("landing"):
+            m_landing = m0 * fractions["total_mff"] / fractions["landing"]
+        m_mid_cruise = m0 - 0.5 * float(mass.get("m_fuel", 0.0))
+    to_takeoff = (lambda ws, m: ws * m0 / m) if m0 else (lambda ws, m: ws)
+
+    # 1. Prędkość minimalna (wzór 10): W/S ≤ q·Cz,max/1,1 — linia pionowa
+    ws_min_speed = 0.5 * RHO0 * v_min_ms ** 2 * cz_max_lnd / CZ_SAFETY
+
+    # 2. Lądowanie (wzory 3–5): W/S przy masie do lądowania przeliczone na masę startową
+    ws_landing_l = ws_landing = None
+    if s_l:
+        if s_l <= 122.0:
+            raise ValueError("Długość lądowania z 15 m musi przekraczać 122 m (wzór 3, BIPOL_2).")
+        ws_landing_l = landing_ws(cz_max_lnd, s_l)
+        ws_landing = to_takeoff(ws_landing_l, m_landing)
+
+    ws_limit, limit_by = ws_min_speed, "prędkość minimalna"
+    if ws_landing is not None and ws_landing < ws_limit:
+        ws_limit, limit_by = ws_landing, "długość lądowania"
+
     fixed_area = float(params.get('wing_area_m2') or 0)
-    ws_design = (float(m0) * G0 / fixed_area if fixed_area and m0 is not None
-                 else round(0.95 * ws_stall_max, 1))
-    
-    # Tworzymy wektor punktów W/S od 200 N/m^2 do 1.15 * ws_stall_max
-    ws_min = min(200.0, 0.25 * ws_stall_max)
-    ws_max = max(ws_stall_max * 1.15, 800.0)
-    ws_min = min(ws_min, ws_design * .7)
-    ws_max = max(ws_max, ws_design * 1.15)
+    if fixed_area and m0 is not None:
+        ws_design, limit_by = float(m0) * G0 / fixed_area, "zadana powierzchnia skrzydła"
+    else:
+        ws_design = round(ws_limit, 1)
+
+    # 3. Wznoszenie (wzory 6–9) przy V = Vmin + 0,25(Vmax − Vmin); Vmax przyjęto równą Vprzel
+    v_climb_ms = v_min_ms + 0.25 * max(0.0, v_cr_ms - v_min_ms)
+    q_climb = 0.5 * RHO0 * v_climb_ms ** 2
+    gradient = wy_req / v_climb_ms
+    tw_climb_min = gradient + 2.0 * math.sqrt(cx0 * k_ind)  # wzór 8 = G + 1/Kmax
+
+    # 4. Największy zasięg (wzory 11–12) w połowie przelotu — linia pionowa (punkt „B”)
+    q_cr = 0.5 * rho_cr * v_cr_ms ** 2
+    ws_max_range = None
+    if engine_type != "none":
+        ws_range_cr = q_cr * math.sqrt(math.pi * AR * e * cx0 / (3.0 if engine_type == "jet" else 1.0))
+        ws_max_range = to_takeoff(ws_range_cr, m_mid_cruise)
+
+    # Siatka W/S obejmująca punkt projektowy i linie pionowe (zasięg tylko, gdy nie spłaszcza wykresu)
+    shown = [ws_limit, ws_design, ws_min_speed] + [w for w in (ws_landing, ws_max_range)
+                                                    if w is not None and w <= 2.5 * ws_limit]
+    ws_min = min(200.0, 0.25 * ws_limit, 0.7 * ws_design)
+    ws_max = max(800.0, 1.15 * max(shown))
     steps = 40
     ws_values = [ws_min + i * (ws_max - ws_min) / steps for i in range(steps + 1)]
-    
-    # Wykresy ograniczeń
-    curve_takeoff = []
-    curve_climb = []
-    curve_cruise = []
-    
-    # Współczynnik oporu indukowanego k w biegunowej: Cx = Cx0 + k * Cz^2
-    k_ind = 1.0 / (math.pi * AR * e)
-    
-    # Współczynnik tarcia kół o nawierzchnię podczas rozbiegu
-    mu_ground = 0.04
-    
+
+    def requirements(ws):
+        """T/W (jet) or P/W [W/N] (prop) for take-off, climb and cruise at one W/S."""
+        if s_to:
+            tw_to = takeoff_tw(ws, cz_max_to, s_to)
+        else:  # zastępczo: rozbieg, gdy nie podano długości startu na 15 m
+            tw_to = (1.21 * ws) / (G0 * RHO0 * cz_max_to * max(30.0, s_run)) + MU_GROUND
+        tw_cl = climb_tw(ws, q_climb, cx0, k_ind, gradient)
+        tw_cr_alt = climb_tw(ws, q_cr, cx0, k_ind, 0.0)  # wzór (61) BIPOL_1_wzory: T = D przy Vprzel
+        if engine_type == "jet":
+            return tw_to, tw_cl, tw_cr_alt / sigma_cr ** 0.80
+        return (None if tw_to is None else tw_to * takeoff_mean_speed(ws, cz_max_to) / eta_to,
+                tw_cl * v_climb_ms / eta_p,
+                tw_cr_alt * v_cr_ms / (eta_p * sigma_cr ** 0.85))
+
+    curve_takeoff, curve_climb, curve_cruise = [], [], []
     for ws in ws_values:
         if engine_type == "none":
-            curve_takeoff.append(0.0)
-            curve_climb.append(0.0)
-            curve_cruise.append(0.0)
-            continue
-
-        # --- A. Rozbieg (Takeoff) ---
-        s_eff = max(30.0, s_to_req)
-        tw_to = (1.21 * ws) / (G0 * RHO0 * cz_max_to * s_eff) + mu_ground
-        
-        if engine_type == "none":
-            curve_takeoff.append(0.0)
-        elif engine_type == "jet":
-            curve_takeoff.append(round(tw_to, 4))
+            values = (0.0, 0.0, 0.0)
         else:
-            pw_to = (tw_to * takeoff_mean_speed(ws, cz_max_to)) / eta_to
-            curve_takeoff.append(round(pw_to, 2))
-            
-        # --- B. Wznoszenie przy ziemi (Climb rate wg BIPOL_1_wzory.pdf) ---
-        if engine_type == "none":
-            curve_climb.append(0.0)
-        elif engine_type == "jet":
-            # Dla odrzutowca (T approx const): max(wy) przy Cz_opt = sqrt(Cx0 / k) -> K_max
-            cz_climb = math.sqrt(cx0 / k_ind)
-            ld_climb = cz_climb / (2.0 * cx0)
-            v_y = math.sqrt(2.0 * ws / (RHO0 * cz_climb))
-            tw_climb = (wy_req / v_y) + (1.0 / ld_climb)
-            curve_climb.append(round(tw_climb, 4))
-        else:
-            # Dla śmigłowego (P_rozp approx const): max(wy) przy min mocy wymaganej -> Cz_ekon = sqrt(3 * Cx0 / k)
-            cz_climb = math.sqrt(3.0 * cx0 / k_ind)
-            cx_climb = 4.0 * cx0
-            ld_climb = cz_climb / cx_climb
-            v_y = math.sqrt(2.0 * ws / (RHO0 * cz_climb))
-            pw_climb = (wy_req + (v_y / ld_climb)) / eta_p
-            curve_climb.append(round(pw_climb, 2))
-            
-        # --- C. Przelot (Cruise) ---
-        q_cr = 0.5 * rho_cr * (v_cr_ms ** 2)
-        cz_cr = ws / q_cr
-        cx_cr = cx0 + k_ind * (cz_cr ** 2)
-        
-        tw_cr_alt = cx_cr / cz_cr
-        engine_lapse = math.pow(sigma_cr, 0.80)
-        tw_cr_sl = tw_cr_alt / engine_lapse
-        
-        if engine_type == "none":
-            curve_cruise.append(0.0)
-        elif engine_type == "jet":
-            curve_cruise.append(round(tw_cr_sl, 4))
-        else:
-            power_lapse = math.pow(sigma_cr, 0.85)
-            pw_cr_sl = (tw_cr_alt * v_cr_ms) / (eta_p * power_lapse)
-            curve_cruise.append(round(pw_cr_sl, 2))
+            values = requirements(ws)
+        digits = 4 if engine_type == "jet" else 2
+        for curve, value in zip((curve_takeoff, curve_climb, curve_cruise), values):
+            curve.append(None if value is None else round(value, digits))
 
-    # Dobór punktu projektowego (Design Point):
-    # Wybieramy W/S równe 95% ws_stall_max (rezerwa na prędkość przeciągnięcia Vs0)
-    # A prescribed area sets W/S. VS0 remains an upper-bound requirement.
-    
-    # Obliczamy wartości w punkcie ws_design:
-    s_eff = max(30.0, s_to_req)
-    tw_to_design = (1.21 * ws_design) / (G0 * RHO0 * cz_max_to * s_eff) + mu_ground
-    
-    q_cr = 0.5 * rho_cr * (v_cr_ms ** 2)
-    cz_cr = ws_design / q_cr
-    cx_cr = cx0 + k_ind * (cz_cr ** 2)
-    tw_cr_sl_design = (cx_cr / cz_cr) / math.pow(sigma_cr, 0.80)
-    
-    if engine_type == "none":
-        tw_design = None
-        pw_design = None
-    elif engine_type == "jet":
-        cz_climb = math.sqrt(cx0 / k_ind)
-        ld_climb = cz_climb / (2.0 * cx0)
-        v_y = math.sqrt(2.0 * ws_design / (RHO0 * cz_climb))
-        tw_climb_design = (wy_req / v_y) + (1.0 / ld_climb)
-        
-        tw_required = max(tw_to_design, tw_climb_design, tw_cr_sl_design) * 1.06 # 6% margines projektowy
-        tw_design = round(tw_required, 3)
-        pw_design = None
-    else:
-        pw_to_design = (tw_to_design * takeoff_mean_speed(ws_design, cz_max_to)) / eta_to
-        
-        cz_climb = math.sqrt(3.0 * cx0 / k_ind)
-        cx_climb = 4.0 * cx0
-        ld_climb = cz_climb / cx_climb
-        v_y = math.sqrt(2.0 * ws_design / (RHO0 * cz_climb))
-        pw_climb_design = (wy_req + (v_y / ld_climb)) / eta_p
-        
-        pw_cr_sl_design = ((cx_cr / cz_cr) * v_cr_ms) / (eta_p * math.pow(sigma_cr, 0.85))
-        
-        pw_required = max(pw_to_design, pw_climb_design, pw_cr_sl_design) * 1.08 # 8% margines projektowy
-        pw_design = round(pw_required, 2)
-        tw_design = None
-
-    # Teoretyczne minimum T/W dla warunku rzeczywistych rozwiązań wznoszenia (Galiński & Grabowski wzór 18)
-    # (T/W)_min >= G + 2 * sqrt(Cx0 / (pi * AR * e)) = G + 1 / K_max
-    k_max_val = 0.5 * math.sqrt((math.pi * AR * e) / cx0)
-    v_ref_climb = math.sqrt(2.0 * ws_design / (RHO0 * math.sqrt(cx0 / k_ind)))
-    grad_g = wy_req / v_ref_climb
-    tw_min_climb_bipol18 = grad_g + (1.0 / k_max_val)
+    climb_min = None
+    tw_design = pw_design = None
+    governing = None
+    if engine_type != "none":
+        climb_min = tw_climb_min if engine_type == "jet" else tw_climb_min * v_climb_ms / eta_p
+        at_design = dict(zip(("start", "wznoszenie", "przelot"), requirements(ws_design)))
+        if at_design["start"] is None:
+            raise ValueError(
+                f"Zadana długość startu na 15 m ({s_to:g} m) jest za krótka przy W/S = {ws_design:.0f} N/m² "
+                "(wzór 2, BIPOL_2). Zwiększ długość startu lub Cz,max do startu albo zmniejsz obciążenie powierzchni.")
+        governing = max(at_design, key=at_design.get)
+        if engine_type == "jet":
+            tw_design = round(at_design[governing] * 1.06, 3)  # 6% margines projektowy
+        else:
+            pw_design = round(at_design[governing] * 1.08, 2)  # 8% margines projektowy
 
     w_newtons = (float(m0) * G0) if m0 is not None else None
     power_kw = round((pw_design * w_newtons) / 1000.0, 1) if (pw_design and w_newtons) else None
@@ -214,13 +201,36 @@ def calculate_matching_chart(params: dict, m0: float = None):
         "engine_type": engine_type,
         # Unrounded: refine_takeoff_sizing() solves the take-off model on these points.
         "ws_values": ws_values,
-        "ws_stall_max": round(ws_stall_max, 1),
+        "ws_stall_max": round(ws_min_speed, 1),
+        "ws_landing": round(ws_landing, 1) if ws_landing is not None else None,
+        "ws_max_range": round(ws_max_range, 1) if ws_max_range is not None else None,
+        "ws_limit": round(ws_limit, 1),
         "curve_takeoff": curve_takeoff,
         "curve_climb": curve_climb,
         "curve_cruise": curve_cruise,
+        "climb_min": round(climb_min, 4) if climb_min is not None else None,
+        "takeoff_basis": "15m" if s_to else "ground_roll",
+        "assumptions": {
+            "source": "BIPOL_2.pdf (C. Galiński, Studium wykonalności), wzory (1)–(12)",
+            "sigma": SIGMA_AIRFIELD,
+            "cz_safety": CZ_SAFETY,
+            "takeoff_distance_m": s_to or None,
+            "takeoff_run_m": None if s_to else s_run,
+            "landing_distance_m": s_l or None,
+            "ws_landing_at_landing_mass": round(ws_landing_l, 1) if ws_landing_l is not None else None,
+            "m_landing_kg": round(m_landing, 1) if m_landing is not None else None,
+            "m_mid_cruise_kg": round(m_mid_cruise, 1) if m_mid_cruise is not None else None,
+            "v_climb_kmh": round(v_climb_ms * 3.6, 1),
+            "climb_gradient": round(gradient, 4),
+            "v_max_kmh": v_cr_kmh,
+            "note": "Vmax przyjęto równą prędkości przelotowej (brak osobnego wymagania). "
+                    "Punkt projektowy leży na granicy W/S; linia największego zasięgu jest punktem odniesienia „B”.",
+        },
         "design_point": {
             "ws": ws_design,
             "ws_N_m2": ws_design,
+            "limit_by": limit_by,
+            "governing": governing,
             "tw": tw_design,
             "pw": pw_design, # W/N
             "pw_hp_kg": round(pw_design * G0 / 735.5, 3) if pw_design else None, # KM/kg
@@ -228,6 +238,6 @@ def calculate_matching_chart(params: dict, m0: float = None):
             "required_power_kw": required_power_kw,
             "power_hp": power_hp,
             "thrust_kn": thrust_kn,
-            "tw_min_climb_bipol18": round(tw_min_climb_bipol18, 4)
+            "tw_min_climb_bipol18": round(tw_climb_min, 4)
         }
     }

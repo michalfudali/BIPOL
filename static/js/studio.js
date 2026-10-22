@@ -6,6 +6,7 @@
   const wideTabs = new Set(['tab-overview', 'tab-inputs', 'tab-calculation-tree', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
   let view = 'iso', fresh = false, resultProject = null, messageTimer;
   let aircraftModel, aircraftResult, aircraftCamera = BipolAircraftPreview.camera(), aircraftFrame;
+  let aircraftProportions = 'concept';
   const $ = id => document.getElementById(id);
   const announce = (message, error = false) => {
     const el = $('studioMessage');
@@ -74,11 +75,21 @@
     if (!currentResults) return;
     if (aircraftResult !== currentResults) {
       aircraftResult = currentResults;
-      aircraftModel = BipolAircraftPreview.model(currentResults);
+      aircraftModel = BipolAircraftPreview.model(currentResults, {proportions:aircraftProportions});
       $('studioAircraftLegend').innerHTML = aircraftModel.parts.filter(part => ['engine','propeller','flap','aileron','flaperon','slat'].includes(part.id))
         .map(part => `<span><i style="background:${part.color}"></i>${esc(part.label)}</span>`).join('');
     }
-    $('studioAircraft').innerHTML = BipolAircraftPreview.render(aircraftModel, view, aircraftCamera);
+    const stage=$('studioAircraft');
+    let mesh=stage.querySelector('canvas');
+    stage.querySelector('svg')?.remove();
+    stage.insertAdjacentHTML('afterbegin',BipolAircraftPreview.render(aircraftModel, view, aircraftCamera));
+    if(!mesh) {mesh=document.createElement('canvas');mesh.setAttribute('aria-hidden','true');stage.append(mesh);}
+    const svg=stage.querySelector('svg'), box=svg.getBoundingClientRect();
+    let solid=false;
+    if(box.width&&box.height) solid=BipolAircraftPreview.draw(mesh,aircraftModel,view,aircraftCamera,
+      {width:box.width,height:box.height,pixelRatio:window.devicePixelRatio});
+    mesh.style.width=`${box.width}px`;mesh.style.height=`${box.height}px`;mesh.hidden=!solid;
+    stage.classList.toggle('is-solid-preview',solid);
     for (const key of ['yaw','elevation']) {
       $(`studioAircraft_${key}`).value = Math.round(aircraftCamera[key]);
       $(`studioAircraft_${key}Value`).value = `${Math.round(aircraftCamera[key])}°`;
@@ -93,8 +104,52 @@
     aircraftFrame = requestAnimationFrame(() => { aircraftFrame = null; renderAircraft(); });
   }
 
+  function renderProjectGuidance() {
+    const card = $('studioProjectHealth'), button = $('studioNextAction');
+    if (!card || !button) return;
+    const failed = currentResults?.compliance_checks?.filter(check => !check.passed).length || 0;
+    let state, title, description, label, target = 'tab-inputs';
+    if ($('calcBtn').disabled) {
+      state = 'calculating'; title = 'Obliczamy Twój projekt';
+      description = 'Za chwilę pojawią się zaktualizowane wyniki i podgląd samolotu.'; label = 'Obliczanie…';
+    } else if ($('calculationStatus').classList.contains('is-error')) {
+      state = 'error'; title = 'Sprawdź wprowadzone dane';
+      description = 'Nie udało się odświeżyć wyników. Szczegóły znajdziesz przy przycisku przeliczania w założeniach.'; label = 'Popraw założenia';
+    } else if (!fresh || resultProject !== getActiveProjectId()) {
+      state = currentResults ? 'stale' : 'waiting'; title = currentResults ? 'Przelicz po zmianach' : 'Zacznij od założeń';
+      description = currentResults ? 'Wyświetlane wyniki pochodzą z poprzednich obliczeń. Odśwież je dla obecnych założeń.' : 'Uzupełnij wymagania misji. Na ich podstawie obliczymy parametry samolotu.';
+      label = currentResults ? 'Przelicz projekt' : 'Uzupełnij założenia';
+    } else if (failed) {
+      state = 'attention'; title = 'Wyniki gotowe. Zobacz uwagi';
+      description = 'Nie wszystkie wymagania są spełnione. Zobacz, które parametry warto zmienić przed przygotowaniem raportu.';
+      label = 'Sprawdź wymagania'; target = 'tab-compliance';
+    } else {
+      state = 'ready'; title = 'Możesz przygotować raport';
+      description = 'Wyniki są aktualne. Dodaj wnioski i wybierz, które części projektu chcesz zapisać.';
+      label = 'Przygotuj raport'; target = 'tab-reports';
+    }
+    card.dataset.state = state;
+    $('studioNextTitle').textContent = title;
+    $('studioNextDescription').textContent = description;
+    button.textContent = label; button.disabled = state === 'calculating';
+    button.removeAttribute('data-studio-action'); button.removeAttribute('data-studio-target');
+    if (state === 'stale') button.dataset.studioAction = 'recalculate'; else button.dataset.studioTarget = target;
+    const checks = currentResults?.compliance_checks || [];
+    $('studioChecksSummary').textContent = ['ready','attention'].includes(state)
+      ? `${checks.filter(check => check.passed).length} z ${checks.length} warunków spełnionych`
+      : state === 'calculating' ? 'Trwają obliczenia' : state === 'error' ? 'Wyniki wymagają poprawnych danych' : 'Wyniki wymagają przeliczenia';
+  }
+
   function setupAircraftRotation() {
     const canvas = $('studioAircraft');
+    new ResizeObserver(()=>{if(currentResults&&canvas.getClientRects().length)requestAnimationFrame(renderAircraft);}).observe(canvas);
+    $('studioAircraftProportions').addEventListener('change', event => {
+      aircraftProportions = event.target.value; aircraftResult = null;
+      $('studioAircraftModelNote').textContent = aircraftProportions === 'concept'
+        ? 'Bryła poglądowa. Czytelne proporcje dopasowane do klasy samolotu.'
+        : 'Długości i średnice pochodzą z obliczeń wstępnych projektu.';
+      renderAircraft();
+    });
     let drag;
     canvas.addEventListener('pointerdown', event => {
       if (!currentResults || !event.isPrimary || event.button !== 0) return;
@@ -132,6 +187,10 @@
 
   function renderOverview(result) {
     const p = result.params, m = result.mass, w = result.geometry.wing;
+    for (const [id,value,digits,unit] of [['kpi_m0',m.m0,1,'kg'],['kpi_wing_s',w.S,2,'m²'],
+      ['kpi_wingspan',w.b,2,'m'],['kpi_wy_max',result.performance.climb.wy_max_ms,2,'m/s']]) {
+      $(id).textContent = `${fmt(value,digits)} ${unit}`;
+    }
     $('studioProjectName').textContent = getActiveProject()?.name || p.name;
     const engine = p.engine_type === 'none' ? 'Bez napędu' : p.engine_type === 'jet' ? 'Napęd odrzutowy' : 'Napęd śmigłowy';
     const layout = {low: 'Dolnopłat', mid: 'Średniopłat', high: 'Górnopłat', braced_high: 'Górnopłat zastrzałowy'}[w.wing_config] || 'Płat stały';
@@ -141,12 +200,13 @@
     const total = m.m0;
     $('studioMassBars').innerHTML = [
       ['Masa pusta', m.m_empty, '#168c83'], ['Załoga i ładunek', m.m_crew + m.m_payload, '#667ed5'], ['Paliwo', m.m_fuel, '#d89b45']
-    ].map(([label, value, color]) => `<div class="studio-mass-row"><span>${label}</span><strong>${fmt(value)} kg</strong><div><i style="width:${Math.min(100, value / total * 100)}%;background:${color}"></i></div></div>`).join('');
-    $('studioMassClosure').textContent = `MTOW ${fmt(total)} kg · suma składników ${fmt(m.m_empty + m.m_crew + m.m_payload + m.m_fuel)} kg`;
+    ].map(([label, value, color]) => `<div class="studio-mass-row"><span>${label}</span><strong>${fmt(value)} kg <small class="studio-mass-share">${fmt(value / total * 100,0)}%</small></strong><div><i style="width:${Math.min(100, value / total * 100)}%;background:${color}"></i></div></div>`).join('');
+    $('studioMassClosure').textContent = `Masa startowa ${fmt(total)} kg · suma składników ${fmt(m.m_empty + m.m_crew + m.m_payload + m.m_fuel)} kg`;
     $('studioChecks').innerHTML = checks.slice(0, 4).map(c => `<div class="studio-check"><span class="studio-check-icon ${c.passed ? 'pass' : 'attention'}">${c.passed ? '✓' : '!'}</span><div><strong>${esc(c.parameter)}</strong><small>${esc(c.required)} · wynik: ${esc(c.actual)}</small></div></div>`).join('');
     $('studioMission').innerHTML = `<svg viewBox="0 0 650 145" role="img" aria-label="Schemat misji: start, wznoszenie, przelot i rezerwa"><path d="M25 95H625" stroke="#cbdadd" stroke-dasharray="4 4"/><path d="M25 95H90L175 40H470L535 78H625" fill="none" stroke="#168c83" stroke-width="3"/><text x="25" y="122">Start</text><text x="108" y="122">Wznoszenie</text><text x="245" y="24">${fmt(p.cruise_altitude_m, 0)} m ISA · ${fmt(p.cruise_speed_kmh, 0)} km/h TAS</text><text x="280" y="122">Przelot · ${fmt(p.range_km, 0)} km</text><text x="510" y="122">Rezerwa · ${fmt(p.loiter_time_min ?? 45, 0)} min</text></svg>`;
     if (p.engine_type === 'none') $('studioMission').innerHTML = `<p>Lot bez napędu · wysokość odniesienia ${fmt(p.cruise_altitude_m, 0)} m ISA.</p><p>Założony zasięg misji nie jest prognozą lotu termicznego. Sprawdź doskonałość i opadanie w module lotu szybowego.</p>`;
     renderAircraft();
+    renderProjectGuidance();
   }
 
   function renderGlide(result) {
@@ -221,6 +281,7 @@
   }
 
   async function action(name) {
+    if (name === 'recalculate') { await performCalculation(); return; }
     if (name === 'reports') return navigate('tab-reports');
     if (name === 'preview-report') return report(false);
     if (name === 'download-report') return report(true);
@@ -249,6 +310,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('studio-layout');
     setupAircraftRotation();
+    const guidanceObserver = new MutationObserver(renderProjectGuidance);
+    guidanceObserver.observe($('calculationStatus'), {attributes:true,childList:true,subtree:true});
+    guidanceObserver.observe($('calcBtn'), {attributes:true,attributeFilter:['disabled']});
     document.querySelectorAll('[data-studio-icon]').forEach(el => { el.innerHTML = BipolVisuals.icon(el.dataset.studioIcon, 19); });
     $('openReportBtn').addEventListener('click', event => { event.preventDefault(); event.stopImmediatePropagation(); navigate('tab-reports'); }, true);
     document.querySelectorAll('[data-studio-metadata]').forEach(input => input.addEventListener('input', () => {
@@ -310,14 +374,14 @@
       $('studioResultStatus').textContent = 'Wyniki aktualne';
       $('studioResultStatus').classList.remove('attention');
     });
-    document.addEventListener('bipol:project', () => { fresh = false; loadEditorial(); renderComparison(); $('studioResultStatus').textContent = 'Oczekiwanie na obliczenia'; });
+    document.addEventListener('bipol:project', () => { fresh = false; loadEditorial(); renderComparison(); $('studioResultStatus').textContent = 'Oczekiwanie na obliczenia'; renderProjectGuidance(); });
     document.addEventListener('bipol:tab', syncNavigation);
     document.addEventListener('bipol:mode', syncNavigation);
     document.addEventListener('bipol:storage', () => {
       $('studioStorageStatus').textContent = projectStore.persistent ? 'Zapis w przeglądarce' : 'Tylko pamięć karty — pobierz JSON';
       $('studioStorageStatus').classList.toggle('attention', !projectStore.persistent);
     });
-    const markStale = () => { fresh = false; $('studioResultStatus').textContent = 'Wyniki wymagają przeliczenia'; $('studioResultStatus').classList.add('attention'); };
+    const markStale = () => { fresh = false; $('studioResultStatus').textContent = 'Wyniki wymagają przeliczenia'; $('studioResultStatus').classList.add('attention'); renderProjectGuidance(); };
     document.addEventListener('bipol:calculating', markStale);
     $('designForm').addEventListener('input', markStale, true);
     $('designForm').addEventListener('change', markStale, true);

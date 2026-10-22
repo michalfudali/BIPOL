@@ -1,7 +1,7 @@
 # Baza referencyjna do analiz P1
 
-Katalog jest bazą SQLite `aircraft.sqlite3` (872 rekordy): 428 wariantów z FAST,
-288 z CADO, 42 motoszybowce i 114 konstrukcji z zestawienia geometrii. To liczba
+Katalog jest bazą SQLite `aircraft.sqlite3` (895 rekordów): 428 wariantów z FAST,
+288 z CADO, 65 motoszybowców i 114 konstrukcji z zestawienia geometrii. To liczba
 rekordów, nie liczba niezależnych rodzin. Te same konstrukcje mogą występować w obu
 źródłach pod różnymi nazwami. Do analizy wrażliwości wybierz jedno źródło.
 Baza jest lokalną migawką; aplikacja nie pobiera danych w trakcie pracy.

@@ -105,3 +105,32 @@ test('aircraft names and labels are escaped in standalone SVG', () => {
   const svg=preview.render(preview.model(result({name:'<script>"& test'})));
   assert.ok(!svg.includes('<script>')); assert.ok(svg.includes('&lt;script&gt;&quot;&amp; test'));
 });
+
+test('concept proportions clarify the extreme regional profile without mutating calculated geometry', () => {
+  const r=result({aircraft_type:'turboprop_regional',n_pax:70,engine_location:'wing'});
+  Object.assign(r.geometry.wing,{b:80.2,S:584.71,cr:10,ct:4,wing_config:'high'});
+  Object.assign(r.geometry.fuselage,{length:68.17,diameter:2.4});
+  const original=structuredClone(r), exact=preview.model(r,{proportions:'calculated'}), concept=preview.model(r,{proportions:'concept'});
+  assert.equal(exact.dimensions.diameter,2.4);
+  assert.equal(concept.dimensions.sourceDiameter,2.4);
+  assert.ok(concept.dimensions.diameter>=68.17*.08);
+  assert.equal(exact.dimensions.length,concept.dimensions.length);
+  assert.equal(exact.span,concept.span); assert.equal(exact.area,concept.area);
+  assert.ok(concept.faces.some(face=>face.label==='Okno kabiny pasażerskiej'));
+  const svg=preview.render(concept);
+  assert.ok(svg.includes('KONCEPCJA · PROPORCJE UPROSZCZONE'));
+  assert.ok(svg.includes('S = 584,71 m² · b = 80,2 m'));
+  assert.deepEqual(r,original);
+});
+
+test('solid faces have finite outward unit normals and no collapsed panels', () => {
+  for (const aircraft_type of ['piston_ga','turboprop_regional','glider','jet_business']) {
+    const r=result({aircraft_type,n_pax:70});
+    const model=preview.model(r,{proportions:'concept'});
+    for (const face of model.faces.filter(face=>!face.line)) {
+      assert.ok(face.normal,`${aircraft_type}: ${face.part}`);
+      assert.ok(face.normal.every(Number.isFinite));
+      assert.ok(Math.abs(Math.hypot(...face.normal)-1)<1e-7);
+    }
+  }
+});

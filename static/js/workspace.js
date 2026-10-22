@@ -80,7 +80,7 @@
     if(reportPlan)charts.append(reportPlan);
     method.append(averages, prelim, sources);
     mount.append(charts, selection, method);root.append(mount);
-    tabset(mount, [{title:'Wyniki',panel:charts},{title:'Baza i dobór samolotów',panel:selection},{title:'Metoda i źródła',panel:method}], 'Analiza trendów');
+    tabset(mount, [{title:'Wykresy i wyniki',panel:charts},{title:'Samoloty w bazie',panel:selection},{title:'Metoda i źródła',panel:method}], 'Analiza trendów');
     const chooser = document.createElement('label'); chooser.htmlFor = 'trendChartView'; chooser.className = 'quiet-chart-chooser';
     chooser.innerHTML = 'Wykres<select id="trendChartView"><option value="0">Udział masy pustej</option><option value="1">Trend w czasie</option><option value="2">Osiągi a geometria</option></select>';
     charts.prepend(chooser);
@@ -100,6 +100,7 @@
       const count = warnings.querySelectorAll('p').length;
       d.hidden = count === 0; summary.textContent = `Uwagi do danych (${count})`;
     }).observe(warnings,{childList:true});
+    disclosure($('trendSuggestionsPanel'),'Parametry z trendów — sprawdź i zastosuj w projekcie');
   }
 
   function organizeAnalyses() {
@@ -176,8 +177,65 @@
     });
   }
 
+  function setupParameterFinder() {
+    const search = $('studioParameterSearch'), list = $('studioParameterResults'), status = $('studioParameterCount');
+    const normalize = text => text.toLocaleLowerCase('pl').normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/ł/g,'l');
+    function openSection(key) {
+      const header = $('accordion_'+key)?.querySelector('.module-header');
+      if ($('body_'+key)?.classList.contains('collapsed')) header.click();
+      return header;
+    }
+    function reveal(control) {
+      if (control.closest('.advanced-only')) setSidebarMode('advanced');
+      const module = control.closest('.module-accordion');
+      if (module) openSection(module.id.replace('accordion_',''));
+      for (let node=control.parentElement; node; node=node.parentElement) if (node.tagName==='DETAILS') node.open=true;
+      requestAnimationFrame(() => {
+        control.focus({preventScroll:true});
+        control.closest('.input-group')?.scrollIntoView({block:'center',behavior:'instant'});
+      });
+    }
+    function update() {
+      const query = normalize(search.value.trim());
+      list.replaceChildren(); list.hidden = !query;
+      if (!query) { status.textContent = 'Wpisz nazwę, aby przejść prosto do pola.'; return; }
+      const fields = [...$('designForm').querySelectorAll('.input-group label[for]')].map(label => {
+        const control = $(label.htmlFor), copy = label.cloneNode(true);
+        copy.querySelectorAll('button,.info-circle-icon').forEach(node=>node.remove());
+        const name = copy.textContent.replace(/\s+/g,' ').trim();
+        return {control,name,module:control?.closest('.module-accordion')};
+      }).filter(field => field.control && field.module && field.module.id!=='accordion_mod0'
+        && !field.control.closest('[hidden]') && normalize(field.name).includes(query));
+      status.textContent = fields.length ? `Znalezione parametry: ${fields.length}. Wybierz pole poniżej.` : 'Nie znaleziono parametru. Spróbuj krótszej nazwy, np. „masa” lub „skrzydło”.';
+      fields.slice(0,8).forEach(field => {
+        const item=document.createElement('li'), button=document.createElement('button');button.type='button';
+        const name=document.createElement('span');name.textContent=field.name;
+        const group=document.createElement('small');group.textContent=(field.control.readOnly?'Obliczany · ':'')+(field.module.querySelector('.module-title b')?.textContent || 'Parametry');
+        button.append(name,group);button.addEventListener('click',()=>reveal(field.control));
+        item.append(button);list.append(item);
+      });
+      if (fields.length>8) status.textContent += ' Wyświetlamy pierwszych 8 — doprecyzuj nazwę.';
+      if (!fields.length) list.hidden=true;
+    }
+    search.addEventListener('input', update);
+    search.addEventListener('keydown', event => {
+      if (event.key==='Escape') { search.value=''; update(); }
+      if (event.key==='ArrowDown' && list.firstElementChild) { event.preventDefault();list.querySelector('button').focus(); }
+    });
+    document.querySelectorAll('[data-input-section]').forEach(button=>button.addEventListener('click',()=> {
+      const header=openSection(button.dataset.inputSection);
+      header?.focus({preventScroll:true});header?.scrollIntoView({block:'start',behavior:'instant'});
+    }));
+    for (const id of ['modeBasicBtn','modeAdvancedBtn']) {
+      const button=$(id), sync=()=>button.setAttribute('aria-pressed',String(button.classList.contains('active')));
+      sync();new MutationObserver(sync).observe(button,{attributes:true,attributeFilter:['class']});
+    }
+    document.addEventListener('bipol:results',()=>{if(search.value.trim())update();});
+    document.addEventListener('bipol:project',()=>{search.value='';update();});
+  }
+
   document.addEventListener('DOMContentLoaded',()=>{
-    organizeTrends();organizeAnalyses();formPresentation();refreshDynamicNotes();
+    organizeTrends();organizeAnalyses();formPresentation();refreshDynamicNotes();setupParameterFinder();
     const metadata=$('tab-reports').querySelector('.studio-metadata-grid');help(metadata,'Dane autora');
     const reportNotes=$('studioNotes').closest('section');disclosure(reportNotes,'Wnioski i własne źródła');
     const extraExports=document.createElement('div');

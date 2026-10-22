@@ -11,14 +11,16 @@
   <link rel="stylesheet" href="/static/css/aircraft-editor.css?v=1">
   <link rel="stylesheet" href="/static/css/workspace.css?v=1">
   <link rel="stylesheet" href="/static/css/calculation-tree.css?v=1">
+  <link rel="stylesheet" href="/static/css/experience.css?v=3">
 </head>
 <body class="studio-layout">
+  <a class="studio-skip-link" href="#studioMainWorkspace">Przejdź do treści</a>
   {% include "studio_sidebar.html" %}
 
   <!-- Top Navbar -->
   <header class="bipol-navbar">
     <div class="navbar-inner">
-      <div class="studio-topbar-left"><button type="button" id="studioMenuToggle" aria-label="Otwórz nawigację" aria-expanded="false" aria-controls="studioSidebar"><span data-studio-icon="menu"></span></button><div class="studio-breadcrumb">BIPOL I / Pracownia<b id="studioBreadcrumb">Przegląd projektu</b></div></div>
+      <div class="studio-topbar-left"><button type="button" id="studioMenuToggle" aria-label="Otwórz nawigację" aria-expanded="false" aria-controls="studioSidebar"><span data-studio-icon="menu"></span></button><div class="studio-breadcrumb">Twoja pracownia<b id="studioBreadcrumb">Przegląd projektu</b></div></div>
       <div class="studio-save-line"><span id="studioStorageStatus">Zapis w przeglądarce</span><span id="studioResultStatus">Oczekiwanie na obliczenia</span></div>
       <div class="brand">
         <div class="brand-logo">✈️</div>
@@ -35,7 +37,7 @@
     </div>
   </header>
 
-  <div class="app-container">
+  <div class="app-container" id="studioMainWorkspace" role="main" tabindex="-1">
 
     <!-- SEMESTER PROGRESS & BIPOL I PROJECTS SCOREBOARD BAR -->
     <div id="semesterProjectBar" class="semester-progress-container" style="display:none;">
@@ -115,16 +117,17 @@
           <span class="project-pulse-dot"></span>
           <span>Projekt</span>
         </div>
-        <select id="projectSwitcherSelect" class="project-switcher-select" title="Zmień aktywny projekt samolotu"></select>
+        <select id="projectSwitcherSelect" class="project-switcher-select" aria-label="Aktywny projekt" title="Zmień aktywny projekt samolotu"></select>
         <span id="projectAutoSaveStatus" class="project-save-status">
           <span class="icon">💾</span> Zapisano automatycznie
         </span>
       </div>
 
-      <div class="project-bar-right"><details class="quiet-project-menu"><summary>Opcje projektu</summary><div class="quiet-project-menu-items">
+      <div class="project-bar-right">
         <button type="button" id="btnNewProjectWizard" class="btn btn-primary" style="font-weight:700; font-size:0.82rem;" title="Utwórz nowy projekt samolotu za pomocą kreatora">
-          Nowy projekt
+          <span aria-hidden="true">＋</span> Nowy projekt
         </button>
+        <details class="quiet-project-menu"><summary>Opcje projektu</summary><div class="quiet-project-menu-items">
         <button type="button" id="btnEditProjectWizard" class="btn btn-outline" onclick="openWizard('edit')">Edytuj w kreatorze</button>
         <button type="button" id="btnOpenProjectManager" class="btn btn-outline" style="font-weight:700; font-size:0.82rem;" title="Przeglądaj wszystkie projekty, zmieniaj nazwy, duplikuj lub eksportuj">
           Projekty (<span id="projectCountBadge">1</span>)
@@ -2334,18 +2337,18 @@
     window.INITIAL_PORTAL_MODE = "{{ initial_portal_mode or '' }}";
   </script>
   <script src="/static/js/studio-core.js?v=1"></script>
-  <script src="/static/js/aircraft-preview.js?v=1"></script>
+  <script src="/static/js/aircraft-preview.js?v=3"></script>
   <script src="/static/js/studio-visuals.js?v=2"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=14"></script>
   <script src="/static/js/app.js?v=19"></script>
   <script src="/static/js/constraints-ui.js?v=3"></script>
   <script src="/static/js/design-basis.js?v=3"></script>
-  <script src="/static/js/studio.js?v=4"></script>
+  <script src="/static/js/studio.js?v=7"></script>
   <script src="/static/js/aircraft-project.js?v=1"></script>
   <script src="/static/js/aircraft-editor.js?v=1"></script>
-  <script src="/static/js/trends.js?v=4"></script>
-  <script src="/static/js/workspace.js?v=3"></script>
+  <script src="/static/js/trends.js?v=5"></script>
+  <script src="/static/js/workspace.js?v=4"></script>
   <script src="/static/js/calculation-tree.js?v=1"></script>
 </body>
 </html>

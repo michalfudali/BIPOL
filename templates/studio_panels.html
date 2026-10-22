@@ -1,10 +1,15 @@
 <section id="tab-overview" class="tab-content active studio-panel">
   <div class="studio-heading"><div><p class="studio-eyebrow">PRZEGLĄD PROJEKTU</p><h1 id="studioProjectName">Twój samolot</h1><p id="studioProjectDescription"></p></div><button type="button" class="btn btn-primary" data-studio-target="tab-inputs">Edytuj założenia</button></div>
-  <span id="studioChecksSummary" class="studio-tag">Oczekiwanie na obliczenia</span>
+  <nav class="studio-workflow" aria-label="Główne kroki projektu">
+    <button type="button" data-studio-target="tab-inputs"><span class="studio-workflow-number" aria-hidden="true">1</span><span><strong>Ustal założenia</strong><small>Wymagania, geometria i napęd</small></span><span aria-hidden="true">↗</span></button>
+    <button type="button" data-studio-target="tab-trends"><span class="studio-workflow-number" aria-hidden="true">2</span><span><strong>Porównaj samoloty</strong><small>Dane z bazy i analiza trendów</small></span><span aria-hidden="true">↗</span></button>
+    <button type="button" data-studio-target="tab-reports"><span class="studio-workflow-number" aria-hidden="true">3</span><span><strong>Przygotuj raport</strong><small>Wyniki gotowe do zapisania</small></span><span aria-hidden="true">↗</span></button>
+  </nav>
   {% include "overview_metrics.html" %}
   <div class="studio-two-col studio-aircraft-grid">
     <section class="studio-card">
-      <div class="studio-card-heading"><div><h2>Koncepcja samolotu</h2></div><button class="btn btn-outline-sm" data-studio-action="export-svg">Pobierz SVG</button></div>
+      <div class="studio-card-heading"><div><h2>Twój samolot</h2><p>Obejrzyj koncepcję z każdej strony.</p></div><button class="btn btn-outline-sm" data-studio-action="export-svg" title="Zapisz aktualny widok jako grafikę SVG">Zapisz widok</button></div>
+      <div class="studio-model-toolbar"><label for="studioAircraftProportions">Proporcje modelu<select id="studioAircraftProportions" aria-describedby="studioAircraftModelNote"><option value="concept">Koncepcja</option><option value="calculated">Z obliczeń</option></select></label><p id="studioAircraftModelNote">Bryła poglądowa. Czytelne proporcje dopasowane do klasy samolotu.</p></div>
       <div id="studioAircraft" class="studio-aircraft" tabindex="0" role="group" aria-label="Obracany podgląd samolotu" aria-describedby="studioAircraftHelp" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home"></div>
       <p id="studioAircraftHelp" class="studio-fine-print studio-aircraft-help">Przeciągnij myszą lub palcem, aby obrócić samolot. Klawiatura: strzałki obracają, Home przywraca perspektywę.</p>
       <div class="studio-view-tabs" role="group" aria-label="Widok samolotu">
@@ -18,9 +23,18 @@
         <label for="studioAircraft_elevation">Wysokość spojrzenia <output id="studioAircraft_elevationValue" for="studioAircraft_elevation">25°</output><input id="studioAircraft_elevation" type="range" min="-90" max="90" value="25" step="1"></label>
       </div>
       <div id="studioAircraftLegend" class="studio-aircraft-legend" aria-label="Elementy widoczne w modelu"></div>
-      <p class="studio-fine-print">Lotki i klapy według wymiarów z obliczeń. Rozmieszczenie silników i slotów jest orientacyjne. Rysunek zestawieniowy jest dostępny w module CAD.</p>
+      <p class="studio-fine-print">Podział lotek i klap wynika z obliczeń. Rozmieszczenie napędu, okien i slotów jest poglądowe. Rysunek wymiarowy projektu znajdziesz w module CAD.</p>
     </section>
-    <section class="studio-card"><div class="studio-card-heading"><div><h2>Bilans masy</h2></div></div><div id="studioMassBars"></div><div class="studio-note" id="studioMassClosure"></div><button class="studio-text-button" data-studio-target="tab-p1-p2">Przejdź do bilansu i doboru napędu →</button></section>
+    <div class="studio-overview-side">
+      <section class="studio-card studio-guidance" id="studioProjectHealth" data-state="waiting" aria-labelledby="studioNextTitle">
+        <div class="studio-guidance-label"><span class="studio-status-dot" aria-hidden="true"></span>Co dalej?</div>
+        <h2 id="studioNextTitle">Zacznij od założeń</h2>
+        <p id="studioNextDescription">Określ, jaki samolot chcesz zaprojektować. Pomożemy obliczyć pozostałe parametry.</p>
+        <span id="studioChecksSummary" class="studio-tag">Oczekiwanie na obliczenia</span>
+        <button type="button" class="btn btn-primary" id="studioNextAction" data-studio-target="tab-inputs">Uzupełnij założenia</button>
+      </section>
+      <section class="studio-card"><div class="studio-card-heading"><div><h2>Co składa się na masę?</h2><p>Masa samolotu gotowego do startu.</p></div></div><div id="studioMassBars"></div><div class="studio-note" id="studioMassClosure"></div><button class="studio-text-button" data-studio-target="tab-p1-p2">Zobacz szczegółowy bilans →</button></section>
+    </div>
   </div>
   <details class="quiet-disclosure"><summary>Misja i kontrola założeń</summary><div class="studio-two-col"><section class="studio-card"><h2>Profil misji</h2><div id="studioMission"></div><button class="studio-text-button" data-studio-target="tab-p1-p2">Edytuj założenia misji →</button></section><section class="studio-card"><h2>Kontrola założeń</h2><div id="studioChecks"></div><button class="studio-text-button" data-studio-target="tab-compliance">Wszystkie kryteria i uwagi →</button></section></div></details>
 </section>
