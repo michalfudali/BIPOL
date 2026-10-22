@@ -3,3 +3,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .agents/
+
+# Materiały dydaktyczne wydziału: tylko lokalna kopia, nie publikować.
+scraped_materials/
+static/scraped_materials/
+# Skrypty pobierające materiały zza logowania: dane logowania podaje się w zmiennych środowiskowych.
+scrape_*.py
+.env

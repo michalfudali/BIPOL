@@ -18,9 +18,14 @@ py -3.11 -m pip install -r requirements.txt
 py -3.11 app.py
 ```
 
+Serwer nasłuchuje domyślnie tylko na `127.0.0.1:5000`. Zmienne środowiskowe:
+`PORT` (port), `HOST` (np. `0.0.0.0`, aby udostępnić aplikację w sieci) oraz
+`FLASK_DEBUG=1` (debugger Werkzeuga). Debuggera nie włączaj razem z `HOST=0.0.0.0`,
+bo pozwala on wykonać dowolny kod na komputerze z serwerem.
 
-Testy regresji: `work/venv/bin/python -m pytest tests -q`.
-Testy narzędzi pracowni: `node tests/studio_core.test.mjs` (bez zależności npm).
+Testy regresji: `py -3.11 -m pip install -r requirements-dev.txt`, potem `py -3.11 -m pytest tests -q`.
+Testy narzędzi pracowni: `node --test tests/studio_core.test.mjs tests/aircraft_project.test.mjs`
+(Node 20, bez zależności npm). Oba zestawy uruchamia GitHub Actions (`.github/workflows/tests.yml`).
 Raporty są dokumentami HTML, które można wydrukować do PDF w przeglądarce.
 
 Raport zbiorczy i osobne sprawozdania P1–P6 mają wspólny skład A4: stronę
@@ -71,6 +76,15 @@ ryzyka, a nie z podziału na masy poniżej i powyżej 600 kg.
 Źródła: [EASA CS 23.2005](https://www.easa.europa.eu/en/downloads/22283/en),
 [EASA: kategorie operacji UAS](https://www.easa.europa.eu/en/domains/drones-air-mobility/operating-drone).
 
+Podział na poziomy pochodzi z obowiązującej CS-23 Amdt 5 (CS 23.2005). Obwiednia V-n
+i współczynniki przeciążeń są liczone **metodą wg CS-23 Amdt 4 (§23.333–23.345) i
+Danileckiego**. Amdt 5 usunęła te paragrafy i przeniosła ich treść do środków spełnienia
+wymagań (AMC, normy ASTM), więc w sprawozdaniu należy je opisywać jako metodę, a nie
+obowiązujący przepis. Podmuch 66 ft/s przy VB jest liczony tylko dla kategorii commuter;
+dla CS-25 linie podmuchu Pratta są uproszczeniem (CS-25.341 stosuje podmuch dyskretny 1-cos).
+Klasyfikacja krajowa: rozporządzenie Ministra Infrastruktury w sprawie klasyfikacji
+statków powietrznych (t.j. Dz. U. z 2025 r. poz. 1137).
+
 ---
 
 ## 🌐 Adresy uruchomionej aplikacji
@@ -78,13 +92,13 @@ ryzyka, a nie z podziału na masy poniżej i powyżej 600 kg.
 - **Główny kokpit projektowy:** 👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
 - **Podgląd sprawozdania i wydruk PDF:** **[http://127.0.0.1:5000/report](http://127.0.0.1:5000/report)**
 - **API oficjalnych tematów wydziałowych:** `http://127.0.0.1:5000/api/topics`
-- **API pobranych materiałów dydaktycznych:** `http://127.0.0.1:5000/api/scraped-files`
+- **API odnośników do materiałów dydaktycznych:** `http://127.0.0.1:5000/api/scraped-files`
 
 ---
 
-## 🚀 Nowe funkcjonalności wdrożone na życzenie użytkownika
+## Funkcje
 
-### 1. Pełna baza 110 oficjalnych tematów projektowych z listy wydziałowej (`BIPOL1_samoloty.pdf`):
+### 1. Baza 110 tematów projektowych z wydziałowej listy BIPOL I:
 Aplikacja zawiera wszystkie **110 tematów** podzielonych na **13 kategorii**:
 1. **Motoszybowce** (1- i 2-miejscowe; rozpiętości 13,5m, 15m, >20m; silnik ciągnący, pchający, chowany)
 2. **Samoloty ultralekkie (ULM / LSA)** (1- i 2-miejscowe, dolnopłaty i górnopłaty, układ tandem / obok siebie)
@@ -108,29 +122,17 @@ Aplikacja zawiera wszystkie **110 tematów** podzielonych na **13 kategorii**:
 - **Położenie zespołu napędowego:** dziób (ciągnący), skrzydła (gondole wielosilnikowe), tył kadłuba (pchający), chowany w kadłubie.
 - **Konfiguracja płatowca:** dolnopłat, górnopłat (np. STOL), średniopłat; skos skrzydła $\chi_{25\%}$, wznos $\Gamma$.
 
-### 3. Zescrapowane i zintegrowane materiały wydziałowe (27 plików PDF dostępnych w aplikacji):
-- **BIPOL I (ZSiS MEiL PW):**
-  - `BIPOL1_samoloty.pdf` – Oficjalna lista 110 tematów projektowych
-  - `BIPOL1_Opis_Projektow.pdf` – Szczegółowe wymagania i punktacja projektów P1–P6 (dr inż. Marcin Figat)
-  - `BIPOL1_regulamin.pdf` – Regulamin zaliczenia
-  - `BIPOL_1_wzory.pdf` – Wyprowadzenia wzorów i metodyka obliczeń
-  - `BIPOL_1.pdf` – Analizy wstępne
-  - `BIPOL_2.pdf` – Studium wykonalności
-  - `BIPOL_3_2010.pdf` i `BIPOL_3_przyklad.pdf` – Projekt wstępny i analiza masowa
-  - `Usterzenie_wymiary.pdf` – Wymiarowanie usterzeń metodą współczynników objętościowych
-  - `Schemat_projektu.pdf` – Metodyka rysowania kadłuba
-  - `BIPOL_4.pdf` i `BIPOL_5.pdf` – Aerodynamika i osiągi
-  - Handouty wykładów prof. C. Galińskiego (od 1 do 8).
-- **Mechanika Lotu I (ZM MEiL PW):**
-  - `Projekt_1.pdf` – Wybór samolotu i bazy danych
-  - `Projekt_2.pdf` – Charakterystyki aerodynamiczne płata
-  - `Projekt_3.pdf` – Opory części samolotu i biegunowa całego płatowca
-  - `Projekt_4.pdf` – Lot szybowy i biegunowa prędkości
-  - `Projekt_5.pdf` – Charakterystyki zespołu napędowego
-  - `Projekt_6.pdf` – Osiągi samolotu w locie ustalonym
-  - `Literatura.pdf` – Wykaz zalecanej literatury.
+### 3. Materiały wydziałowe
+Repozytorium nie zawiera materiałów dydaktycznych wydziału ani podręczników. Zakładka
+**„📥 Materiały z Wydziału”** odsyła do stron źródłowych (BIPOL I w ZSiS, Mechanika Lotu I
+w ZM, Zapis Konstrukcji CAD I w ZPK, podręcznik Danileckiego w DBC, monografia Galińskiego
+w Łukasiewicz – ILOT). Materiały chronione hasłem pobiera się po zalogowaniu danymi od
+prowadzącego.
 
-Wszystkie te pliki są dostępne do bezpośredniego podglądu i pobrania w zakładce **"📥 Materiały z Wydziału"**.
+Własne kopie można trzymać w katalogu `scraped_materials/` (ignorowanym przez git):
+aplikacja wyświetli je wtedy w tej samej zakładce, tylko na Twoim komputerze. Skrypty
+`scrape_*.py` też są ignorowane, a dane logowania przyjmują wyłącznie ze zmiennych
+środowiskowych (`BIPOL_USER`, `BIPOL_PASSWORD`, `ML1_LOGIN`, `ML1_PASSWORD`).
 
 ---
 
@@ -140,6 +142,6 @@ Wszystkie te pliki są dostępne do bezpośredniego podglądu i pobrania w zakł
 2. **Biegunowa aerodynamiczna $C_z(C_x)$:** Konfiguracja gładka, startowa oraz z klapami do lądowania i wysuniętym podwoziem.
 3. **Rozkład siły nośnej wg Schrenka:** Wykres obciążenia trapezowego, eliptycznego i wypadkowego rozkładu Schrenka wzdłuż rozpiętości.
 4. **Krzywa prędkości wznoszenia $w_y(V)$:** Biegunowa prędkości i punkt maksymalnego wznoszenia $w_{y,max}$.
-5. **Obwiednia obciążeń dopuszczalnych $V-n$:** Obwiednia manewrowa i linie podmuchów pionowych wg przepisów CS-23/CS-25.
+5. **Obwiednia obciążeń dopuszczalnych $V-n$:** Obwiednia manewrowa i linie podmuchów pionowych metodą wg CS-23 Amdt 4 i Danileckiego (dla CS-25 uproszczenie Pratta).
 6. **Diagram wyważenia:** Wykres wędrówki Środka Masy w % ŚDA dla stanów OEW, ZFW, MTOW, MLW względem Punktu Neutralnego.
 7. **Rysunek zestawieniowy 3-widokowy SVG (CAD):** Parametryczny rzut z góry, z przodu i z boku uwzględniający górnopłat/dolnopłat, rozpiętość, kadłub i usterzenia.

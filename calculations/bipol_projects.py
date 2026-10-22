@@ -96,7 +96,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     unmanned_ac = law_sub["unmanned"] or ac_type == "uav"
     k_cat = str(params.get("airworthiness_k") or law_sub["k_allowed"][0]).upper()
     cat_pl = (f"specyfikacji {law_sub['easa_spec']} ({law_sub['class_name']}, kategoria zdatności: {law_sub['design_code']}, "
-              f"krajowy wpis: {law_sub['polish_code']} / {K_CATEGORIES.get(k_cat, k_cat)} wg Dz. U. 2025 poz. 1137)")
+              f"krajowy wpis: {law_sub['polish_code']} / {K_CATEGORIES.get(k_cat, k_cat)} wg rozporządzenia MI, t.j. Dz. U. z 2025 r. poz. 1137)")
     if engine_type == "jet":
         eng_pl = "turboodrzutowy dwuprzepływowy (Turbofan)"
     elif ac_type == "turboprop_regional":
@@ -657,7 +657,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # =========================================================================
     # PROJEKT 6: OBWIEDNIA OBCIĄŻEŃ DOPUSZCZALNYCH (20 pkt)
     # =========================================================================
-    # 6.1 Punkty charakterystyczne manewrowe i podmuchowe wg CS-23.335 i CS-23.341
+    # 6.1 Punkty charakterystyczne manewrowe i podmuchowe wg CS-23 Amdt 4 §23.335 i §23.341 (metoda dydaktyczna)
     limits = env_res.get("limits", {})
     speeds = env_res.get("speeds", {})
     gusts = env_res.get("gust_factors", {})
@@ -665,25 +665,28 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     points_vn = [
         {"point": "S (początek przeciągnięcia dodatniego Vs1)", "v_kmh": speeds.get("v_s_kmh", 0), "n": 1.0, "type": "Przeciągnięcie n=+1"},
         {"point": "A (prędkość manewrowa dodatnia VA)", "v_kmh": speeds.get("v_a_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Krzywa manewrowa n_max"},
-        {"point": "B (maks. intensywność podmuchu VB, Ude=66 fps)", "v_kmh": speeds.get("v_b_kmh", speeds.get("v_a_kmh", 0)), "n": round(1.0 + gusts.get("delta_n_b", 2.2), 2), "type": "Podmuch Ub=20.12 m/s"},
         {"point": "C (obliczeniowa prędkość przelotowa VC)", "v_kmh": speeds.get("v_c_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Przelot VC (Uc=15.24 m/s)"},
         {"point": "D (obliczeniowa prędkość nurkowania VD)", "v_kmh": speeds.get("v_d_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Nurkowanie VD (Ud=7.62 m/s)"},
         {"point": "E (dolny punkt przy VD)", "v_kmh": speeds.get("v_d_kmh", 0), "n": 0.0, "type": "Nurkowanie n=0"},
         {"point": "F (dolny punkt przy VC z n_min)", "v_kmh": speeds.get("v_c_kmh", 0), "n": limits.get("n_min", -1.52), "type": "Krzywa manewrowa n_min"},
         {"point": "G (prędkość manewrowa ujemna VG)", "v_kmh": speeds.get("v_g_kmh", 0), "n": limits.get("n_min", -1.52), "type": "Przeciągnięcie ujemne"}
     ]
-    
-    # 6.2 Pętla klapowa wg CS-23.345: VF = max(1.4 * Vs1, 1.8 * Vs0), n_flap = +2.0 (BIPOL_5.pdf Rys. 5.6)
+    if gusts.get("vb_gust"):
+        # Commuter / CS-25 only; other categories have no VB gust case.
+        points_vn.insert(2, {"point": "B (maks. intensywność podmuchu VB, Ude=66 fps)", "v_kmh": speeds["v_b_kmh"],
+                             "n": round(1.0 + gusts["delta_n_b"], 2), "type": "Podmuch Ub=20.12 m/s"})
+
+    # 6.2 Pętla klapowa wg CS-23 Amdt 4 §23.345: VF = max(1.4 * Vs1, 1.8 * Vs0), n_flap = +2.0 (BIPOL_5.pdf Rys. 5.6)
     v_f_kmh = float(speeds.get("v_f_kmh", round(max(1.4 * float(perf_res["speeds"]["vs_clean_kmh"]), 1.8 * float(perf_res["speeds"]["vs_lnd_kmh"])), 1)))
     flap_loop = [
         {"point": "Sf (początek przeciągnięcia z klapami Vs0)", "v_kmh": perf_res["speeds"]["vs_lnd_kmh"], "n": 1.0},
         {"point": "Af (wejście na n=+2.0 z klapami)", "v_kmh": round(float(perf_res["speeds"]["vs_lnd_kmh"]) * math.sqrt(2.0), 1), "n": 2.0},
-        {"point": "Ff (prędkość obliczeniowa klap VF wg CS-23.345)", "v_kmh": v_f_kmh, "n": 2.0},
+        {"point": "Ff (prędkość obliczeniowa klap VF wg CS-23 Amdt 4 §23.345)", "v_kmh": v_f_kmh, "n": 2.0},
         {"point": "Df (dolny punkt przy VF)", "v_kmh": v_f_kmh, "n": 0.0}
     ]
     
     p6_data = {
-        "regulations_standard": f"{law_sub['design_code']} – podkategoria {law_sub['name']} (Dz. U. 2025 poz. 1137); {limits.get('load_factor_reference', '')}",
+        "regulations_standard": f"{law_sub['design_code']} – podkategoria {law_sub['name']} (t.j. Dz. U. z 2025 r. poz. 1137); {limits.get('load_factor_reference', '')}",
         "points_table": points_vn,
         "flap_envelope_loop": flap_loop,
         "v_f_kmh": v_f_kmh,

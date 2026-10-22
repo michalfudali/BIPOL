@@ -5,6 +5,16 @@ Matching Chart / Diagram doboru parametrów płatowca i napędu wg BIPOL I
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 
+
+def takeoff_mean_speed(ws, cz_max_to):
+    """Mean ground-roll speed V_LOF/sqrt(2), V_LOF = 1.12 V_S,TO.
+
+    Propeller thrust is converted to power at this speed, as in
+    runway.takeoff_distance(); converting at V_LOF overstates power by sqrt(2).
+    """
+    return 1.12 * math.sqrt(max(1.0, 2.0 * ws / (RHO0 * cz_max_to))) / math.sqrt(2.0)
+
+
 def calculate_matching_chart(params: dict, m0: float = None):
     """
     Parametry wejściowe:
@@ -103,9 +113,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
         elif engine_type == "jet":
             curve_takeoff.append(round(tw_to, 4))
         else:
-            # Prędkość oderwania V_LOF = 1.12 * V_stall_to
-            v_to = 1.12 * math.sqrt(max(1.0, 2.0 * ws / (RHO0 * cz_max_to)))
-            pw_to = (tw_to * v_to) / eta_to
+            pw_to = (tw_to * takeoff_mean_speed(ws, cz_max_to)) / eta_to
             curve_takeoff.append(round(pw_to, 2))
             
         # --- B. Wznoszenie przy ziemi (Climb rate wg BIPOL_1_wzory.pdf) ---
@@ -171,8 +179,7 @@ def calculate_matching_chart(params: dict, m0: float = None):
         tw_design = round(tw_required, 3)
         pw_design = None
     else:
-        v_to = 1.12 * math.sqrt(max(1.0, 2.0 * ws_design / (RHO0 * cz_max_to)))
-        pw_to_design = (tw_to_design * v_to) / eta_to
+        pw_to_design = (tw_to_design * takeoff_mean_speed(ws_design, cz_max_to)) / eta_to
         
         cz_climb = math.sqrt(3.0 * cx0 / k_ind)
         cx_climb = 4.0 * cx0
@@ -205,7 +212,8 @@ def calculate_matching_chart(params: dict, m0: float = None):
 
     return {
         "engine_type": engine_type,
-        "ws_values": [round(x, 1) for x in ws_values],
+        # Unrounded: refine_takeoff_sizing() solves the take-off model on these points.
+        "ws_values": ws_values,
         "ws_stall_max": round(ws_stall_max, 1),
         "curve_takeoff": curve_takeoff,
         "curve_climb": curve_climb,

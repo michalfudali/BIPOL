@@ -21,7 +21,7 @@ def calculate_mass_sizing(params: dict):
       - range_km: zasięg obliczeniowy [km]
       - cruise_altitude_m: wysokość przelotowa [m]
       - cruise_speed_kmh: prędkość przelotowa [km/h]
-      - ld_cruise: doskonałość przelotowa L/D (K) [-]
+      - aspect_ratio, oswald_e, cx0: wyznaczają K_max; K przelotu = mission_ld_factor * K_max
       - engine_type: 'jet' lub 'prop'
       - sfc: jednostkowe zużycie paliwa:
             dla odrzutowych: c_j w [1/h] lub [g/(kN*s)] -> np. 0.6 1/h
@@ -63,14 +63,11 @@ def calculate_mass_sizing(params: dict):
         cx0_eff += 0.0030
 
     k_max_theo = 0.5 * math.sqrt((math.pi * AR * oswald_e) / max(0.008, cx0_eff))
-    if "aspect_ratio" in params and "cx0" in params:
-        # Lecture note IMG20261021122751: K_cr = 0.94 Kmax, superseding 0.8 in the PDF.
-        ld_cr = k_max_theo * float(params.get('mission_ld_factor', CRUISE_LD_FACTOR))
-    else:
-        ld_cr = float(params.get("ld_cruise", 12.0))
+    # Lecture note IMG20261021122751: K_cr = 0.94 Kmax, superseding 0.8 in the PDF.
+    ld_cr = k_max_theo * float(params.get('mission_ld_factor', CRUISE_LD_FACTOR))
     
     # 1. Masa płatna (Payload) i załoga
-    # Bezzałogowy statek powietrzny (klasa UM wg Dz. U. 2025 poz. 1137): 0 osób na pokładzie,
+    # Bezzałogowy statek powietrzny (klasa UM wg t.j. Dz. U. z 2025 r. poz. 1137): 0 osób na pokładzie,
     # masa płatna = wyposażenie zadaniowe (głowica, sensory, łącze danych).
     unmanned = is_unmanned(params)
     if unmanned:

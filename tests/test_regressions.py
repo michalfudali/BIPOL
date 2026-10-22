@@ -1,6 +1,7 @@
 """Regresje błędów wykrytych po commicie 9fef4f5."""
 import json
 import math
+import os
 from pathlib import Path
 
 import pytest
@@ -37,12 +38,41 @@ def test_presets_close_mass_balance_and_obey_lift_equation(preset):
 @pytest.mark.parametrize('payload', [None, [], 3, {'aspect_ratio': 0}, {'oswald_e': 0},
     {'aspect_ratio': 'NaN'}, {'cx0': float('inf')}, {'n_pax': 1.5},
     {'m_cargo': -1}, {'range_km': None}, {'prop_efficiency': 0},
-    {'takeoff_run_m': 0}, {'v_stall_kmh': 300, 'cruise_speed_kmh': 100}])
+    {'takeoff_run_m': 0}, {'v_stall_kmh': 300, 'cruise_speed_kmh': 100},
+    {'v_stall_kmh': 1, 'takeoff_distance_m': 500}])
 def test_invalid_inputs_are_json_400(client, payload):
     response = client.post('/api/calculate', data=json.dumps(payload), content_type='application/json')
     assert response.status_code == 400
     assert response.json['status'] == 'error'
     assert response.json['message']
+
+
+def test_low_stall_speed_with_takeoff_distance_never_divides_by_zero(client):
+    params = dict(AIRCRAFT_PRESETS['pzl_kos'], v_stall_kmh=30, cz_max_lnd=2.2, takeoff_distance_m=400)
+    response = client.post('/api/calculate', json=params)
+    assert response.status_code in (200, 400)
+    if response.status_code == 200:
+        assert min(response.json['sizing']['ws_values']) > 0
+
+
+def test_propeller_takeoff_power_uses_mean_ground_roll_speed():
+    result = run_bipol_project(dict(AIRCRAFT_PRESETS['pzl_kos'], takeoff_distance_m=0))
+    p, sizing = result['params'], result['sizing']
+    ws = sizing['ws_values'][10]
+    tw = 1.21 * ws / (G0 * RHO0 * p['cz_max_to'] * p['takeoff_run_m']) + .04
+    v_lof = 1.12 * math.sqrt(2 * ws / (RHO0 * p['cz_max_to']))
+    # Same convention as runway.takeoff_distance(): power at V_LOF/sqrt(2), not at V_LOF.
+    assert sizing['curve_takeoff'][10] == pytest.approx(tw * v_lof / math.sqrt(2) / p['prop_eff_to'], abs=.01)
+
+
+@pytest.mark.parametrize('category,vb_gust', [('cs23_level2', False), ('cs23_commuter', True), ('cs25_transport', True)])
+def test_vb_gust_only_for_commuter_and_transport(category, vb_gust):
+    preset = 'pzl_kos' if category == 'cs23_level2' else 'vlj_jet'
+    env = run_bipol_project(dict(AIRCRAFT_PRESETS[preset], category=category))['envelope']
+    assert env['gust_factors']['vb_gust'] is vb_gust
+    assert (env['speeds']['v_b_kmh'] is not None) is vb_gust
+    assert len(env['gust_pos']) == (4 if vb_gust else 3)
+    assert 'Amdt 4' in env['gust_factors']['gust_basis'] or 'Pratta' in env['gust_factors']['gust_basis']
 
 
 def test_impossible_mission_is_not_hidden_by_clamped_fuel_fraction(client):
@@ -118,10 +148,23 @@ def test_invalid_report_never_silently_replaces_project_with_default(client, url
 
 
 def test_material_paths_are_independent_of_working_directory(client, monkeypatch, tmp_path):
+    assert os.path.isabs(client.application.config['MATERIALS_DIR'])
+    materials = tmp_path / 'materials'
+    (materials / 'bipol').mkdir(parents=True)
+    (materials / 'bipol' / 'BIPOL_1.pdf').write_bytes(b'%PDF-1.4 local copy')
+    monkeypatch.setitem(client.application.config, 'MATERIALS_DIR', str(materials))
     monkeypatch.chdir(tmp_path)
     response = client.get('/api/scraped-files')
-    assert response.json['total_count'] > 0
+    assert response.json['total_count'] == 1
     doc = response.json['bipol'][0]
     assert client.get(doc['path']).status_code == 200
     assert client.get('/download/scraped/unknown/BIPOL_1.pdf').status_code == 404
     assert client.get('/report/project/unknown').status_code == 404
+
+
+def test_materials_link_to_sources_without_local_copies(client, monkeypatch, tmp_path):
+    monkeypatch.setitem(client.application.config, 'MATERIALS_DIR', str(tmp_path / 'missing'))
+    response = client.get('/api/scraped-files').json
+    assert response['total_count'] == 0
+    assert all(s['url'].startswith('https://') for s in response['sources'])
+    assert client.get('/download/scraped/bipol/BIPOL_1.pdf').status_code == 404

@@ -14,10 +14,10 @@ KMH_TO_KT = 1.0 / 1.852
 LB_PER_KG = 2.20462
 AVGAS_DENSITY_KG_L = 0.72
 JETA1_DENSITY_KG_L = 0.80
-LAW_REF = "Dz. U. 2025 poz. 1137"
+LAW_REF = "t.j. Dz. U. z 2025 r. poz. 1137"
 EASA_REF = "Rozporządzenie Parlamentu Europejskiego i Rady (UE) 2018/1139 oraz CS-23/25/VLA/LSA/22"
 
-# Kategorie zdatności wg Tabeli nr 2 Dz. U. 2025 poz. 1137
+# Kategorie zdatności wg Tabeli nr 2 t.j. Dz. U. z 2025 r. poz. 1137
 K_CATEGORIES = {
     "K1": "K1. Podstawowa (certyfikat typu EASA / UE 2018/1139)",
     "K2": "K2. Konwencyjna (krajowy certyfikat typu, poza UE 2018/1139)",
@@ -389,7 +389,7 @@ CATEGORY_ALIASES = {
     "vla": "cs_vla",
     "lsa": "cs_lsa",
     "uav": "easa_uas_specific",
-    # Polskie kody Dz. U. 2025 poz. 1137
+    # Polskie kody t.j. Dz. U. z 2025 r. poz. 1137
     "a1_transport": "cs25_transport",
     "a2_commuter": "cs23_commuter",
     "a3_normal": "cs23_level2",
@@ -546,15 +546,15 @@ def limit_load_factors(category, m0: float):
     elif basis in ("cs23_normal", "cs23_commuter"):
         n_pos = min(3.8, n_formula)
         n_neg = -0.4 * n_pos
-        ref = "EASA CS-23.337(a)(1) / Amdt 5: n+ = 2,1 + 24000/(W+10000) ≤ 3,8; n- = -0,4·n+"
+        ref = "CS-23 Amdt 4 §23.337(a)(1): n+ = 2,1 + 24000/(W+10000) ≤ 3,8; n- = -0,4·n+"
     elif basis == "cs23_utility":
         n_pos = 4.4
         n_neg = -0.4 * n_pos
-        ref = "EASA CS-23.337(a)(2) (Utility): n+ = +4,4; n- = -1,76"
+        ref = "CS-23 Amdt 4 §23.337(a)(2) (Utility): n+ = +4,4; n- = -1,76"
     elif basis == "cs23_aerobatic":
         n_pos = 6.0
         n_neg = -0.5 * n_pos
-        ref = "EASA CS-23.337(a)(3) / Amdt 5 Certified for Aerobatics: n+ = +6,0; n- = -3,0"
+        ref = "CS-23 Amdt 4 §23.337(a)(3) (Aerobatic): n+ = +6,0; n- = -3,0"
     elif basis == "cs_vla":
         n_pos = 3.8
         n_neg = -1.5
@@ -579,13 +579,13 @@ def limit_load_factors(category, m0: float):
     else:
         n_pos = min(3.8, n_formula)
         n_neg = -0.4 * n_pos
-        ref = "EASA CS-23.337 (Normal)"
+        ref = "CS-23 Amdt 4 §23.337(a)(1) (Normal)"
 
     return round(n_pos, 2), round(n_neg, 2), ref
 
 
 def envelope_speed_family(category) -> str:
-    """Zwraca rodzinę współczynników prędkości VC/VD wg CS-23.335."""
+    """Zwraca rodzinę współczynników prędkości VC/VD wg CS-23 Amdt 4 §23.335."""
     basis = SUBCATEGORIES[resolve_category(category)]["load_basis"]
     if basis == "cs23_aerobatic":
         return "aerobatic"
@@ -635,7 +635,7 @@ def _chk(name, limit, value, ok, source, severity="error"):
 def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_res: dict = None) -> dict:
     """
     Weryfikacja pełnej zgodności projektu ze specyfikacjami EASA
-    oraz polskim prawem lotniczym (Dz. U. 2025 poz. 1137).
+    oraz polskim prawem lotniczym (t.j. Dz. U. z 2025 r. poz. 1137).
     """
     cat_key = resolve_category(params.get("category"))
     sub = SUBCATEGORIES[cat_key]
@@ -673,7 +673,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
         "warning"
     ))
 
-    # 2. Sprawdzenie limitu masy startowej MTOM wg EASA / Dz. U. 2025 poz. 1137
+    # 2. Sprawdzenie limitu masy startowej MTOM wg EASA / t.j. Dz. U. z 2025 r. poz. 1137
     mtom_max = sub.get("mtom_max_water") if (seaplane and sub.get("mtom_max_water")) else sub.get("mtom_max")
     if mtom_max is not None:
         checks.append(_chk(
@@ -813,7 +813,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
             "≤ 115.0 kg",
             f"{m_empty:.1f} kg",
             m_empty <= 115.0,
-            "UE 2018/1139 Zał. I / Dz. U. 2025 poz. 1137"
+            "UE 2018/1139 Zał. I / t.j. Dz. U. z 2025 r. poz. 1137"
         ))
         rho_f = JETA1_DENSITY_KG_L if engine_type == "jet" else AVGAS_DENSITY_KG_L
         v_fuel = m_fuel / rho_f
@@ -822,7 +822,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
             "≤ 20.0 l",
             f"{v_fuel:.1f} l",
             v_fuel <= 20.0,
-            "UE 2018/1139 Zał. I / Dz. U. 2025 poz. 1137"
+            "UE 2018/1139 Zał. I / t.j. Dz. U. z 2025 r. poz. 1137"
         ))
         if vmax > 0:
             checks.append(_chk(
@@ -830,7 +830,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
                 "≤ 102.0 km/h (55 kt)",
                 f"{vmax:.1f} km/h",
                 vmax <= 102.0,
-                "UE 2018/1139 Zał. I / Dz. U. 2025 poz. 1137"
+                "UE 2018/1139 Zał. I / t.j. Dz. U. z 2025 r. poz. 1137"
             ))
         if S > 0:
             wl_empty = m_empty / S
@@ -839,7 +839,7 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
                 "≤ 10.0 kg/m²",
                 f"{wl_empty:.2f} kg/m²",
                 wl_empty <= 10.0,
-                "UE 2018/1139 Zał. I / Dz. U. 2025 poz. 1137"
+                "UE 2018/1139 Zał. I / t.j. Dz. U. z 2025 r. poz. 1137"
             ))
 
     errors = [c for c in checks if c["severity"] == "error"]

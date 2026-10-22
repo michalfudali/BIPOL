@@ -1,0 +1,15 @@
+Copyright (c) 2026 Michał Fudali. Wszelkie prawa zastrzeżone. All rights reserved.
+
+Kod źródłowy, szablony i dokumentacja tego repozytorium nie są udostępniane
+na licencji open source. Repozytorium można przeglądać, ale kopiowanie,
+modyfikowanie i rozpowszechnianie ich wymaga zgody autora.
+
+Składniki osób trzecich zachowują własne licencje:
+
+- data/aircraft/fast.json: Apache License 2.0,
+  zob. data/aircraft/licenses/FAST-Apache-2.0.txt.
+- data/aircraft/cado.json: baza pochodna CADO Airplane Database, udostępniona
+  na Open Database License 1.0, zob. data/aircraft/licenses/CADO-ODbL-1.0.txt.
+- Pozostałe dane w data/aircraft/: zob. data/aircraft/README.md
+  i data/aircraft/licenses/.
+- static/vendor/katex/: MIT License, zob. static/vendor/katex/LICENSE.

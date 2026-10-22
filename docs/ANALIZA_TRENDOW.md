@@ -1,9 +1,8 @@
 # Analiza trendów i wdrożenie materiałów P1
 
 Materiały przekazane przez użytkownika: `BIPOL_1.pdf` (6 stron) oraz
-`BIPOL_1_wzory.pdf` (9 stron). Ich sumy SHA-256 są identyczne z kopiami
-w `scraped_materials/bipol`, dlatego istniejące odnośniki otwierają dokładnie
-przeanalizowane dokumenty. Nie dodano drugich kopii PDF.
+`BIPOL_1_wzory.pdf` (9 stron) ze strony przedmiotu BIPOL I. Repozytorium nie
+zawiera ich kopii; program odsyła do strony źródłowej.
 
 ## Co wynika z materiałów i jak działa program
 

@@ -16,9 +16,9 @@ The Trend Analysis Integration consists of four main architectural subsystems:
    - **Location 1 (Module 1 P1 Mission Inputs & Project Wizard)**: Trend suggestion recommendation cards and "Zastosuj z trendów" action buttons that populate inputs, synchronize `BipolDesignBasis.sync()`, and trigger `performCalculation()`.
    - **Location 2 (Baza i trendy Transfer Panel)**: Dedicated panel `#trendTransferPanel` in the Results sub-panel comparing regression predictions $y_{trend}$ with active project values $y_{proj}$, showing delta badges and one-click injection.
    - **Database Editor UI**: In `#trendSelectionPanel`, a searchable, filterable table with modal dialog (`#aircraftEditorModal`) for Add/Edit and Delete confirmations, connected to REST endpoints with live chart redrawing.
-4. **Automated Testing & Python 3.11 Compatibility (`tests/`, `pytest.ini`, `scratch/`)**:
+4. **Automated Testing & Python 3.11 Compatibility (`tests/`, `pytest.ini`, `.github/workflows/tests.yml`)**:
    - Automated unit, integration, and regression test suites.
-   - Python 3.11 verification with 100% pass rate in `pytest tests/` and `scratch/run_all_regressions.py`.
+   - Python 3.11 verification with 100% pass rate in `pytest tests/`, run in CI on every push.
 
 ## Code Layout
 - `calculations/trends.py` — Core trend analysis and regression algorithms.
@@ -51,7 +51,7 @@ The Trend Analysis Integration consists of four main architectural subsystems:
 | 11 | Reference Aircraft Editor UI | Searchable, filterable table with modal dialog (`#aircraftEditorModal`) for Add/Edit/Delete | M3 | ORIGINAL_REQUEST §R3 |
 | 12 | Reactive Client Recalculation | Instant redrawing of SVG trend plots and recalculation without page reload | M3 | ORIGINAL_REQUEST §R3 |
 | 13 | Pytest Configuration & 100% Pass Rate | `pytest.ini` with `pythonpath = .` ensuring 100% pass rate in `pytest tests/` on Python 3.11 | M4 | ORIGINAL_REQUEST §R4 |
-| 14 | Regression Script Pass Rate | Fix cargo/baggage parameter discrepancy in `scratch/test_constraints_and_planforms.py` | M4 | ORIGINAL_REQUEST §R4 |
+| 14 | Regression Script Pass Rate | Fix cargo/baggage parameter discrepancy (one-off script, removed with `scratch/`) | M4 | ORIGINAL_REQUEST §R4 |
 | 15 | E2E Regression & CRUD Test Suite | Comprehensive opaque-box test suite verifying all CRUD, suggestion, and adoption workflows | M4 | ORIGINAL_REQUEST §R4 |
 
 ## Milestones
@@ -60,7 +60,7 @@ The Trend Analysis Integration consists of four main architectural subsystems:
 | M1 | Statistical Parameter Suggestions Engine | Engine logic in `calculations/trends.py`, endpoint `GET /api/trends/suggestions` in `app.py`, unit tests | None | DONE |
 | M2 | Aircraft Database CRUD & Recalculation | Service `calculations/aircraft_db.py`, endpoints in `app.py`, validation, cache clearing, CRUD tests | None | IN_PROGRESS |
 | M3 | Dual-Location UI Integration & Editor | Module 1 & Wizard buttons, Baza i trendy Transfer Panel, Modal Editor, reactive SVG refresh | M1, M2 | PLANNED |
-| M4 | E2E Test Suite Pass & Hardening | Full E2E test verification (Tiers 1-4), pytest compatibility, scratch runner pass, Tier 5 hardening | M1, M2, M3 | PLANNED |
+| M4 | E2E Test Suite Pass & Hardening | Full E2E test verification (Tiers 1-4), pytest compatibility, Tier 5 hardening | M1, M2, M3 | PLANNED |
 
 ## Interface Contracts
 

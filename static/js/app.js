@@ -1657,6 +1657,7 @@ async function loadScrapedFiles() {
   const containerBipol = document.getElementById('scrapedBipolFiles');
   const containerZpk = document.getElementById('scrapedZpkFiles');
   const containerMl = document.getElementById('scrapedMlFiles');
+  const containerSources = document.getElementById('facultySources');
   const badgeTotal = document.getElementById('facultyFilesTotalBadge');
   if (!containerBipol || !containerMl) return;
 
@@ -1664,22 +1665,29 @@ async function loadScrapedFiles() {
     const resp = await fetch('/api/scraped-files');
     const data = await resp.json();
 
-    const renderList = (items, icon) => (items || []).map(f => `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem; border-bottom:1px solid #e2e8f0;">
+    const row = 'display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:0.5rem 0.75rem; border-bottom:1px solid #e2e8f0;';
+    const renderList = (items, icon) => (items || []).length ? items.map(f => `
+      <div style="${row}">
         <div>
-          <strong>${icon} ${f.name}</strong> <small style="color:#64748b;">(${(f.size/1024).toFixed(0)} KB)</small>
+          <strong>${icon} ${escapeHtml(f.name)}</strong> <small style="color:#64748b;">(${(f.size/1024).toFixed(0)} KB)</small>
         </div>
-        <a href="${f.path}" target="_blank" class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Podgląd / Pobierz</a>
+        <a href="${escapeHtml(f.path)}" target="_blank" class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Podgląd</a>
+      </div>
+    `).join('') : `<div style="${row} color:#64748b; font-size:0.82rem;">Brak kopii lokalnej.</div>`;
+
+    if (containerSources) containerSources.innerHTML = (data.sources || []).map(s => `
+      <div style="${row}">
+        <div><strong>🔗 ${escapeHtml(s.name)}</strong><br><small style="color:#64748b;">${escapeHtml(s.note)}</small></div>
+        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener" class="btn btn-outline" style="padding:0.25rem 0.6rem; font-size:0.75rem;">Otwórz źródło</a>
       </div>
     `).join('');
-
     if (containerDanilecki) containerDanilecki.innerHTML = renderList(data.danilecki, '📖');
     containerBipol.innerHTML = renderList(data.bipol, '📄');
     if (containerZpk) containerZpk.innerHTML = renderList(data.zpk_cad, '📐');
     containerMl.innerHTML = renderList(data.mechanika_lotu, '📘');
 
-    if (badgeTotal && data.total_count) {
-      badgeTotal.textContent = `${data.total_count} Plików PDF lokalnie`;
+    if (badgeTotal) {
+      badgeTotal.textContent = data.total_count ? `${data.total_count} kopii lokalnych PDF` : 'Brak kopii lokalnych';
     }
 
   } catch (err) {

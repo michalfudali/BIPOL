@@ -116,7 +116,7 @@ def run_bipol_project(params: dict):
         mass_res, sizing_res, geom_res, aero_res, perf_res, envelope_res, balance_res, params
     )
 
-    # Zgodność z klasyfikacją statków powietrznych (Dz. U. 2025 poz. 1137, Tabele nr 1–3)
+    # Zgodność z klasyfikacją statków powietrznych (t.j. Dz. U. z 2025 r. poz. 1137, Tabele nr 1–3)
     law_res = check_compliance(params, mass_res, geom_res, perf_res)
     for c in law_res["checks"]:
         checks.append({

@@ -915,45 +915,30 @@
         <div id="tab-faculty-docs" class="tab-content">
           <div class="b-card">
             <div class="b-card-header">
-              <h3>📥 Pobrane Oficjalne Materiały Dydaktyczne (ZSiS, ZM, ZPK CAD1 MEiL PW oraz prof. J. Danilecki)</h3>
-              <span id="facultyFilesTotalBadge" class="badge badge-success">62 Pliki PDF lokalnie</span>
+              <h3>📥 Materiały dydaktyczne (ZSiS, ZM, ZPK CAD1 MEiL PW oraz prof. J. Danilecki)</h3>
+              <span id="facultyFilesTotalBadge" class="badge badge-success">Brak kopii lokalnych</span>
             </div>
             <div class="b-card-body">
               <p style="font-size:0.85rem; color:#475569; margin-bottom:1rem;">
-                Wszystkie poniższe materiały dydaktyczne zostały pobrane z serwerów wydziałowych <code>itlims-zsis.meil.pw.edu.pl</code>, <code>meil.pw.edu.pl/zm</code>, <code>meil.pw.edu.pl/zpk</code> oraz Dolnośląskiej Biblioteki Cyfrowej (DBC). Kliknij dowolny dokument, aby go otworzyć w nowej karcie:
+                Program nie rozpowszechnia materiałów wydziału. Otwórz je na stronach źródłowych; materiały chronione
+                hasłem pobierz po zalogowaniu danymi od prowadzącego. Rozdziały Danileckiego użyte w algorytmach:
+                1 (współczynniki bezpieczeństwa), 2 (obwiednie manewru i podmuchu), 4 (usterzenia), 7 (metoda Schrenka).
               </p>
+              <div id="facultySources" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:1.5rem;"></div>
 
-              <!-- Karta Specjalna: Podręcznik prof. J. Danileckiego -->
-              <div style="background:#f8fafc; border:2px solid #0284c7; border-radius:10px; padding:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-                <div style="max-width:700px;">
-                  <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-                    <span class="badge" style="background:#0284c7; color:#fff; font-size:0.75rem;">Podręcznik Bazowy MEiL PW</span>
-                    <strong style="color:#0f172a; font-size:1.05rem;">prof. dr hab. inż. Jan Danilecki &mdash; <em>Konstruowanie samolotów</em></strong>
-                  </div>
-                  <p style="font-size:0.82rem; color:#475569; margin:0 0 0.5rem 0;">
-                    Oficjalny 121-stronicowy podręcznik akademicki oparty na wykładach prowadzonych na Wydziale MEiL Politechniki Warszawskiej w latach 1981–2001. Zawiera pełną metodykę wyznaczania obciążeń dopuszczalnych i niszczących (\(\nu = 1.5\)), obwiedni manewrowo-podmuchowych \(V-n\), teorii podmuchu pionowego wg CS-23/25, rozkładu Schrenka sił nośnych oraz wymiarowania usterzeń.
-                  </p>
-                  <div style="font-size:0.78rem; color:#64748b;">
-                    <strong>Rozdziały wdrożone w algorytmach BIPOL Studio:</strong> Rozdz. 1 (Współczynniki bezpieczeństwa), Rozdz. 2 (Obwiednie manewru i podmuchu), Rozdz. 4 (Usterzenia), Rozdz. 7 (Metoda Schrenka).
-                  </div>
-                </div>
-                <div>
-                  <a href="/download/scraped/danilecki/Danilecki_Konstruowanie.pdf" target="_blank" class="btn btn-primary" style="padding:0.6rem 1.2rem; font-size:0.88rem; display:inline-flex; align-items:center; gap:0.4rem; box-shadow:0 2px 4px rgba(2,132,199,0.3);">
-                    📖 Otwórz Podręcznik (PDF 3.2 MB)
-                  </a>
-                </div>
-              </div>
-
-              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📖 1. Podręcznik i Monografie Obciążeń (prof. J. Danilecki & W. Stafiej):</h4>
+              <p style="font-size:0.85rem; color:#475569; margin-bottom:1rem;">
+                Kopie zapisane w katalogu <code>scraped_materials/</code> (poza repozytorium) są widoczne tylko na tym komputerze:
+              </p>
+              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📖 1. Podręcznik i monografie obciążeń:</h4>
               <div id="scrapedDanileckiFiles" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:1.5rem;"></div>
 
-              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">✈️ 2. Materiały BIPOL I + Książka prof. C. Galińskiego (43 pliki &mdash; Zakład Samolotów i Śmigłowców ZSiS):</h4>
+              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">✈️ 2. BIPOL I (ZSiS):</h4>
               <div id="scrapedBipolFiles" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:1.5rem;"></div>
 
-              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📐 3. Normy Rysunku Technicznego i Formatki A3/A4 Zapis Konstrukcji CAD I (10 plików &mdash; ZPK MEiL PW):</h4>
+              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📐 3. Zapis Konstrukcji CAD I (ZPK):</h4>
               <div id="scrapedZpkFiles" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:1.5rem;"></div>
 
-              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📘 4. Materiały Mechanika Lotu I (8 plików &mdash; Zakład Mechaniki ZM):</h4>
+              <h4 style="color:#0284c7; font-size:0.95rem; margin-top:1rem; margin-bottom:0.5rem;">📘 4. Mechanika Lotu I (ZM):</h4>
               <div id="scrapedMlFiles" style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;"></div>
             </div>
           </div>

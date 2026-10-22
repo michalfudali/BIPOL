@@ -74,7 +74,7 @@ def get_presets():
 
 @app.route('/api/aircraft-classification', methods=['GET'])
 def get_aircraft_classification():
-    """Klasyfikacja statków powietrznych wg Dz. U. 2025 poz. 1137 (Tabele nr 1-3)."""
+    """Klasyfikacja statków powietrznych wg rozporządzenia MI (t.j. Dz. U. z 2025 r. poz. 1137), tabele nr 1-3."""
     return jsonify(catalog_for_frontend())
 
 @app.route('/api/topics', methods=['GET'])
@@ -210,52 +210,53 @@ def aircraft_source_download(source, kind):
         return send_from_directory(DATA / 'licenses', SOURCES[source]['license_file'], as_attachment=True)
     return send_from_directory(DATA, source + '.json', as_attachment=True)
 
+# Course materials are not redistributed: the app links to the source pages
+# and lists only the user's own local copies (git-ignored scraped_materials/).
+app.config['MATERIALS_DIR'] = os.path.join(app.root_path, 'scraped_materials')
+MATERIAL_FOLDERS = ('danilecki', 'bipol', 'mechanika_lotu', 'zpk_cad')
+MATERIAL_SOURCES = [
+    {"name": "BIPOL I — strona przedmiotu (ZSiS)",
+     "url": "https://www.meil.pw.edu.pl/zsis/ZSiS/Dydaktyka/Prowadzone-przedmioty/BIPOL/BIPOL-I",
+     "note": "Pliki chronione hasłem podawanym na zajęciach."},
+    {"name": "Mechanika Lotu I — materiały do pobrania (ZM)",
+     "url": "https://www.meil.pw.edu.pl/zm/ZM/Dydaktyka/Prowadzone-przedmioty/Mechanika-Lotu-I/Materialy-do-pobrania",
+     "note": "Wymaga zalogowania danymi od prowadzącego."},
+    {"name": "Zapis Konstrukcji CAD I — materiały dla studentów (ZPK)",
+     "url": "https://www.meil.pw.edu.pl/zpk/ZPK/Dydaktyka/Materialy-dla-studentow-Files-for-students/Zapis-Konstrukcji-CAD1",
+     "note": "Normy rysunku technicznego i formatki A3/A4."},
+    {"name": "J. Danilecki — Konstruowanie samolotów (Dolnośląska Biblioteka Cyfrowa)",
+     "url": "https://www.dbc.wroc.pl/Content/1004/Danilecki_Konstruowanie.pdf",
+     "note": "Wydanie cyfrowe udostępnione przez DBC."},
+    {"name": "C. Galiński — Wybrane zagadnienia projektowania samolotów (Łukasiewicz – ILOT)",
+     "url": "https://ilot.lukasiewicz.gov.pl/wp-content/uploads/sites/47/2026/09/Cezary_Galinski_Wybrane_zagadnienia_projektowania_samolotow.pdf",
+     "note": "Odnośnik ze strony przedmiotu BIPOL I."},
+    {"name": "NASA Technical Reports Server — raport 19930094469",
+     "url": "https://ntrs.nasa.gov/citations/19930094469",
+     "note": "Raport NACA/NASA udostępniony publicznie w NTRS."},
+]
+
+
 @app.route('/api/scraped-files', methods=['GET'])
 def list_scraped_files():
-    danilecki_dir = "scraped_materials/danilecki"
-    bipol_dir = "scraped_materials/bipol"
-    ml_dir = "scraped_materials/mechanika_lotu"
-    zpk_dir = "scraped_materials/zpk_cad"
-    
-    def scan_dir(d, folder_key):
-        items = []
-        d = os.path.join(app.root_path, d)
-        if os.path.exists(d):
-            for f in sorted(os.listdir(d)):
-                if f.lower().endswith('.pdf'):
-                    items.append({
-                        "name": f,
-                        "path": f"/download/scraped/{folder_key}/{f}",
-                        "size": os.path.getsize(os.path.join(d, f))
-                    })
-        return items
+    def scan_dir(folder_key):
+        d = os.path.join(app.config['MATERIALS_DIR'], folder_key)
+        if not os.path.isdir(d):
+            return []
+        return [{"name": f,
+                 "path": f"/download/scraped/{folder_key}/{f}",
+                 "size": os.path.getsize(os.path.join(d, f))}
+                for f in sorted(os.listdir(d)) if f.lower().endswith('.pdf')]
 
-    danilecki_files = scan_dir(danilecki_dir, "danilecki")
-    bipol_files = scan_dir(bipol_dir, "bipol")
-    ml_files = scan_dir(ml_dir, "mechanika_lotu")
-    zpk_files = scan_dir(zpk_dir, "zpk_cad")
-    total = len(danilecki_files) + len(bipol_files) + len(ml_files) + len(zpk_files)
-
-    return jsonify({
-        "danilecki": danilecki_files,
-        "bipol": bipol_files,
-        "mechanika_lotu": ml_files,
-        "zpk_cad": zpk_files,
-        "total_count": total
-    })
+    files = {key: scan_dir(key) for key in MATERIAL_FOLDERS}
+    return jsonify({**files,
+                    "sources": MATERIAL_SOURCES,
+                    "total_count": sum(len(items) for items in files.values())})
 
 @app.route('/download/scraped/<folder>/<path:filename>')
 def download_scraped(folder, filename):
-    allowed = {
-        "bipol": "bipol",
-        "mechanika_lotu": "mechanika_lotu",
-        "zpk_cad": "zpk_cad",
-        "danilecki": "danilecki"
-    }
-    if folder not in allowed:
+    if folder not in MATERIAL_FOLDERS:
         abort(404)
-    safe_folder = allowed[folder]
-    directory = os.path.join(app.root_path, "scraped_materials", safe_folder)
+    directory = os.path.join(app.config['MATERIALS_DIR'], folder)
     return send_from_directory(directory, filename, as_attachment=False)
 
 @app.route('/api/calculate', methods=['POST'])
@@ -318,5 +319,8 @@ def project_report(p_id):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"Startowanie serwera BIPOL Studio na porcie {port}...")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Local only by default: the Werkzeug debugger allows code execution.
+    host = os.environ.get('HOST', '127.0.0.1')
+    debug = os.environ.get('FLASK_DEBUG') == '1'
+    print(f"Startowanie serwera BIPOL Studio: http://{host}:{port} (debug={'tak' if debug else 'nie'})...")
+    app.run(host=host, port=port, debug=debug)
