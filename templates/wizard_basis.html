@@ -13,7 +13,55 @@
   </div>
   {% endfor %}
 </div>
-<fieldset class="basis-requirements"><legend>Wielkości narzucone w temacie</legend>
-  {% for key,label in [('range_km','Zasięg maksymalny'),('cruise_speed_kmh','Prędkość przelotowa'),('v_stall_kmh','Maksymalna prędkość przeciągnięcia'),('n_pax','Liczba pasażerów')] %}<label><input type="checkbox" data-wizard-assumption="{{ key }}">{{ label }}</label>{% endfor %}
-  <p class="basis-note">Wartości niezaznaczone są założeniami roboczymi. Możesz je doprecyzować w następnych krokach.</p>
+<fieldset class="basis-requirements">
+  <legend>Wielkości narzucone w temacie (Kluczowe założenia projektowe)</legend>
+  <div class="basis-requirements-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 6px;">
+    
+    <div class="assumption-input-card" style="display:flex; flex-direction:column; gap:4px; padding:8px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+      <label style="display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:0.8rem; margin:0; cursor:pointer;">
+        <input type="checkbox" data-wizard-assumption="range_km" id="wiz_lock_range_km">
+        <span>Zasięg obliczeniowy R</span>
+      </label>
+      <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+        <input type="number" step="any" id="wiz_basis_range_km" min="0" max="30000" value="640" style="flex:1; padding:4px 8px; border-radius:4px; border:1px solid #94a3b8; font-weight:700; font-size:0.85rem;" placeholder="np. 640" title="Wpisz własny zasięg obliczeniowy">
+        <span style="font-size:0.75rem; color:#64748b; font-weight:700;">km</span>
+      </div>
+    </div>
+
+    <div class="assumption-input-card" style="display:flex; flex-direction:column; gap:4px; padding:8px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+      <label style="display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:0.8rem; margin:0; cursor:pointer;">
+        <input type="checkbox" data-wizard-assumption="cruise_speed_kmh" id="wiz_lock_cruise_speed_kmh">
+        <span>Prędkość przelotowa Vcr</span>
+      </label>
+      <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+        <input type="number" step="any" id="wiz_basis_cruise_speed_kmh" min="30" max="1200" value="174" style="flex:1; padding:4px 8px; border-radius:4px; border:1px solid #94a3b8; font-weight:700; font-size:0.85rem;" placeholder="np. 174" title="Wpisz własną prędkość przelotową">
+        <span style="font-size:0.75rem; color:#64748b; font-weight:700;">km/h</span>
+      </div>
+    </div>
+
+    <div class="assumption-input-card" style="display:flex; flex-direction:column; gap:4px; padding:8px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+      <label style="display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:0.8rem; margin:0; cursor:pointer;">
+        <input type="checkbox" data-wizard-assumption="v_stall_kmh" id="wiz_lock_v_stall_kmh">
+        <span>Maks. prędkość VS0</span>
+      </label>
+      <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+        <input type="number" step="any" id="wiz_basis_v_stall_kmh" min="30" max="400" value="84" style="flex:1; padding:4px 8px; border-radius:4px; border:1px solid #94a3b8; font-weight:700; font-size:0.85rem;" placeholder="np. 84" title="Wpisz limit prędkości przeciągnięcia">
+        <span style="font-size:0.75rem; color:#64748b; font-weight:700;">km/h</span>
+      </div>
+    </div>
+
+    <div class="assumption-input-card" style="display:flex; flex-direction:column; gap:4px; padding:8px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px;">
+      <label style="display:inline-flex; gap:6px; align-items:center; font-weight:700; font-size:0.8rem; margin:0; cursor:pointer;">
+        <input type="checkbox" data-wizard-assumption="n_pax" id="wiz_lock_n_pax">
+        <span>Liczba pasażerów [os.]</span>
+      </label>
+      <div style="font-size:0.75rem; color:#0369a1; padding-top:4px;">
+        Sterowana polem: <b>liczba pasażerów poniżej</b>
+      </div>
+    </div>
+
+  </div>
+  <p class="basis-note" style="margin-top:8px;">
+    Możesz wpisać własne wartości bezpośrednio tutaj. Zaznaczenie checkboxa blokuje daną wielkość jako stałe założenie tematu i synchronizuje ją z Krokiem 2.
+  </p>
 </fieldset>

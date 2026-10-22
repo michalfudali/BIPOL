@@ -2664,39 +2664,60 @@ function suggestStepDefaults(step) {
   const acType = document.getElementById('wiz_aircraft_type')?.value || 'piston_ga';
 
   if (step === 2) {
+    const rangeChk = document.querySelector('[data-wizard-assumption="range_km"]');
+    const isRangeLocked = rangeChk && rangeChk.checked;
+    if (!isRangeLocked) {
+      if (acType === 'piston_ga') setFieldValue('wiz_range_km', 750);
+      else if (acType === 'turboprop_regional') setFieldValue('wiz_range_km', 2000);
+      else if (acType === 'jet_business') setFieldValue('wiz_range_km', 2400);
+      else if (acType === 'jet_transport') setFieldValue('wiz_range_km', 5000);
+      else if (acType === 'uav') setFieldValue('wiz_range_km', 1500);
+      const bR = document.getElementById('wiz_basis_range_km');
+      if (bR) bR.value = document.getElementById('wiz_range_km')?.value || '';
+    }
+
+    const spdChk = document.querySelector('[data-wizard-assumption="cruise_speed_kmh"]');
+    const isSpdLocked = spdChk && spdChk.checked;
+    if (!isSpdLocked) {
+      if (acType === 'piston_ga') setFieldValue('wiz_cruise_speed_kmh', 190);
+      else if (acType === 'turboprop_regional') setFieldValue('wiz_cruise_speed_kmh', 450);
+      else if (acType === 'jet_business') setFieldValue('wiz_cruise_speed_kmh', 680);
+      else if (acType === 'jet_transport') setFieldValue('wiz_cruise_speed_kmh', 840);
+      else if (acType === 'uav') setFieldValue('wiz_cruise_speed_kmh', 140);
+      const bV = document.getElementById('wiz_basis_cruise_speed_kmh');
+      if (bV) bV.value = document.getElementById('wiz_cruise_speed_kmh')?.value || '';
+    }
+
+    const stallChk = document.querySelector('[data-wizard-assumption="v_stall_kmh"]');
+    const isStallLocked = stallChk && stallChk.checked;
+    if (!isStallLocked) {
+      if (acType === 'piston_ga') setFieldValue('wiz_v_stall_kmh', 85);
+      else if (acType === 'turboprop_regional') setFieldValue('wiz_v_stall_kmh', 135);
+      else if (acType === 'jet_business') setFieldValue('wiz_v_stall_kmh', 160);
+      else if (acType === 'jet_transport') setFieldValue('wiz_v_stall_kmh', 190);
+      else if (acType === 'uav') setFieldValue('wiz_v_stall_kmh', 70);
+      const bVs = document.getElementById('wiz_basis_v_stall_kmh');
+      if (bVs) bVs.value = document.getElementById('wiz_v_stall_kmh')?.value || '';
+    }
+
     if (acType === 'piston_ga') {
-      setFieldValue('wiz_range_km', 750);
       setFieldValue('wiz_cruise_altitude_m', 2000);
-      setFieldValue('wiz_cruise_speed_kmh', 190);
-      setFieldValue('wiz_v_stall_kmh', 85);
       setFieldValue('wiz_takeoff_run_m', 220);
       setFieldValue('wiz_climb_rate_ms', 4.5);
     } else if (acType === 'turboprop_regional') {
-      setFieldValue('wiz_range_km', 2000);
       setFieldValue('wiz_cruise_altitude_m', 6000);
-      setFieldValue('wiz_cruise_speed_kmh', 450);
-      setFieldValue('wiz_v_stall_kmh', 135);
       setFieldValue('wiz_takeoff_run_m', 700);
       setFieldValue('wiz_climb_rate_ms', 8.5);
     } else if (acType === 'jet_business') {
-      setFieldValue('wiz_range_km', 2400);
       setFieldValue('wiz_cruise_altitude_m', 11000);
-      setFieldValue('wiz_cruise_speed_kmh', 680);
-      setFieldValue('wiz_v_stall_kmh', 160);
       setFieldValue('wiz_takeoff_run_m', 950);
       setFieldValue('wiz_climb_rate_ms', 14.0);
     } else if (acType === 'jet_transport') {
-      setFieldValue('wiz_range_km', 5000);
       setFieldValue('wiz_cruise_altitude_m', 11500);
-      setFieldValue('wiz_cruise_speed_kmh', 840);
-      setFieldValue('wiz_v_stall_kmh', 190);
       setFieldValue('wiz_takeoff_run_m', 1600);
       setFieldValue('wiz_climb_rate_ms', 12.0);
     } else if (acType === 'uav') {
-      setFieldValue('wiz_range_km', 1500);
       setFieldValue('wiz_cruise_altitude_m', 5000);
-      setFieldValue('wiz_cruise_speed_kmh', 140);
-      setFieldValue('wiz_v_stall_kmh', 70);
       setFieldValue('wiz_takeoff_run_m', 180);
       setFieldValue('wiz_climb_rate_ms', 4.0);
     }

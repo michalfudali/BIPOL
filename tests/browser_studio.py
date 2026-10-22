@@ -53,7 +53,7 @@ with sync_playwright() as p:
  for checkbox in page.locator('[name=studio-report-section]').all(): checkbox.set_checked(checkbox.input_value() in ['p3','p5'])
  with page.expect_download() as download_info:page.locator('[data-studio-action=download-report]').click()
  download=download_info.value;download.save_as(OUT/'raport.html')
- html=(OUT/'raport.html').read_text()
+ html=(OUT/'raport.html').read_text(encoding='utf-8')
  assert 'data-report-section="p3"' in html and 'data-report-section="p5"' in html
  assert 'data-report-section="p4"' not in html and '<script src=' not in html and '<link rel="stylesheet"' not in html
  assert '&lt;script&gt;alert' in html
@@ -67,15 +67,15 @@ with sync_playwright() as p:
  with page.expect_download() as download_info:page.locator('[data-studio-action=export-csv]').click()
  download_info.value.save_as(OUT/'wyniki.csv')
  assert (OUT/'wyniki.csv').read_bytes().startswith(b'\xef\xbb\xbf')
- assert 'Szybowanie' in (OUT/'wyniki.csv').read_text()
+ assert 'Szybowanie' in (OUT/'wyniki.csv').read_text(encoding='utf-8')
  with page.expect_download() as download_info:page.locator('[data-studio-action=export-json]').click()
  download_info.value.save_as(OUT/'projekt.json')
- assert 'Wnioski:' in json.loads((OUT/'projekt.json').read_text())['project']['editorial']['notes']
+ assert 'Wnioski:' in json.loads((OUT/'projekt.json').read_text(encoding='utf-8'))['project']['editorial']['notes']
  navigate(page, 'tab-overview')
  page.locator('[data-aircraft-view=top]').click()
  with page.expect_download() as download_info:page.locator('[data-studio-action=export-svg]').click()
  download_info.value.save_as(OUT/'samolot.svg')
- svg=(OUT/'samolot.svg').read_text();assert 'xmlns="http://www.w3.org/2000/svg"' in svg and 'RZUT Z GÓRY' in svg
+ svg=(OUT/'samolot.svg').read_text(encoding='utf-8');assert 'xmlns="http://www.w3.org/2000/svg"' in svg and 'RZUT Z GÓRY' in svg
  print('EXPORT CSV, SVG, HTML, JSON, PREVIEW OK')
  # Raport HTML bez aplikacji i bez żądań sieciowych.
  offline=browser.new_context(offline=True)

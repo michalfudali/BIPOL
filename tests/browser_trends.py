@@ -63,7 +63,7 @@ with sync_playwright() as p:
     with page.expect_download() as download:
         page.locator('#trendExportJson').click()
     download.value.save_as(out/'analiza.json')
-    analysis = json.loads((out/'analiza.json').read_text())
+    analysis = json.loads((out/'analiza.json').read_text(encoding='utf-8'))
     assert analysis['analysis']['trend_analysis']['selected_n'] == 2
     params = page.evaluate('currentResults.params')
     report = page.request.post(args.base_url+'/report?sections=p1',data=params)

@@ -88,7 +88,7 @@ with sync_playwright() as p:
     reveal_details(page.locator('#studioMeta_student_name'));page.locator('#studioMeta_student_name').fill('Test czytelnego interfejsu')
     for checkbox in page.locator('[name=studio-report-section]').all():checkbox.set_checked(checkbox.input_value()=='p1')
     with page.expect_download() as download:page.locator('[data-studio-action=download-report]').click()
-    download.value.save_as(out/'raport.html');html=(out/'raport.html').read_text()
+    download.value.save_as(out/'raport.html');html=(out/'raport.html').read_text(encoding='utf-8')
     assert 'cdn.jsdelivr.net' not in html
     assert 'data:font/woff2;base64,' in html
     offline=browser.new_context(offline=True);report=offline.new_page()

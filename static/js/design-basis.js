@@ -104,6 +104,9 @@
     const topic=topicsData.find(t=>t.num===Number(wizardBase.topic_id));
     set('wiz_','topic',wizardBase.topic_origin==='official'&&topic?topic.id:'');
     document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=window.userLockedParams.has(input.dataset.wizardAssumption));
+    set('wiz_basis_','range_km', value('wiz_','range_km'));
+    set('wiz_basis_','cruise_speed_kmh', value('wiz_','cruise_speed_kmh'));
+    set('wiz_basis_','v_stall_kmh', value('wiz_','v_stall_kmh'));
     sync('wiz_');propulsion('wiz_');topicNote();
   }
   function topicNote() {
@@ -118,6 +121,9 @@
     wizardBase=structuredClone(topic.parameters);
     for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
     document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=wizardBase.locked_params.includes(input.dataset.wizardAssumption));
+    set('wiz_basis_','range_km', wizardBase.range_km || value('wiz_','range_km'));
+    set('wiz_basis_','cruise_speed_kmh', wizardBase.cruise_speed_kmh || value('wiz_','cruise_speed_kmh'));
+    set('wiz_basis_','v_stall_kmh', wizardBase.v_stall_kmh || value('wiz_','v_stall_kmh'));
     syncAircraftClassAndEASAUI(true);syncWizardPropulsionUI(false);renderWizardStep4Mechanics();
     sync('wiz_');topicNote();
   }
@@ -126,6 +132,9 @@
     const p={...wizardBase};
     const keys=new Set([...Object.keys(collectFormData()),...extraKeys]);
     keys.forEach(key=>{const input=$('wiz_'+key);if(!input)return;p[key]=input.type==='number'?Number(input.value):input.value;});
+    if($('wiz_basis_range_km')){const bR=Number($('wiz_basis_range_km').value);if(!isNaN(bR)&&bR>=0)p['range_km']=bR;}
+    if($('wiz_basis_cruise_speed_kmh')){const bV=Number($('wiz_basis_cruise_speed_kmh').value);if(!isNaN(bV)&&bV>0)p['cruise_speed_kmh']=bV;}
+    if($('wiz_basis_v_stall_kmh')){const bVs=Number($('wiz_basis_v_stall_kmh').value);if(!isNaN(bVs)&&bVs>0)p['v_stall_kmh']=bVs;}
     p.name=$('wiz_name').value.trim()||'Mój projekt BIPOL';
     const locked=new Set(wizardBase.locked_params||[]);
     for(const key of ['wingspan_m','wing_area_m2','aspect_ratio','m_payload','m_cargo','engine_power_kw'])locked.delete(key);
@@ -174,6 +183,25 @@
   window.BipolDesignBasis={sync,propulsion,restore,openWizard,snapshot,collect,loadTopic,applyResult,classDefaults};
   document.addEventListener('DOMContentLoaded',async()=>{
     $('wiz_topic')?.addEventListener('change',chooseTopic);
+    const syncAssumption = (basisId, step2Id, assumptionKey) => {
+      const bEl = $(basisId), s2El = $(step2Id);
+      const chk = document.querySelector(`[data-wizard-assumption="${assumptionKey}"]`);
+      if(bEl && s2El) {
+        bEl.addEventListener('input', () => {
+          s2El.value = bEl.value;
+          if(chk) chk.checked = true;
+          wizardBase[assumptionKey] = Number(bEl.value);
+        });
+        s2El.addEventListener('input', () => {
+          bEl.value = s2El.value;
+          if(chk) chk.checked = true;
+          wizardBase[assumptionKey] = Number(s2El.value);
+        });
+      }
+    };
+    syncAssumption('wiz_basis_range_km', 'wiz_range_km', 'range_km');
+    syncAssumption('wiz_basis_cruise_speed_kmh', 'wiz_cruise_speed_kmh', 'cruise_speed_kmh');
+    syncAssumption('wiz_basis_v_stall_kmh', 'wiz_v_stall_kmh', 'v_stall_kmh');
     document.addEventListener('input',event=>{
       const input=event.target;if(!input.matches('#designForm input, #projectWizardBackdrop input'))return;
       const prefix=input.id.startsWith('wiz_')?'wiz_':'';sync(prefix);
