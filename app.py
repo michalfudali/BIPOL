@@ -5,13 +5,18 @@ Zakład Samolotów i Śmigłowców (ZSiS)
 """
 import os
 import json
+import math
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
 from calculations import run_bipol_project, AIRCRAFT_PRESETS
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend
-from calculations.trends import reference_catalog, SOURCES, DATA
+from calculations.trends import reference_catalog, SOURCES, DATA, CLASSES, get_trend_suggestions
+from calculations.aircraft_db import (
+    create_aircraft, get_aircraft, update_aircraft, delete_aircraft,
+    AircraftValidationError, AircraftNotFoundError, AircraftDuplicateError
+)
 from calculations.trend_report import trend_chart
 from calculations.report_assets import math_assets
 from calculations.report_document import report_document, report_number, report_metadata, tex_number
@@ -91,9 +96,93 @@ def get_constraint_suggestions():
         'lockable_parameters': LOCKABLE_PARAMETERS
     })
 
-@app.route('/api/aircraft', methods=['GET'])
-def aircraft_catalog():
+@app.route('/api/aircraft', methods=['GET', 'POST'])
+def aircraft_collection():
+    if request.method == 'POST':
+        data = request.get_json(silent=True)
+        if data is None or not isinstance(data, dict):
+            return jsonify(status='error', message='Invalid or malformed JSON payload'), 400
+        try:
+            record = create_aircraft(data)
+            resp = dict(record)
+            resp['status'] = 'ok'
+            resp['message'] = 'Aircraft created'
+            resp['aircraft'] = record
+            resp['record'] = record
+            return jsonify(resp), 201
+        except AircraftDuplicateError as err:
+            return jsonify(status='error', message=str(err)), 409
+        except AircraftValidationError as err:
+            return jsonify(status='error', message=str(err)), 400
     return jsonify(reference_catalog())
+
+
+@app.route('/api/aircraft/<path:aircraft_id>', methods=['GET', 'PUT', 'DELETE'])
+def aircraft_item(aircraft_id):
+    if request.method == 'GET':
+        record = get_aircraft(aircraft_id)
+        if record is None:
+            return jsonify(status='error', message=f"Aircraft '{aircraft_id}' not found"), 404
+        resp = dict(record)
+        resp['status'] = 'ok'
+        resp['aircraft'] = record
+        resp['record'] = record
+        return jsonify(resp), 200
+
+    elif request.method == 'PUT':
+        data = request.get_json(silent=True)
+        if data is None or not isinstance(data, dict):
+            return jsonify(status='error', message='Invalid or malformed JSON payload'), 400
+        try:
+            record = update_aircraft(aircraft_id, data)
+            resp = dict(record)
+            resp['status'] = 'ok'
+            resp['message'] = 'Aircraft updated'
+            resp['aircraft'] = record
+            resp['record'] = record
+            return jsonify(resp), 200
+        except AircraftNotFoundError as err:
+            return jsonify(status='error', message=str(err)), 404
+        except AircraftValidationError as err:
+            return jsonify(status='error', message=str(err)), 400
+
+    elif request.method == 'DELETE':
+        try:
+            delete_aircraft(aircraft_id)
+            return jsonify({
+                'status': 'ok',
+                'message': 'Aircraft deleted',
+                'id': aircraft_id,
+                'deleted_id': aircraft_id
+            }), 200
+        except AircraftNotFoundError as err:
+            return jsonify(status='error', message=str(err)), 404
+
+
+
+@app.route('/api/trends/suggestions', methods=['GET'])
+def get_trends_suggestions():
+    aircraft_type = request.args.get('aircraft_type')
+    if not aircraft_type:
+        return jsonify(status='error', message="Missing required parameter: 'aircraft_type'"), 400
+    if aircraft_type not in CLASSES:
+        return jsonify(status='error', message=f"Unknown aircraft_type: '{aircraft_type}'"), 400
+
+    m0_param = request.args.get('m0')
+    m0 = None
+    if m0_param is not None and m0_param != '':
+        try:
+            m0 = float(m0_param)
+            if not math.isfinite(m0) or m0 < 0:
+                return jsonify(status='error', message="Parameter 'm0' must be a non-negative number"), 400
+            if m0 == 0:
+                m0 = None
+        except (ValueError, TypeError):
+            return jsonify(status='error', message="Invalid 'm0' parameter: must be a number"), 400
+
+    wing_cfg = request.args.get('wing_configuration', request.args.get('wing_config'))
+    res = get_trend_suggestions(aircraft_type, m0=m0, wing_configuration=wing_cfg)
+    return jsonify(res)
 
 
 @app.post('/api/trends/import')

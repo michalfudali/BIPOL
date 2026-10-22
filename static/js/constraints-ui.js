@@ -173,11 +173,44 @@ async function renderInitialSuggestions() {
   if (!container) return;
 
   try {
-    const resp = await fetch(`/api/constraints/suggestions?category=${encodeURIComponent(cat)}&aircraft_type=${encodeURIComponent(acType)}`);
-    if (!resp.ok) return;
-    const data = await resp.json();
+    const [cResp, tResp] = await Promise.all([
+      fetch(`/api/constraints/suggestions?category=${encodeURIComponent(cat)}&aircraft_type=${encodeURIComponent(acType)}`),
+      fetch(`/api/trends/suggestions?aircraft_type=${encodeURIComponent(acType)}`)
+    ]);
+    const cData = cResp.ok ? await cResp.json() : {suggestions: []};
+    const tData = tResp.ok ? await tResp.json() : {suggestions: {}};
+
     const noEngine = document.getElementById('engine_type')?.value === 'none';
-    const suggestions = (data.suggestions || []).filter(s=>!noEngine||!['engine_power_kw','takeoff_run_m'].includes(s.param));
+    const suggestions = (cData.suggestions || []).filter(s=>!noEngine||!['engine_power_kw','takeoff_run_m'].includes(s.param));
+
+    if (tData.suggestions) {
+      if (tData.suggestions.ar) {
+        const s = tData.suggestions.ar;
+        suggestions.push({
+          id: 'trend_ar',
+          param: 'aspect_ratio',
+          title: `Wydłużenie skrzydła Λ (${s.suggested_value}) — Trend empiryczny`,
+          value: s.suggested_value,
+          unit: '—',
+          description: `Regresja bazy samolotów: ${s.equation}. Typowy zakres: ${s.typical_range ? s.typical_range.join(' – ') : '—'}. R²=${s.r2 != null ? (+s.r2).toFixed(3) : 'mediana'} (n=${s.n}).`,
+          standard: 'BIPOL I / Analiza trendów',
+          icon: '📈'
+        });
+      }
+      if (tData.suggestions.dihedral_deg) {
+        const s = tData.suggestions.dihedral_deg;
+        suggestions.push({
+          id: 'trend_dihedral',
+          param: 'dihedral_deg',
+          title: `Wznios skrzydła Γ (${s.suggested_value}°) — Baza konstrukcji`,
+          value: s.suggested_value,
+          unit: '°',
+          description: `Wyznaczony na podstawie geometrii certyfikowanych konstrukcji (${s.equation}).`,
+          standard: 'Raymer / Roskam / MEiL',
+          icon: '📐'
+        });
+      }
+    }
 
     if (suggestions.length === 0) {
       container.innerHTML = '<div style="font-size:0.75rem; color:#64748b;">Brak specyficznych ograniczeń dla wybranej konfiguracji.</div>';

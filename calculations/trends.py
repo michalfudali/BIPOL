@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 import json
 import math
+import time
 
 from calculations.atmosphere import G0
 from calculations.instructor import MIN_AIRCRAFT
@@ -42,6 +43,7 @@ SOURCES = {
 
 def derived(row):
     r = dict(row)
+    r['year'] = r.get('year')
     mass, area, span = r['m0'], r.get('s'), r.get('b')
     r['ar'] = span * span / area if span and area else None
     r['empty_fraction'] = r['me'] / mass if r.get('me') else None
@@ -79,7 +81,16 @@ def load_aircraft():
     for source in SOURCES:
         src_path = DATA / f'{source}.json'
         if src_path.exists():
-            records.extend(derived(r) for r in json.loads(src_path.read_text(encoding='utf-8')))
+            for attempt in range(5):
+                try:
+                    text = src_path.read_text(encoding='utf-8')
+                    if text.strip():
+                        records.extend(derived(r) for r in json.loads(text))
+                    break
+                except (PermissionError, OSError, json.JSONDecodeError):
+                    if attempt == 4:
+                        raise
+                    time.sleep(0.025 * (2 ** attempt))
     return tuple(records)
 
 
@@ -104,7 +115,7 @@ def select_references(params, m0):
         pool = [r for r in pool if r['n_engines'] == engines]
     ymin, ymax = int(params.get('trend_year_min', 0)), int(params.get('trend_year_max', 0))
     if ymin or ymax:
-        pool = [r for r in pool if r['year'] is not None and (not ymin or r['year'] >= ymin) and (not ymax or r['year'] <= ymax)]
+        pool = [r for r in pool if r.get('year') is not None and (not ymin or r.get('year') >= ymin) and (not ymax or r.get('year') <= ymax)]
     ids = params.get('trend_aircraft_ids')
     if ids is not None:
         pool = [r for r in pool if r['id'] in ids]
@@ -424,7 +435,7 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         warnings.append('Ekstrapolacja daje niefizyczny udział masy. Nie używaj jej do bilansu mas.')
     time_trends = []
     for key, (label, unit) in METRICS.items():
-        subset = [r for r in rows if r['year'] is not None and r.get(key) is not None]
+        subset = [r for r in rows if r.get('year') is not None and r.get(key) is not None]
         fit = fit_regression([(r['year'], r[key]) for r in subset], weights(subset))
         # Do not pretend to extrapolate a single generation of aircraft.
         if fit and fit['x_max'] - fit['x_min'] < 5:
@@ -530,3 +541,452 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         'method': 'Ważona regresja log(OEW/MTOW) = log(A) + C·log(m₀ [kg]). Domyślnie rodziny mają równą wagę.',
         'limitations': 'OEW obejmuje wyposażenie operacyjne i nie jest tożsama z masą własną każdego projektu. Cechy geometryczne i sterów (V_H, lotki, stery, wznios) oparto na 82 certyfikowanych konstrukcjach (Raymer, Roskam, Corke, TCDS, MEiL PW). Rodziny są grupowane heurystycznie. Korelacja nie dowodzi przyczynowości.',
         'geometry_trends_analysis': geometry_trends_analysis}
+
+
+SUGGESTION_TYPICAL_RANGES = {
+    'ws': {
+        'piston_ga': [60.0, 130.0],
+        'turboprop_regional': [180.0, 360.0],
+        'jet_business': [220.0, 500.0],
+        'jet_transport': [400.0, 750.0],
+        'glider': [28.0, 52.0],
+        'motoglider': [30.0, 55.0],
+        'uav': [15.0, 120.0],
+    },
+    'ar': {
+        'piston_ga': [6.0, 9.5],
+        'turboprop_regional': [8.5, 13.0],
+        'jet_business': [6.5, 10.0],
+        'jet_transport': [7.0, 11.5],
+        'glider': [16.0, 32.0],
+        'motoglider': [14.0, 28.0],
+        'uav': [8.0, 20.0],
+    },
+    'me_m0': {
+        'piston_ga': [0.55, 0.72],
+        'turboprop_regional': [0.52, 0.68],
+        'jet_business': [0.50, 0.68],
+        'jet_transport': [0.44, 0.62],
+        'glider': [0.45, 0.70],
+        'motoglider': [0.52, 0.74],
+        'uav': [0.45, 0.65],
+    },
+    'pw': {
+        'piston_ga': [5.5, 10.5],
+        'turboprop_regional': [3.8, 7.5],
+        'motoglider': [8.0, 25.0],
+    },
+    'tw': {
+        'jet_business': [0.25, 0.48],
+        'jet_transport': [0.22, 0.40],
+    },
+}
+
+
+def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None):
+    """Compute empirical design parameter suggestions for a given aircraft class.
+
+    Supports dynamic evaluation if m0 is provided, otherwise returns cohort median/mean.
+    Gracefully handles small cohorts (N < 3 or low variance) and class-specific propulsion.
+    """
+    if aircraft_type not in CLASSES:
+        raise ValueError(f"Unknown aircraft_type: '{aircraft_type}'")
+
+    if m0 is not None:
+        try:
+            m0 = float(m0)
+            if not math.isfinite(m0) or m0 <= 0:
+                raise ValueError("m0 must be a positive finite number")
+        except (TypeError, ValueError):
+            raise ValueError("m0 must be a positive finite number")
+
+    all_ac = load_aircraft()
+    class_ac = [r for r in all_ac if r.get('aircraft_type') == aircraft_type]
+
+    def _format_stats(st):
+        if not st:
+            return None
+        return {
+            'min': round(st['min'], 3),
+            'max': round(st['max'], 3),
+            'mean': round(st['mean'], 3),
+            'median': round(st['median'], 3),
+        }
+
+    suggestions = {}
+
+    # 1. Wing Loading (ws)
+    pts_ws = [(r['m0'], r['wing_loading_kg_m2']) for r in class_ac if r.get('m0') and r.get('wing_loading_kg_m2')]
+    st_ws = compute_vector_stats([y for _, y in pts_ws])
+    fit_ws = fit_regression(pts_ws, power=True)
+    if fit_ws and fit_ws.get('A') and fit_ws.get('C'):
+        eq_ws = f"W/S = {fit_ws['A']:.4g} · m0^{fit_ws['C']:.4g}"
+        eq_ws_tex = f"W/S = {fit_ws['A']:.4g} \\cdot m_0^{{{fit_ws['C']:.4g}}}"
+        r2_ws = round(fit_ws['r2'], 4) if fit_ws.get('r2') is not None else None
+        model_ws = 'power'
+        if m0 is not None:
+            pred_ws = predict(fit_ws, m0)
+            val_ws = round(max(10.0, pred_ws), 2) if pred_ws else (round(st_ws['median'], 2) if st_ws else 80.0)
+        else:
+            val_ws = round(st_ws['median'], 2) if st_ws else 80.0
+    else:
+        model_ws = 'median'
+        val_ws = round(st_ws['median'], 2) if st_ws else 80.0
+        r2_ws = None
+        eq_ws = f"W/S = {val_ws}"
+        eq_ws_tex = f"W/S = {val_ws}"
+
+    suggestions['ws'] = {
+        'key': 'ws',
+        'name': 'Wing Loading',
+        'symbol': 'W/S',
+        'unit': 'kg/m²',
+        'suggested_value': val_ws,
+        'model_type': model_ws,
+        'equation': eq_ws,
+        'equation_latex': eq_ws_tex,
+        'r2': r2_ws,
+        'n': len(pts_ws),
+        'stats': _format_stats(st_ws),
+        'typical_range': SUGGESTION_TYPICAL_RANGES['ws'].get(aircraft_type, [50.0, 150.0]),
+    }
+
+    # 2. Aspect Ratio (ar)
+    pts_ar = [(r['m0'], r['ar']) for r in class_ac if r.get('m0') and r.get('ar') and 2 <= r['ar'] <= 60]
+    st_ar = compute_vector_stats([y for _, y in pts_ar])
+    fit_ar = fit_regression(pts_ar, power=False)
+    if fit_ar and fit_ar.get('r2') is not None and fit_ar['r2'] >= 0.20:
+        sign = '+' if fit_ar['intercept'] >= 0 else '-'
+        eq_ar = f"AR = {fit_ar['slope']:.6g} · m0 {sign} {abs(fit_ar['intercept']):.4g}"
+        eq_ar_tex = f"\\Lambda = {fit_ar['slope']:.6g} \\cdot m_0 {sign} {abs(fit_ar['intercept']):.4g}"
+        r2_ar = round(fit_ar['r2'], 4)
+        model_ar = 'linear'
+        if m0 is not None:
+            pred_ar = predict(fit_ar, m0)
+            val_ar = round(min(50.0, max(3.0, pred_ar)), 2) if pred_ar else (round(st_ar['median'], 2) if st_ar else 7.5)
+        else:
+            val_ar = round(st_ar['median'], 2) if st_ar else 7.5
+    else:
+        model_ar = 'median'
+        val_ar = round(st_ar['median'], 2) if st_ar else 7.5
+        r2_ar = round(fit_ar['r2'], 4) if fit_ar and fit_ar.get('r2') is not None else None
+        eq_ar = f"AR = {val_ar}"
+        eq_ar_tex = f"\\Lambda = {val_ar}"
+
+    suggestions['ar'] = {
+        'key': 'ar',
+        'name': 'Aspect Ratio',
+        'symbol': 'AR',
+        'unit': '−',
+        'suggested_value': val_ar,
+        'model_type': model_ar,
+        'equation': eq_ar,
+        'equation_latex': eq_ar_tex,
+        'r2': r2_ar,
+        'n': len(pts_ar),
+        'stats': _format_stats(st_ar),
+        'typical_range': SUGGESTION_TYPICAL_RANGES['ar'].get(aircraft_type, [6.0, 10.0]),
+    }
+
+    # 3. Empty Mass Fraction (me_m0)
+    pts_me = [(r['m0'], r['empty_fraction']) for r in class_ac if r.get('m0') and r.get('empty_fraction') and 0.15 < r['empty_fraction'] < 0.95]
+    st_me = compute_vector_stats([y for _, y in pts_me])
+    fit_me = fit_regression(pts_me, power=True)
+    if fit_me and fit_me.get('A') and fit_me.get('C'):
+        eq_me = f"m_e/m0 = {fit_me['A']:.4g} · m0^{fit_me['C']:.4g}"
+        eq_me_tex = f"m_e/m_0 = {fit_me['A']:.4g} \\cdot m_0^{{{fit_me['C']:.4g}}}"
+        r2_me = round(fit_me['r2'], 4) if fit_me.get('r2') is not None else None
+        model_me = 'power'
+        if m0 is not None:
+            pred_me = predict(fit_me, m0)
+            val_me = round(min(0.90, max(0.20, pred_me)), 3) if pred_me else (round(st_me['median'], 3) if st_me else 0.60)
+        else:
+            val_me = round(st_me['median'], 3) if st_me else 0.60
+    else:
+        model_me = 'median'
+        val_me = round(st_me['median'], 3) if st_me else 0.60
+        r2_me = None
+        eq_me = f"m_e/m0 = {val_me}"
+        eq_me_tex = f"m_e/m_0 = {val_me}"
+
+    suggestions['me_m0'] = {
+        'key': 'me_m0',
+        'name': 'Empty Mass Fraction',
+        'symbol': 'm_e/m_0',
+        'unit': '−',
+        'suggested_value': val_me,
+        'model_type': model_me,
+        'equation': eq_me,
+        'equation_latex': eq_me_tex,
+        'r2': r2_me,
+        'n': len(pts_me),
+        'stats': _format_stats(st_me),
+        'typical_range': SUGGESTION_TYPICAL_RANGES['me_m0'].get(aircraft_type, [0.50, 0.70]),
+    }
+
+    # 4. Power Loading (pw) - Prop and motoglider classes
+    if aircraft_type in ('piston_ga', 'turboprop_regional', 'motoglider'):
+        pts_pw = [(r['m0'], r['power_loading_kg_kw']) for r in class_ac if r.get('m0') and r.get('power_loading_kg_kw')]
+        st_pw = compute_vector_stats([y for _, y in pts_pw])
+        fit_pw = fit_regression(pts_pw, power=True)
+        if fit_pw and fit_pw.get('A') and fit_pw.get('C'):
+            eq_pw = f"m0/P = {fit_pw['A']:.4g} · m0^{fit_pw['C']:.4g}"
+            eq_pw_tex = f"m_0/P = {fit_pw['A']:.4g} \\cdot m_0^{{{fit_pw['C']:.4g}}}"
+            r2_pw = round(fit_pw['r2'], 4) if fit_pw.get('r2') is not None else None
+            model_pw = 'power'
+            if m0 is not None:
+                pred_pw = predict(fit_pw, m0)
+                val_pw = round(max(2.0, pred_pw), 2) if pred_pw else (round(st_pw['median'], 2) if st_pw else 7.5)
+            else:
+                val_pw = round(st_pw['median'], 2) if st_pw else 7.5
+        else:
+            model_pw = 'median'
+            val_pw = round(st_pw['median'], 2) if st_pw else 7.5
+            r2_pw = None
+            eq_pw = f"m0/P = {val_pw}"
+            eq_pw_tex = f"m_0/P = {val_pw}"
+
+        suggestions['pw'] = {
+            'key': 'pw',
+            'name': 'Power Loading',
+            'symbol': 'P/W',
+            'unit': 'kg/kW',
+            'suggested_value': val_pw,
+            'model_type': model_pw,
+            'equation': eq_pw,
+            'equation_latex': eq_pw_tex,
+            'r2': r2_pw,
+            'n': len(pts_pw),
+            'stats': _format_stats(st_pw),
+            'typical_range': SUGGESTION_TYPICAL_RANGES['pw'].get(aircraft_type, [4.0, 12.0]),
+        }
+    else:
+        suggestions['pw'] = {
+            'key': 'pw',
+            'name': 'Power Loading',
+            'symbol': 'P/W',
+            'unit': 'kg/kW',
+            'suggested_value': None,
+            'model_type': None,
+            'equation': None,
+            'equation_latex': None,
+            'r2': None,
+            'n': 0,
+            'stats': None,
+            'typical_range': None,
+        }
+
+    # 5. Thrust Loading (tw) - Jet classes
+    if aircraft_type in ('jet_business', 'jet_transport'):
+        pts_tw = [(r['m0'], r['thrust_to_weight']) for r in class_ac if r.get('m0') and r.get('thrust_to_weight')]
+        st_tw = compute_vector_stats([y for _, y in pts_tw])
+        fit_tw = fit_regression(pts_tw, power=False)
+        if fit_tw:
+            sign = '+' if fit_tw['intercept'] >= 0 else '-'
+            eq_tw = f"T/W = {fit_tw['slope']:.7g} · m0 {sign} {abs(fit_tw['intercept']):.4g}"
+            eq_tw_tex = f"T/W = {fit_tw['slope']:.7g} \\cdot m_0 {sign} {abs(fit_tw['intercept']):.4g}"
+            r2_tw = round(fit_tw['r2'], 4) if fit_tw.get('r2') is not None else None
+            model_tw = 'linear'
+            if m0 is not None:
+                pred_tw = predict(fit_tw, m0)
+                val_tw = round(min(0.80, max(0.15, pred_tw)), 3) if pred_tw else (round(st_tw['median'], 3) if st_tw else 0.30)
+            else:
+                val_tw = round(st_tw['median'], 3) if st_tw else 0.30
+        else:
+            model_tw = 'median'
+            val_tw = round(st_tw['median'], 3) if st_tw else 0.30
+            r2_tw = None
+            eq_tw = f"T/W = {val_tw}"
+            eq_tw_tex = f"T/W = {val_tw}"
+
+        suggestions['tw'] = {
+            'key': 'tw',
+            'name': 'Thrust Loading',
+            'symbol': 'T/W',
+            'unit': '−',
+            'suggested_value': val_tw,
+            'model_type': model_tw,
+            'equation': eq_tw,
+            'equation_latex': eq_tw_tex,
+            'r2': r2_tw,
+            'n': len(pts_tw),
+            'stats': _format_stats(st_tw),
+            'typical_range': SUGGESTION_TYPICAL_RANGES['tw'].get(aircraft_type, [0.20, 0.45]),
+        }
+    else:
+        suggestions['tw'] = {
+            'key': 'tw',
+            'name': 'Thrust Loading',
+            'symbol': 'T/W',
+            'unit': '−',
+            'suggested_value': None,
+            'model_type': None,
+            'equation': None,
+            'equation_latex': None,
+            'r2': None,
+            'n': 0,
+            'stats': None,
+            'typical_range': None,
+        }
+
+    # 6. Horizontal Tail Volume (vh)
+    pts_vh = [(r['m0'], r['v_h']) for r in class_ac if r.get('m0') and r.get('v_h') is not None]
+    st_vh = compute_vector_stats([y for _, y in pts_vh])
+    fit_vh = fit_regression(pts_vh, power=False)
+    vh_typ_range = list(GEOMETRY_METRICS_INFO['v_h']['typical_ranges'][aircraft_type][:2])
+    if fit_vh and fit_vh.get('r2') is not None and fit_vh['r2'] >= 0.50:
+        sign = '+' if fit_vh['intercept'] >= 0 else '-'
+        eq_vh = f"V_H = {fit_vh['slope']:.7g} · m0 {sign} {abs(fit_vh['intercept']):.4g}"
+        eq_vh_tex = f"V_H = {fit_vh['slope']:.7g} \\cdot m_0 {sign} {abs(fit_vh['intercept']):.4g}"
+        r2_vh = round(fit_vh['r2'], 4)
+        model_vh = 'linear'
+        if m0 is not None:
+            pred_vh = predict(fit_vh, m0)
+            val_vh = round(min(1.5, max(0.3, pred_vh)), 2) if pred_vh else (round(st_vh['median'], 2) if st_vh else 0.70)
+        else:
+            val_vh = round(st_vh['median'], 2) if st_vh else 0.70
+    else:
+        model_vh = 'median'
+        val_vh = round(st_vh['median'], 2) if st_vh else 0.70
+        r2_vh = round(fit_vh['r2'], 4) if fit_vh and fit_vh.get('r2') is not None else None
+        eq_vh = f"V_H = {val_vh}"
+        eq_vh_tex = f"V_H = {val_vh}"
+
+    suggestions['vh'] = {
+        'key': 'vh',
+        'name': 'Horizontal Tail Volume',
+        'symbol': 'V_H',
+        'unit': '−',
+        'suggested_value': val_vh,
+        'model_type': model_vh,
+        'equation': eq_vh,
+        'equation_latex': eq_vh_tex,
+        'r2': r2_vh,
+        'n': len(pts_vh),
+        'stats': _format_stats(st_vh),
+        'typical_range': vh_typ_range,
+    }
+
+    # 7. Aileron Span Ratio (b_ail_ratio)
+    pts_ba = [r['aileron_span_fraction'] for r in class_ac if r.get('aileron_span_fraction') is not None]
+    st_ba = compute_vector_stats(pts_ba)
+    val_ba = round(st_ba['median'], 2) if st_ba else 0.40
+    suggestions['b_ail_ratio'] = {
+        'key': 'b_ail_ratio',
+        'name': 'Aileron Span Ratio',
+        'symbol': 'b_ail/(b/2)',
+        'unit': '−',
+        'suggested_value': val_ba,
+        'model_type': 'median',
+        'equation': f"b_ail/(b/2) = {val_ba}",
+        'equation_latex': f"\\frac{{b_{{ail}}}}{{b/2}} = {val_ba}",
+        'r2': None,
+        'n': len(pts_ba),
+        'stats': _format_stats(st_ba),
+        'typical_range': list(GEOMETRY_METRICS_INFO['aileron_span_fraction']['typical_ranges'][aircraft_type][:2]),
+    }
+
+    # 8. Aileron Chord Ratio (c_ail_ratio)
+    pts_ca = [r['aileron_chord_ratio'] for r in class_ac if r.get('aileron_chord_ratio') is not None]
+    st_ca = compute_vector_stats(pts_ca)
+    val_ca = round(st_ca['median'], 2) if st_ca else 0.20
+    suggestions['c_ail_ratio'] = {
+        'key': 'c_ail_ratio',
+        'name': 'Aileron Chord Ratio',
+        'symbol': 'c_ail/c',
+        'unit': '−',
+        'suggested_value': val_ca,
+        'model_type': 'median',
+        'equation': f"c_ail/c = {val_ca}",
+        'equation_latex': f"\\frac{{c_{{ail}}}}{{c}} = {val_ca}",
+        'r2': None,
+        'n': len(pts_ca),
+        'stats': _format_stats(st_ca),
+        'typical_range': list(GEOMETRY_METRICS_INFO['aileron_chord_ratio']['typical_ranges'][aircraft_type][:2]),
+    }
+
+    # 9. Elevator Chord Ratio (c_e_ratio)
+    pts_ce = [r['elevator_chord_ratio'] for r in class_ac if r.get('elevator_chord_ratio') is not None]
+    st_ce = compute_vector_stats(pts_ce)
+    val_ce = round(st_ce['median'], 2) if st_ce else 0.35
+    suggestions['c_e_ratio'] = {
+        'key': 'c_e_ratio',
+        'name': 'Elevator Chord Ratio',
+        'symbol': 'c_e/c_H',
+        'unit': '−',
+        'suggested_value': val_ce,
+        'model_type': 'median',
+        'equation': f"c_e/c_H = {val_ce}",
+        'equation_latex': f"\\frac{{c_e}}{{c_H}} = {val_ce}",
+        'r2': None,
+        'n': len(pts_ce),
+        'stats': _format_stats(st_ce),
+        'typical_range': list(GEOMETRY_METRICS_INFO['elevator_chord_ratio']['typical_ranges'][aircraft_type][:2]),
+    }
+
+    # 10. Rudder Chord Ratio (c_r_ratio)
+    pts_cr = [r['rudder_chord_ratio'] for r in class_ac if r.get('rudder_chord_ratio') is not None]
+    st_cr = compute_vector_stats(pts_cr)
+    val_cr = round(st_cr['median'], 2) if st_cr else 0.35
+    suggestions['c_r_ratio'] = {
+        'key': 'c_r_ratio',
+        'name': 'Rudder Chord Ratio',
+        'symbol': 'c_r/c_V',
+        'unit': '−',
+        'suggested_value': val_cr,
+        'model_type': 'median',
+        'equation': f"c_r/c_V = {val_cr}",
+        'equation_latex': f"\\frac{{c_r}}{{c_V}} = {val_cr}",
+        'r2': None,
+        'n': len(pts_cr),
+        'stats': _format_stats(st_cr),
+        'typical_range': list(GEOMETRY_METRICS_INFO['rudder_chord_ratio']['typical_ranges'][aircraft_type][:2]),
+    }
+
+    # 11. Dihedral (dihedral_deg)
+    pts_dih = [r['dihedral_deg'] for r in class_ac if r.get('dihedral_deg') is not None]
+    st_dih = compute_vector_stats(pts_dih)
+    is_high_wing = (wing_configuration in ('high', 'braced_high', 'strut_braced'))
+    if is_high_wing:
+        if aircraft_type in ('piston_ga', 'turboprop_regional'):
+            typ_dih = [0.0, 2.5]
+            val_dih = 1.5
+        else:
+            typ_dih = [0.0, 3.0]
+            val_dih = 1.5
+        model_dih = 'literature'
+    else:
+        if aircraft_type == 'piston_ga':
+            typ_dih = [3.5, 7.0]
+            val_dih = round(st_dih['median'], 1) if (st_dih and 3.5 <= st_dih['median'] <= 7.0) else 5.0
+        elif aircraft_type == 'turboprop_regional':
+            typ_dih = [4.0, 6.5]
+            val_dih = 5.0
+        else:
+            typ_dih = list(GEOMETRY_METRICS_INFO['dihedral_deg']['typical_ranges'][aircraft_type][:2])
+            val_dih = round(st_dih['median'], 1) if st_dih else 3.0
+        model_dih = 'median' if (st_dih and not wing_configuration) else 'literature'
+
+    suggestions['dihedral_deg'] = {
+        'key': 'dihedral_deg',
+        'name': 'Dihedral Angle',
+        'symbol': 'Gamma',
+        'unit': '°',
+        'suggested_value': val_dih,
+        'model_type': model_dih,
+        'equation': f"Gamma = {val_dih}°",
+        'equation_latex': f"\\Gamma = {val_dih}^\\circ",
+        'r2': None,
+        'n': len(pts_dih),
+        'stats': _format_stats(st_dih),
+        'typical_range': typ_dih,
+    }
+
+    return {
+        'status': 'ok',
+        'aircraft_type': aircraft_type,
+        'class_name': CLASSES[aircraft_type],
+        'm0': m0,
+        'suggestions': suggestions,
+    }
+
