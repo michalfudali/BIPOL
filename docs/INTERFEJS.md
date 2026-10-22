@@ -29,6 +29,21 @@ opisów na każdym ekranie. Zmiany układu nie ograniczają danych w eksporcie.
 
 ## Dostępność i błędy
 
+W widoku **Baza i trendy** przycisk **Otwórz edytor bazy samolotów** prowadzi do
+wyszukiwania katalogu. Wybór **Cała baza — wszystkie klasy** umożliwia przeglądanie
+także konstrukcji spoza klasy projektu. **Parametry / edytuj** otwiera formularz
+z grupami danych i podglądem wydłużenia, udziału masy pustej oraz obciążeń.
+Puste pole oznacza brak danych; opcjonalne wartości można wyczyścić.
+**Sprawdź dane** waliduje rekord bez zapisu. **Zapisz we wspólnej bazie** zapisuje
+zmiany lokalnie, dla wszystkich projektów, i odświeża analizę trendów.
+
+**Użyj jako punkt startowy projektu** otwiera kreator z dostępnymi danymi
+katalogowymi. Brakujące założenia pochodzą z profilu klasy i wymagają przeglądu.
+Katalogowe MTOW i OEW pozostają danymi porównawczymi; projekt jest zapisywany
+dopiero po zatwierdzeniu kreatora i udanym przeliczeniu. Okno edytora obsługuje
+klawiaturę, ogranicza fokus do swoich kontrolek i przy zamknięciu przywraca go
+do przycisku otwierającego.
+
 Akordeony formularza obsługują Enter i Spację. Zakładki trendów obsługują strzałki,
 Home i End, mają role tab/tabpanel i właściwe aria-selected. Stan blokady jest
 ogłaszany przez aria-pressed. Menu mobilne obejmuje fokusem widoczne elementy

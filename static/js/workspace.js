@@ -80,7 +80,7 @@
     if(reportPlan)charts.append(reportPlan);
     method.append(averages, prelim, sources);
     mount.append(charts, selection, method);root.append(mount);
-    tabset(mount, [{title:'Wyniki',panel:charts},{title:'Dobór samolotów',panel:selection},{title:'Metoda i źródła',panel:method}], 'Analiza trendów');
+    tabset(mount, [{title:'Wyniki',panel:charts},{title:'Baza i dobór samolotów',panel:selection},{title:'Metoda i źródła',panel:method}], 'Analiza trendów');
     const chooser = document.createElement('label'); chooser.htmlFor = 'trendChartView'; chooser.className = 'quiet-chart-chooser';
     chooser.innerHTML = 'Wykres<select id="trendChartView"><option value="0">Udział masy pustej</option><option value="1">Trend w czasie</option><option value="2">Osiągi a geometria</option></select>';
     charts.prepend(chooser);

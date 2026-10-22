@@ -257,7 +257,7 @@ def test_uav_small_cohort_handles_gracefully(client):
     ws = res['suggestions']['ws']
     # UAV has strong wing loading correlation across mass range
     assert ws['r2'] is not None and ws['r2'] > 0.90
-    assert ws['n'] == 8
+    assert ws['n'] >= 8
     assert 15.0 <= ws['suggested_value'] <= 35.0
     # Empty mass fraction
     me_m0 = res['suggestions']['me_m0']
@@ -341,4 +341,4 @@ def test_cache_clearing_reloads_catalog_without_crash():
     load_aircraft.cache_clear()
     res = get_trend_suggestions('piston_ga', m0=1200.0)
     assert res['status'] == 'ok'
-    assert res['suggestions']['ws']['n'] == 67
+    assert res['suggestions']['ws']['n'] >= 67

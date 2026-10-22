@@ -17,6 +17,8 @@ from calculations.aircraft_db import (
     create_aircraft, get_aircraft, update_aircraft, delete_aircraft,
     AircraftValidationError, AircraftNotFoundError, AircraftDuplicateError
 )
+from calculations.aircraft_db import validate_aircraft
+from calculations.trends import derived
 from calculations.trend_report import trend_chart
 from calculations.report_assets import math_assets
 from calculations.report_document import report_document, report_number, report_metadata, tex_number
@@ -115,6 +117,25 @@ def aircraft_collection():
         except AircraftValidationError as err:
             return jsonify(status='error', message=str(err)), 400
     return jsonify(reference_catalog())
+
+
+@app.post('/api/aircraft/preview')
+def preview_aircraft():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get('record'), dict):
+        return jsonify(status='error', message='Podaj dane statku powietrznego.'), 400
+    aircraft_id = data.get('id')
+    if aircraft_id is not None and not isinstance(aircraft_id, str):
+        return jsonify(status='error', message='Nieprawidłowy identyfikator samolotu.'), 400
+    existing = get_aircraft(aircraft_id) if aircraft_id else None
+    if aircraft_id and existing is None:
+        return jsonify(status='error', message='Nie znaleziono samolotu.'), 404
+    try:
+        record = validate_aircraft({**(existing or {}), **data['record']},
+                                    is_create=existing is None, existing=existing)
+        return jsonify(status='ok', aircraft=derived(record))
+    except AircraftValidationError as err:
+        return jsonify(status='error', message=str(err)), 400
 
 
 @app.route('/api/aircraft/<path:aircraft_id>', methods=['GET', 'PUT', 'DELETE'])

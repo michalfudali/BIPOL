@@ -1,3 +1,4 @@
+<p id="wizardCatalogSource" class="basis-note" role="status" hidden></p>
 <div class="input-group wizard-topic-field">
   <label for="wiz_topic">Temat projektu</label>
   <select id="wiz_topic"><option value="">Własne założenia</option>{% for topic in topics %}<option value="{{ topic.id }}">{{ topic.title }}</option>{% endfor %}</select>

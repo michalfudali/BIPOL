@@ -53,6 +53,19 @@ Nie zmieniano wartości liczbowych katalogu poza jawną konwersją jednostek.
 Nazwy i jakość danych zachowują ograniczenia oryginału; to baza do projektu
 wstępnego, a nie do planowania rzeczywistych operacji lotniczych.
 
+## Baza Geometrii i Trendów (geometry_trends.json) oraz Motoszybowców (motogliders.json)
+
+Zestawienie certyfikowanych konstrukcji lotniczych (EASA, FAA, ULC, MEiL PW) rozszerzające
+próbę o brakujące w FAST/CADO kategorie:
+- Polskie samoloty tłokowe, szkolne i rolnicze (PZL-104 Wilga 35A, PZL-110 Koliber 150, PZL M-26 Iskierka, PZL M-18B Dromader, PZL-106BR Kruk, PZL-101 Gawron, Aero AT-3 R100)
+- Nowoczesne samoloty General Aviation (Diamond DA40 NG, DA42 NG, DA62, Cirrus SR22T, Robin DR400, Pipistrel Virus SW 121, pierwszy w pełni certyfikowany samolot elektryczny Pipistrel Velis Electro)
+- Samoloty regionalne i transportowe (PZL M28 Skytruck, PZL An-28, Pilatus PC-12 NGX)
+- Szybowce certyfikowane CS-22 (SZD-9bis Bocian, SZD-30 Pirat, SZD-54-2 Perkoz, SZD-24-4 Foka, PW-2 Gapa, SZD-56-2 Diana 2)
+- Samoloty odrzutowe szkolno-bojowe i dyspozycyjne (PZL TS-11 Iskra, PZL I-22 Iryda, Phenom 300E, Challenger 350)
+- Bezzałogowe statki powietrzne UAV (WB Group FlyEye 3.0, WB Group Warmate, Bayraktar TB2, Orbiter 3, Hermes 450)
+
+Dane pochodzą z oficjalnych arkuszy TCDS (EASA/FAA), instrukcji użytkowania w locie (AFM/POH) oraz dokumentacji technicznej MEiL PW.
+
 ## Odtworzenie
 
 Pobierz powyższe, przypięte wersje źródeł oraz:

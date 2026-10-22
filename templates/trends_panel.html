@@ -1,5 +1,6 @@
 <section id="tab-trends" class="tab-content studio-panel">
   <div class="studio-heading"><div><p class="studio-eyebrow">PROJEKT 1 / ANALIZY WSTĘPNE</p><h1>Baza i analiza trendów</h1><p>Dobierz podobne konstrukcje, sprawdź źródła i oprzyj założenia na jawnej próbie.</p></div><div class="studio-actions"><button type="button" class="btn btn-primary" id="trendExportCsv">Pobierz próbę CSV</button><button type="button" class="btn btn-outline" id="trendExportJson">Analiza JSON</button></div></div>
+  <button type="button" class="btn btn-outline" id="trendOpenDatabase">Otwórz edytor bazy samolotów</button>
   <div id="trendStatus" role="status" aria-live="polite">Oczekiwanie na obliczenia projektu.</div>
   <section class="studio-card" id="instructorReview" aria-live="polite"></section>
   <div id="trendSummary" class="studio-mini-metrics"></div>
@@ -69,7 +70,10 @@
         ➕ Dodaj samolot do bazy
       </button>
     </div>
-    <label for="trendSearch">Szukaj modelu, rodziny lub producenta<input id="trendSearch" type="search" placeholder="np. Cessna, PA-28, A320"></label>
+    <div class="aircraft-catalog-filters">
+      <label for="trendSearch">Szukaj modelu, rodziny lub producenta<input id="trendSearch" type="search" placeholder="np. Cessna, PA-28, A320"></label>
+      <label for="trendCatalogScope">Przeglądaj<select id="trendCatalogScope"><option value="current">Samoloty pasujące do projektu</option><option value="all">Cała baza — wszystkie klasy</option></select></label>
+    </div>
     <p id="trendCatalogStatus" role="status"></p>
     <div class="studio-actions">
       <button type="button" class="btn btn-outline" id="trendSelectVisible">Zaznacz widoczne</button>
@@ -102,173 +106,5 @@
   <section class="studio-card"><h2>Wnioski z BIPOL_1 i wyprowadzeń wzorów</h2><div id="trendPreliminary"></div><details><summary>Założenia misji i bilansu masy</summary><div class="trend-controls"><label for="mission_phase_model">Ułamki startu i lądowania<select id="mission_phase_model" data-analysis-param disabled><option value="galinski">Start 0,975; lądowanie 0,975</option></select></label><label for="fuel_reserve_factor">Rezerwa i paliwo nieużywalne<input id="fuel_reserve_factor" data-analysis-param type="number" min="1" max="1.5" step="0.01" value="1.06"></label><label for="mission_ld_factor">K przelotu / Kmax<input id="mission_ld_factor" data-analysis-param type="number" readonly value="0.94"></label></div><button type="button" class="btn btn-primary" id="trendMissionApply">Przelicz projekt z tymi założeniami</button><p class="studio-fine-print">Metoda proporcji dotyczy misji bez zrzutu ładunku. Wznoszenie pozostaje przybliżeniem; nie odtwarzamy wykresu Corke’a bez jego tablic. Jednostki SFC formularza: śmigłowy g/(kW·h), odrzutowy 1/h (cT·g). Wzory PDF wymagają przeliczenia czasu, mocy i ciągu do SI.</p></details></section>
   <section class="studio-card"><h2>Źródła, licencje i dane do pobrania</h2><div id="trendSources"></div><p>Galiński — analizy wstępne (BIPOL_1.pdf, 6 stron) · Galiński i Grabowski — wyprowadzenie wzorów (BIPOL_1_wzory.pdf, 9 stron): <a href="https://www.meil.pw.edu.pl/zsis/ZSiS/Dydaktyka/Prowadzone-przedmioty/BIPOL/BIPOL-I" target="_blank" rel="noopener">strona przedmiotu BIPOL I</a>.</p></section>
 
-  <!-- Modal Dodawania / Edycji Samolotu do Bazy Odniesienia -->
-  <div id="trendAircraftModal" class="wizard-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="trendModalTitle">
-    <div class="wizard-modal" style="max-width:760px; max-height:90vh; overflow-y:auto; background:#ffffff; border-radius:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
-      <div class="wizard-header" style="background:linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%); color:#fff; display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-top-left-radius:10px; border-top-right-radius:10px;">
-        <div>
-          <h3 id="trendModalTitle" style="color:#fff; margin:0; font-size:1.1rem;">✈️ Dodaj samolot do bazy odniesienia</h3>
-          <div style="font-size:0.75rem; color:#93c5fd;">Trwały zapis na serwerze z natychmiastowym przeliczeniem trendów</div>
-        </div>
-        <button type="button" class="wizard-close-btn" id="closeTrendModalBtn" style="color:#fff; background:none; border:none; font-size:1.5rem; cursor:pointer;" title="Zamknij">&times;</button>
-      </div>
-      <form id="trendAircraftForm" style="padding:16px;" onsubmit="return false;">
-        <input type="hidden" id="ac_form_mode" value="create">
-        <input type="hidden" id="ac_form_id" value="">
-        <input type="hidden" id="ac_form_source_id" value="cado">
-
-        <div style="font-weight:700; color:#1e3a8a; font-size:0.85rem; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
-          1. Identyfikacja i klasyfikacja
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_model"><strong>Model samolotu *</strong></label>
-            <input type="text" id="ac_model" required placeholder="np. Cessna 182T Skylane">
-          </div>
-          <div class="input-group">
-            <label for="ac_manufacturer">Producent</label>
-            <input type="text" id="ac_manufacturer" placeholder="np. Cessna Aircraft">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_family">Rodzina konstrukcji</label>
-            <input type="text" id="ac_family" placeholder="np. C182">
-          </div>
-          <div class="input-group">
-            <label for="ac_year">Rok certyfikacji / oblotu</label>
-            <input type="number" id="ac_year" min="1900" max="2100" placeholder="np. 2001">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_aircraft_type"><strong>Klasa samolotu *</strong></label>
-            <select id="ac_aircraft_type" required>
-              <option value="piston_ga">Tłokowy GA (piston_ga)</option>
-              <option value="turboprop_regional">Turbośmigłowy regionalny (turboprop_regional)</option>
-              <option value="jet_business">Odrzutowiec biznesowy (jet_business)</option>
-              <option value="jet_transport">Komunikacyjny odrzutowy (jet_transport)</option>
-              <option value="glider">Szybowiec (glider)</option>
-              <option value="motoglider">Motoszybowiec (motoglider)</option>
-              <option value="uav">Bezzałogowy UAV (uav)</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label for="ac_engine_type"><strong>Rodzaj napędu *</strong></label>
-            <select id="ac_engine_type" required>
-              <option value="prop">Śmigłowy tłokowy (prop)</option>
-              <option value="turboprop">Turbośmigłowy (turboprop)</option>
-              <option value="jet">Odrzutowy (jet)</option>
-              <option value="none">Bez napędu (szybowiec)</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label for="ac_n_engines">Liczba silników</label>
-            <input type="number" id="ac_n_engines" min="0" max="8" value="1">
-          </div>
-        </div>
-
-        <div style="font-weight:700; color:#1e3a8a; font-size:0.85rem; margin:14px 0 8px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
-          2. Masy i Geometria Nośna
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_m0"><strong>Maksymalna masa startowa MTOW m₀ [kg] *</strong></label>
-            <input type="number" step="any" id="ac_m0" required min="1" placeholder="np. 1406">
-          </div>
-          <div class="input-group">
-            <label for="ac_me"><strong>Masa własna OEW m_e [kg] *</strong></label>
-            <input type="number" step="any" id="ac_me" required min="1" placeholder="np. 890 (m_e < m₀)">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_s"><strong>Powierzchnia skrzydła S [m²] *</strong></label>
-            <input type="number" step="any" id="ac_s" required min="0.1" placeholder="np. 16.2">
-          </div>
-          <div class="input-group">
-            <label for="ac_b"><strong>Rozpiętość skrzydła b [m] *</strong></label>
-            <input type="number" step="any" id="ac_b" required min="0.5" placeholder="np. 11.0">
-          </div>
-        </div>
-
-        <div style="font-weight:700; color:#1e3a8a; font-size:0.85rem; margin:14px 0 8px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
-          3. Zespół Napędowy i Osiągi
-        </div>
-        <div class="input-row">
-          <div class="input-group" id="ac_grp_p_kw">
-            <label for="ac_p_kw">Moc łączna silników P [kW]</label>
-            <input type="number" step="any" id="ac_p_kw" min="0" placeholder="np. 172">
-          </div>
-          <div class="input-group" id="ac_grp_t_kn">
-            <label for="ac_t_kn">Ciąg łączny T [kN]</label>
-            <input type="number" step="any" id="ac_t_kn" min="0" placeholder="dla odrzutowych">
-          </div>
-          <div class="input-group">
-            <label for="ac_prop_diameter_m">Średnica śmigła d [m]</label>
-            <input type="number" step="any" id="ac_prop_diameter_m" min="0" placeholder="np. 1.98">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_v_cruise_kmh">Prędkość przelotowa [km/h]</label>
-            <input type="number" step="any" id="ac_v_cruise_kmh" min="0" placeholder="np. 260">
-          </div>
-          <div class="input-group">
-            <label for="ac_v_stall_kmh">Prędkość przeciągnięcia [km/h]</label>
-            <input type="number" step="any" id="ac_v_stall_kmh" min="0" placeholder="np. 91">
-          </div>
-          <div class="input-group">
-            <label for="ac_range_km">Zasięg [km]</label>
-            <input type="number" step="any" id="ac_range_km" min="0" placeholder="np. 1720">
-          </div>
-        </div>
-
-        <div style="font-weight:700; color:#1e3a8a; font-size:0.85rem; margin:14px 0 8px 0; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
-          4. Cechy Geometryczne i Usterzenia (Raymer / Roskam / MEiL)
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_v_h">Cecha objętościowa usterzenia poziomego V_H [-]</label>
-            <input type="number" step="any" id="ac_v_h" min="0" max="2.0" placeholder="np. 0.72">
-          </div>
-          <div class="input-group">
-            <label for="ac_v_v">Cecha objętościowa usterzenia pionowego V_V [-]</label>
-            <input type="number" step="any" id="ac_v_v" min="0" max="0.5" placeholder="np. 0.045">
-          </div>
-          <div class="input-group">
-            <label for="ac_dihedral_deg">Wznios skrzydła Γ [°]</label>
-            <input type="number" step="any" id="ac_dihedral_deg" min="-5" max="15" placeholder="np. 3.0">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_aileron_span_fraction">Udział rozpiętości lotek b_ail/(b/2) [-]</label>
-            <input type="number" step="any" id="ac_aileron_span_fraction" min="0" max="1.0" placeholder="np. 0.42">
-          </div>
-          <div class="input-group">
-            <label for="ac_aileron_chord_ratio">Względna cięciwa lotki c_ail/c [-]</label>
-            <input type="number" step="any" id="ac_aileron_chord_ratio" min="0" max="0.5" placeholder="np. 0.22">
-          </div>
-        </div>
-        <div class="input-row">
-          <div class="input-group">
-            <label for="ac_elevator_chord_ratio">Względna cięciwa steru wysokości c_e/c_H [-]</label>
-            <input type="number" step="any" id="ac_elevator_chord_ratio" min="0" max="0.8" placeholder="np. 0.35">
-          </div>
-          <div class="input-group">
-            <label for="ac_rudder_chord_ratio">Względna cięciwa steru kierunku c_r/c_V [-]</label>
-            <input type="number" step="any" id="ac_rudder_chord_ratio" min="0" max="0.8" placeholder="np. 0.35">
-          </div>
-        </div>
-
-        <div id="trendModalError" style="display:none; color:#dc2626; background:#fee2e2; border:1px solid #f87171; padding:8px 12px; border-radius:6px; margin-top:10px; font-size:0.8rem;"></div>
-
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-          <button type="button" class="btn btn-outline" id="cancelTrendModalBtn">Anuluj</button>
-          <button type="button" class="btn btn-primary" id="saveTrendAircraftBtn">💾 Zapisz w bazie na stałe</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </section>
+{% include 'aircraft_editor.html' %}

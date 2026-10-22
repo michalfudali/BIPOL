@@ -1,0 +1,27 @@
+<dialog id="trendAircraftModal" class="aircraft-editor" aria-labelledby="trendModalTitle">
+  <header class="aircraft-editor-header">
+    <div><p class="studio-eyebrow">WSPÓLNA BAZA STATKÓW POWIETRZNYCH</p><h2 id="trendModalTitle">Parametry samolotu</h2>
+      <p>Zmiany zapisują się lokalnie i obowiązują we wszystkich projektach.</p></div>
+    <button type="button" class="btn btn-outline" id="closeTrendModalBtn" aria-label="Zamknij edytor">×</button>
+  </header>
+  <form id="trendAircraftForm">
+    <div class="aircraft-editor-body">
+      <div><p class="studio-fine-print">Pola z * są wymagane. Puste pole oznacza brak danych. Wielkości pochodne przeliczają się automatycznie.</p>
+        <div id="aircraftEditorFields"></div></div>
+      <aside class="aircraft-editor-preview" aria-label="Kontrola parametrów">
+        <h3>Podgląd i kontrola</h3><dl id="aircraftEditorDerived" aria-live="polite"></dl>
+        <p id="aircraftEditorChecks" role="status" aria-live="polite"></p>
+        <div id="aircraftEditorSource"></div>
+        <p id="aircraftEditorProjectNote" class="studio-fine-print"></p>
+        <button type="button" class="btn btn-outline" id="aircraftEditorProject">Użyj jako punkt startowy projektu</button>
+      </aside>
+    </div>
+    <div id="trendModalError" class="aircraft-editor-error" role="alert" hidden></div>
+    <footer class="aircraft-editor-footer">
+      <button type="button" class="btn btn-outline" id="cancelTrendModalBtn">Anuluj</button>
+      <button type="button" class="btn btn-outline" id="aircraftEditorReset">Cofnij edycję</button>
+      <button type="button" class="btn btn-outline" id="aircraftEditorCheck">Sprawdź dane</button>
+      <button type="submit" class="btn btn-primary" id="saveTrendAircraftBtn">Zapisz we wspólnej bazie</button>
+    </footer>
+  </form>
+</dialog>

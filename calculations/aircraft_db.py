@@ -81,7 +81,7 @@ def validate_aircraft(data: dict, is_create: bool = True, existing: dict | None 
 
     # Validate model
     model = data.get('model')
-    if model is not None:
+    if model is not None or 'model' in data:
         if not isinstance(model, str) or not model.strip():
             raise AircraftValidationError("Field 'model' must be a non-empty string.")
 
@@ -101,7 +101,7 @@ def validate_aircraft(data: dict, is_create: bool = True, existing: dict | None 
 
     # Validate m0 (MTOW)
     m0 = data.get('m0')
-    if m0 is not None:
+    if m0 is not None or 'm0' in data:
         if isinstance(m0, bool) or not isinstance(m0, (int, float)):
             raise AircraftValidationError("Field 'm0' must be a numeric value.")
         if not math.isfinite(m0) or m0 <= 0:
@@ -205,6 +205,33 @@ def validate_aircraft(data: dict, is_create: bool = True, existing: dict | None 
     if year is not None:
         if isinstance(year, bool) or not isinstance(year, int) or not (1900 <= year <= 2100):
             raise AircraftValidationError("Field 'year' must be an integer between 1900 and 2100.")
+
+    # Fields editable in the catalogue also require server-side validation.
+    limits = {
+        'v_cruise_kmh': (0, 3000), 'v_stall_kmh': (0, 1000), 'cruise_mach': (0, 5),
+        'range_km': (0, 50000), 'climb_rate_ms': (0, 150), 'ld_max': (0, 150),
+        'takeoff_m': (0, 50000), 'landing_m': (0, 50000), 'prop_diameter_m': (0, 20),
+        'v_v': (0, .5), 'v_h': (0, 2), 'dihedral_deg': (-15, 20),
+        'aileron_span_fraction': (0, 1), 'aileron_chord_ratio': (0, 1),
+        'elevator_chord_ratio': (0, 1), 'rudder_chord_ratio': (0, 1),
+    }
+    for key, (low, high) in limits.items():
+        value = data.get(key)
+        if value is None or (existing and value == existing.get(key)):
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+            raise AircraftValidationError(f"Pole {key}: podaj liczbę od {low} do {high}.")
+    for key in ('source_locator', 'source_references', 'empty_mass_definition', 'family'):
+        value = data.get(key)
+        if value is not None and (not isinstance(value, str) or len(value) > 4000):
+            raise AircraftValidationError(f"Pole {key}: wymagany tekst do 4000 znaków.")
+    for key in ('takeoff_basis', 'landing_basis'):
+        value = data.get(key)
+        if value is not None and (not existing or value != existing.get(key)) and value not in ('unknown', 'ground_roll', '15m', '50ft', 'field_length'):
+            raise AircraftValidationError(f"Pole {key}: wybierz definicję długości.")
+    cruise, stall = data.get('v_cruise_kmh'), data.get('v_stall_kmh')
+    if isinstance(cruise, (int, float)) and isinstance(stall, (int, float)) and stall >= cruise:
+        raise AircraftValidationError('Prędkość przeciągnięcia musi być mniejsza od prędkości przelotowej.')
 
     # Build clean output dictionary (stripping dynamically derived keys)
     clean = {k: v for k, v in data.items() if k not in DERIVED_KEYS}

@@ -7,7 +7,7 @@
   const engines = new Set(['prop', 'jet', 'none']);
   const fullDistanceBases = new Set(['15m', '50ft', 'field_length']);
   const limits = {
-    range_km: [0, 30000], cruise_speed_kmh: [80, 950],
+    range_km: [0, 30000], cruise_speed_kmh: [80, 950], v_stall_kmh: [1, 400],
     climb_rate_ms: [1.5, 30], takeoff_distance_m: [0, 20000],
     landing_distance_m: [0, 20000], wingspan_m: [0.5, 80],
     wing_area_m2: [0.5, 1000], aspect_ratio: [2, 35],
@@ -15,7 +15,7 @@
     v_h: [0.05, 2], aileron_chord_ratio: [0.05, 0.45],
   };
   const observedNumbers = ['m0', 'me', 's', 'b', 'ar', 'p_kw', 't_kn',
-    'v_cruise_kmh', 'cruise_mach', 'range_km', 'takeoff_m', 'landing_m',
+    'v_cruise_kmh', 'v_stall_kmh', 'cruise_mach', 'range_km', 'takeoff_m', 'landing_m',
     'climb_rate_ms', 'ld_max', 'prop_diameter_m', 'v_h',
     'aileron_chord_ratio', 'dihedral_deg', 'year', 'n_engines'];
 
@@ -42,15 +42,16 @@
 
     copy('range_km', record.range_km);
     copy('cruise_speed_kmh', record.v_cruise_kmh);
+    copy('v_stall_kmh', record.v_stall_kmh);
     if (record.engine_type !== 'none') {
       copy('climb_rate_ms', record.climb_rate_ms);
       const takeoff = record.takeoff_distance_m ??
         (fullDistanceBases.has(record.takeoff_basis) ? record.takeoff_m : null);
       copy('takeoff_distance_m', takeoff);
-      const landing = record.landing_distance_m ??
-        (fullDistanceBases.has(record.landing_basis) ? record.landing_m : null);
-      copy('landing_distance_m', landing);
     }
+    const landing = record.landing_distance_m ??
+      (fullDistanceBases.has(record.landing_basis) ? record.landing_m : null);
+    copy('landing_distance_m', landing);
     copy('dihedral_deg', record.dihedral_deg);
     copy('v_h', record.v_h);
     copy('aileron_chord_ratio', record.aileron_chord_ratio);

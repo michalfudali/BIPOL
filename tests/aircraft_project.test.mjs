@@ -79,3 +79,10 @@ test('rejects a record without catalog identity', () => {
   assert.throws(() => aircraftProject.fromRecord({...source(), id: ''}), TypeError);
   assert.throws(() => aircraftProject.fromRecord({...source(), aircraft_type: 'unknown'}), TypeError);
 });
+
+test('documented stall and landing data also seed an unpowered project', () => {
+  const mapped=aircraftProject.fromRecord({...source(),aircraft_type:'glider',engine_type:'none',v_stall_kmh:70});
+  assert.equal(mapped.params.v_stall_kmh,70);
+  assert.equal(mapped.params.landing_distance_m,606);
+  assert.ok(!Object.hasOwn(mapped.params,'engine_power_kw'));
+});

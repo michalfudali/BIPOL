@@ -102,6 +102,7 @@
     sync();propulsion();
   }
   function openWizard() {
+    if ($('wizardCatalogSource')) $('wizardCatalogSource').hidden = true;
     wizardBase=infer(collectFormData());
     for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
     const topic=topicsData.find(t=>t.num===Number(wizardBase.topic_id));
@@ -112,6 +113,25 @@
     set('wiz_basis_','v_stall_kmh', value('wiz_','v_stall_kmh'));
     sync('wiz_');propulsion('wiz_');topicNote();
   }
+  function seed(params) {
+    // Reset the new project wizard before applying a catalogue observation.
+    wizardBase=infer(structuredClone(params));
+    for (const input of document.querySelectorAll('#projectWizardBackdrop input, #projectWizardBackdrop select')) {
+      if (!input.id.startsWith('wiz_')) continue;
+      if (input.type==='checkbox') { input.checked=false; continue; }
+      if (input.tagName==='SELECT') input.value=[...input.options].find(o=>o.defaultSelected)?.value||input.options[0]?.value||'';
+      else input.value=input.defaultValue;
+    }
+    for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
+    set('wiz_','topic','');
+    document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=(wizardBase.locked_params||[]).includes(input.dataset.wizardAssumption));
+    syncAircraftClassAndEASAUI(true);propulsion('wiz_');renderWizardStep4Mechanics();
+    for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
+    for(const key of ['range_km','cruise_speed_kmh','v_stall_kmh'])set('wiz_basis_',key,wizardBase[key]);
+    sync('wiz_');topicNote();
+    const note=$('wizardCatalogSource');
+    if(note){note.hidden=false;note.textContent=`Dane początkowe: ${params.reference_aircraft.model}. Przeniesiono dostępne parametry katalogowe. Pozostałe pola pochodzą z profilu klasy — sprawdź misję, załogę i ładunek przed zapisaniem projektu. Katalogowe MTOW i OEW służą do porównania.`;}
+  }
   function topicNote() {
     const topic=topicsData.find(t=>t.id===value('wiz_','topic'));
     const note=$('wiz_topic_note');
@@ -121,6 +141,7 @@
   function chooseTopic() {
     const topic=topicsData.find(t=>t.id===value('wiz_','topic'));
     if(!topic){delete wizardBase.topic_id;delete wizardBase.topic_origin;topicNote();return;}
+    if($('wizardCatalogSource'))$('wizardCatalogSource').hidden=true;
     wizardBase=structuredClone(topic.parameters);
     for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
     document.querySelectorAll('[data-wizard-assumption]').forEach(input=>input.checked=wizardBase.locked_params.includes(input.dataset.wizardAssumption));
@@ -183,7 +204,7 @@
     }
     sync(prefix);
   }
-  window.BipolDesignBasis={sync,propulsion,restore,openWizard,snapshot,collect,loadTopic,applyResult,classDefaults};
+  window.BipolDesignBasis={sync,propulsion,restore,openWizard,seed,snapshot,collect,loadTopic,applyResult,classDefaults};
   document.addEventListener('DOMContentLoaded',async()=>{
     $('wiz_topic')?.addEventListener('change',chooseTopic);
     const syncAssumption = (basisId, step2Id, assumptionKey) => {

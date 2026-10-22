@@ -165,19 +165,20 @@
     if(!catalog||!result)return [];
     const query=$('trendSearch').value.trim().toLocaleLowerCase('pl');
     const ids=new Set(result.bipol_projects.p1.trend_analysis.similar_aircraft.map(r=>r.id));
-    return catalog.aircraft.filter(r=>r.aircraft_type===result.params.aircraft_type&&r.engine_type===result.params.engine_type)
+    const scope=$('trendCatalogScope')?.value||'current';
+    const rows=scope==='all'?catalog.aircraft:catalog.aircraft.filter(r=>r.aircraft_type===result.params.aircraft_type&&r.engine_type===result.params.engine_type)
       .filter(r=>result.params.trend_source==null||result.params.trend_source==='all'||r.source_id===result.params.trend_source)
       .filter(r=>!result.params.trend_engine_count||r.n_engines===result.params.trend_engine_count)
-      .filter(r=>(!result.params.trend_year_min&&!result.params.trend_year_max)||r.year!=null&&(!result.params.trend_year_min||r.year>=result.params.trend_year_min)&&(!result.params.trend_year_max||r.year<=result.params.trend_year_max))
-      .filter(r=>!query||`${r.model} ${r.manufacturer} ${r.family}`.toLocaleLowerCase('pl').includes(query))
+      .filter(r=>(!result.params.trend_year_min&&!result.params.trend_year_max)||r.year!=null&&(!result.params.trend_year_min||r.year>=result.params.trend_year_min)&&(!result.params.trend_year_max||r.year<=result.params.trend_year_max));
+    return rows.filter(r=>!query||`${r.model} ${r.manufacturer} ${r.family}`.toLocaleLowerCase('pl').includes(query))
       .sort((a,b)=>Number(ids.has(b.id))-Number(ids.has(a.id))||a.model.localeCompare(b.model));
   }
 
   function renderCatalog() {
     const all=filteredCatalog();page=Math.max(0,Math.min(page,Math.ceil(all.length/size)-1));visible=all.slice(page*size,(page+1)*size);
-    $('trendCatalogStatus').textContent=`${all.length} pozycji w bieżącej klasie i źródle${$('trendSearch').value?' po wyszukaniu':''}. Zaznaczenie jest robocze do użycia „Zastosuj zaznaczone”.`;
+    $('trendCatalogStatus').textContent=`${all.length} pozycji${$('trendCatalogScope')?.value==='all'?' w całej bazie':' w bieżącej klasie i źródle'}${$('trendSearch').value?' po wyszukaniu':''}. Otwórz „Parametry / edytuj”, aby sprawdzić dane. Dobór do próby obejmuje klasę i napęd projektu.`;
     $('trendAircraftRows').innerHTML=visible.map(r=>`<tr class="${selected.has(r.id)?'trend-selected':''}">
-      <td><input type="checkbox" data-aircraft-id="${esc(r.id)}" aria-label="Dodaj ${esc(r.model)} do próby" ${selected.has(r.id)?'checked':''}></td>
+      <td><input type="checkbox" data-aircraft-id="${esc(r.id)}" aria-label="Dodaj ${esc(r.model)} do próby" ${selected.has(r.id)?'checked':''} ${r.aircraft_type!==result.params.aircraft_type||r.engine_type!==result.params.engine_type?'disabled title="Inna klasa lub napęd niż w projekcie"':''}></td>
       <td><strong>${esc(r.model)}</strong><small>${esc(r.family||'')} · <a href="${esc(catalog.sources[r.source_id]?.url||'#')}" target="_blank" rel="noopener">${esc((r.source_id||'').toUpperCase())}</a></small><details><summary>Pochodzenie</summary><p>${esc(r.source_locator||'')}<br>${esc(r.source_references||'')}<br>${esc(r.empty_mass_definition||'')}</p>${(r.quality_notes||[]).length?`<p>${esc(r.quality_notes.join(' '))}</p>`:''}</details></td>
       <td>${r.year??'—'}</td>
       <td>${fmt(r.m0,0)}</td>
@@ -188,166 +189,13 @@
       <td>${r.prop_diameter_m!=null?`${fmt(r.prop_diameter_m,2)} m`:'—'}</td>
       <td>${r.v_cruise_kmh!=null?`${fmt(r.v_cruise_kmh,0)} km/h`:r.cruise_mach!=null?`${fmt(r.cruise_mach,3)} Ma`:'—'}</td>
       <td style="white-space:nowrap;">
-        <button type="button" class="btn btn-outline btn-sm edit-ac-btn" data-id="${esc(r.id)}" style="padding:2px 7px; font-size:0.75rem; margin-right:4px;">✏️ Edytuj</button>
+        <button type="button" class="btn btn-outline btn-sm edit-ac-btn" data-id="${esc(r.id)}" style="padding:7px 9px; font-size:0.78rem; margin-right:4px;">Parametry / edytuj</button>
         <button type="button" class="btn btn-outline btn-sm delete-ac-btn" data-id="${esc(r.id)}" style="padding:2px 7px; font-size:0.75rem; color:#ef4444; border-color:#fca5a5;">🗑️ Usuń</button>
       </td>
     </tr>`).join('')||'<tr><td colspan="11">Brak konstrukcji w tej klasie i źródle. Nie zastępujemy ich samolotami o innym przeznaczeniu.</td></tr>';
     $('trendPage').textContent=all.length?`${page+1} / ${Math.ceil(all.length/size)}`:'0 / 0';
     $('trendPrev').disabled=page===0;$('trendNext').disabled=(page+1)*size>=all.length;
     $('trendSelectionStatus').textContent=`Zaznaczono: ${selected.size}`;
-  }
-
-  function openAircraftModal(mode = 'create', aircraft = null) {
-    const modal = $('trendAircraftModal');
-    if (!modal) return;
-    $('ac_form_mode').value = mode;
-    $('trendModalError').style.display = 'none';
-    $('trendModalError').textContent = '';
-
-    if (mode === 'create') {
-      $('trendModalTitle').textContent = '✈️ Dodaj nowy samolot do bazy odniesienia';
-      $('ac_form_id').value = '';
-      $('ac_form_source_id').value = 'cado';
-      $('ac_model').value = '';
-      $('ac_manufacturer').value = '';
-      $('ac_family').value = '';
-      $('ac_year').value = new Date().getFullYear();
-      $('ac_aircraft_type').value = result?.params?.aircraft_type || 'piston_ga';
-      $('ac_engine_type').value = result?.params?.engine_type || 'prop';
-      $('ac_n_engines').value = 1;
-      $('ac_m0').value = '';
-      $('ac_me').value = '';
-      $('ac_s').value = '';
-      $('ac_b').value = '';
-      $('ac_p_kw').value = '';
-      $('ac_t_kn').value = '';
-      $('ac_prop_diameter_m').value = '';
-      $('ac_v_cruise_kmh').value = '';
-      $('ac_v_stall_kmh').value = '';
-      $('ac_range_km').value = '';
-      $('ac_v_h').value = '';
-      $('ac_v_v').value = '';
-      $('ac_dihedral_deg').value = '';
-      $('ac_aileron_span_fraction').value = '';
-      $('ac_aileron_chord_ratio').value = '';
-      $('ac_elevator_chord_ratio').value = '';
-      $('ac_rudder_chord_ratio').value = '';
-    } else {
-      $('trendModalTitle').textContent = `✏️ Edytuj samolot: ${aircraft.model}`;
-      $('ac_form_id').value = aircraft.id;
-      $('ac_form_source_id').value = aircraft.source_id || 'cado';
-      $('ac_model').value = aircraft.model || '';
-      $('ac_manufacturer').value = aircraft.manufacturer || '';
-      $('ac_family').value = aircraft.family || '';
-      $('ac_year').value = aircraft.year ?? '';
-      $('ac_aircraft_type').value = aircraft.aircraft_type || 'piston_ga';
-      $('ac_engine_type').value = aircraft.engine_type || 'prop';
-      $('ac_n_engines').value = aircraft.n_engines ?? 1;
-      $('ac_m0').value = aircraft.m0 ?? '';
-      $('ac_me').value = aircraft.me ?? '';
-      $('ac_s').value = aircraft.s ?? '';
-      $('ac_b').value = aircraft.b ?? '';
-      $('ac_p_kw').value = aircraft.p_kw ?? '';
-      $('ac_t_kn').value = aircraft.t_kn ?? '';
-      $('ac_prop_diameter_m').value = aircraft.prop_diameter_m ?? '';
-      $('ac_v_cruise_kmh').value = aircraft.v_cruise_kmh ?? '';
-      $('ac_v_stall_kmh').value = aircraft.v_stall_kmh ?? '';
-      $('ac_range_km').value = aircraft.range_km ?? '';
-      $('ac_v_h').value = aircraft.v_h ?? '';
-      $('ac_v_v').value = aircraft.v_v ?? '';
-      $('ac_dihedral_deg').value = aircraft.dihedral_deg ?? '';
-      $('ac_aileron_span_fraction').value = aircraft.aileron_span_fraction ?? '';
-      $('ac_aileron_chord_ratio').value = aircraft.aileron_chord_ratio ?? '';
-      $('ac_elevator_chord_ratio').value = aircraft.elevator_chord_ratio ?? '';
-      $('ac_rudder_chord_ratio').value = aircraft.rudder_chord_ratio ?? '';
-    }
-    modal.style.display = 'flex';
-  }
-
-  function closeAircraftModal() {
-    const modal = $('trendAircraftModal');
-    if (modal) modal.style.display = 'none';
-  }
-
-  async function saveAircraft() {
-    const mode = $('ac_form_mode').value;
-    const acId = $('ac_form_id').value;
-    const errEl = $('trendModalError');
-    errEl.style.display = 'none';
-
-    const model = $('ac_model').value.trim();
-    if (!model) {
-      errEl.textContent = 'Nazwa modelu jest wymagana.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    const m0 = parseFloat($('ac_m0').value);
-    const me = parseFloat($('ac_me').value);
-    const s = parseFloat($('ac_s').value);
-    const b = parseFloat($('ac_b').value);
-
-    if (isNaN(m0) || m0 <= 0 || isNaN(me) || me <= 0 || isNaN(s) || s <= 0 || isNaN(b) || b <= 0) {
-      errEl.textContent = 'Masa m0, masa me, powierzchnia S i rozpiętość b muszą być liczbami dodatnimi.';
-      errEl.style.display = 'block';
-      return;
-    }
-    if (me >= m0) {
-      errEl.textContent = 'Masa własna me musi być mniejsza od maksymalnej masy startowej m0.';
-      errEl.style.display = 'block';
-      return;
-    }
-
-    const payload = {
-      model: model,
-      manufacturer: $('ac_manufacturer').value.trim() || undefined,
-      family: $('ac_family').value.trim() || undefined,
-      year: $('ac_year').value ? parseInt($('ac_year').value, 10) : undefined,
-      aircraft_type: $('ac_aircraft_type').value,
-      engine_type: $('ac_engine_type').value,
-      n_engines: parseInt($('ac_n_engines').value, 10) || 1,
-      m0: m0,
-      me: me,
-      s: s,
-      b: b,
-      source_id: $('ac_form_source_id').value || 'cado',
-    };
-
-    if ($('ac_p_kw').value) payload.p_kw = parseFloat($('ac_p_kw').value);
-    if ($('ac_t_kn').value) payload.t_kn = parseFloat($('ac_t_kn').value);
-    if ($('ac_prop_diameter_m').value) payload.prop_diameter_m = parseFloat($('ac_prop_diameter_m').value);
-    if ($('ac_v_cruise_kmh').value) payload.v_cruise_kmh = parseFloat($('ac_v_cruise_kmh').value);
-    if ($('ac_v_stall_kmh').value) payload.v_stall_kmh = parseFloat($('ac_v_stall_kmh').value);
-    if ($('ac_range_km').value) payload.range_km = parseFloat($('ac_range_km').value);
-    if ($('ac_v_h').value) payload.v_h = parseFloat($('ac_v_h').value);
-    if ($('ac_v_v').value) payload.v_v = parseFloat($('ac_v_v').value);
-    if ($('ac_dihedral_deg').value) payload.dihedral_deg = parseFloat($('ac_dihedral_deg').value);
-    if ($('ac_aileron_span_fraction').value) payload.aileron_span_fraction = parseFloat($('ac_aileron_span_fraction').value);
-    if ($('ac_aileron_chord_ratio').value) payload.aileron_chord_ratio = parseFloat($('ac_aileron_chord_ratio').value);
-    if ($('ac_elevator_chord_ratio').value) payload.elevator_chord_ratio = parseFloat($('ac_elevator_chord_ratio').value);
-    if ($('ac_rudder_chord_ratio').value) payload.rudder_chord_ratio = parseFloat($('ac_rudder_chord_ratio').value);
-
-    try {
-      const url = mode === 'create' ? '/api/aircraft' : `/api/aircraft/${encodeURIComponent(acId)}`;
-      const method = mode === 'create' ? 'POST' : 'PUT';
-      const resp = await fetch(url, {
-        method: method,
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data.message || 'Błąd zapisu samolotu.');
-      }
-      closeAircraftModal();
-      catalogPromise = null;
-      await loadCatalog();
-      if (typeof performCalculation === 'function') await performCalculation();
-      status(`Zapisano samolot „${payload.model}” na serwerze i zaktualizowano analizę.`);
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-    }
   }
 
   async function deleteAircraft(id) {
@@ -362,6 +210,10 @@
       if (!resp.ok) throw new Error(data.message || 'Nie udało się usunąć samolotu.');
       catalogPromise = null;
       selected.delete(id);
+      if(Array.isArray(formBaseParams.trend_aircraft_ids)){
+        formBaseParams.trend_aircraft_ids=formBaseParams.trend_aircraft_ids.filter(key=>key!==id);
+        if(!formBaseParams.trend_aircraft_ids.length)delete formBaseParams.trend_aircraft_ids;
+      }
       await loadCatalog();
       if (typeof performCalculation === 'function') await performCalculation();
       status(`Usunięto samolot „${name}” z bazy.`);
@@ -423,6 +275,16 @@
       formBaseParams.trend_aircraft_ids=ids;$('trend_count').value='0';performCalculation();
     });
     $('trendSearch').addEventListener('input',()=>{page=0;renderCatalog();});
+    $('trendCatalogScope').addEventListener('change',()=>{page=0;renderCatalog();});
+    $('trendOpenDatabase').addEventListener('click',()=>{
+      $('trendSelectionPanel-tab')?.click();
+      $('trendSearch').focus();$('trendSearch').scrollIntoView({block:'center'});
+    });
+    document.addEventListener('bipol:catalog-updated',async event=>{
+      catalogPromise=null;await loadCatalog();
+      await performCalculation();
+      status(`Zapisano „${event.detail.model}” we wspólnej lokalnej bazie. Analiza została odświeżona.`);
+    });
     
     // Obsługa tabeli katalogu i przycisków Edytuj / Usuń
     $('trendAircraftRows').addEventListener('change',event=>{
@@ -435,7 +297,7 @@
       if (editBtn) {
         const id = editBtn.dataset.id;
         const ac = catalog?.aircraft?.find(r => r.id === id);
-        if (ac) openAircraftModal('edit', ac);
+        if (ac) BipolAircraftEditor.open(ac, catalog.sources);
         return;
       }
       const delBtn = event.target.closest('.delete-ac-btn');
@@ -453,12 +315,9 @@
     });
 
     // Obsługa Modala dodawania/edycji samolotu
-    $('btnAddAircraftBtn')?.addEventListener('click', () => openAircraftModal('create'));
-    $('closeTrendModalBtn')?.addEventListener('click', closeAircraftModal);
-    $('cancelTrendModalBtn')?.addEventListener('click', closeAircraftModal);
-    $('saveTrendAircraftBtn')?.addEventListener('click', saveAircraft);
+    $('btnAddAircraftBtn')?.addEventListener('click', () => BipolAircraftEditor.open(null, catalog?.sources));
 
-    $('trendSelectVisible').addEventListener('click',()=>{visible.forEach(r=>selected.add(r.id));renderCatalog();});
+    $('trendSelectVisible').addEventListener('click',()=>{visible.filter(r=>r.aircraft_type===result.params.aircraft_type&&r.engine_type===result.params.engine_type).forEach(r=>selected.add(r.id));renderCatalog();});
     $('trendClearSelection').addEventListener('click',()=>{selected.clear();renderCatalog();});
     $('trendPrev').addEventListener('click',()=>{page--;renderCatalog();});$('trendNext').addEventListener('click',()=>{page++;renderCatalog();});
     for(const id of ['trendTimeMetric','trendRelationX','trendRelationY'])$(id).addEventListener('change',renderPlots);
