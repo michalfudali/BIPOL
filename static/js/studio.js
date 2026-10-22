@@ -5,6 +5,7 @@
   const VARIANTS_KEY = 'bipol_studio_variants_v1';
   const wideTabs = new Set(['tab-overview', 'tab-inputs', 'tab-calculation-tree', 'tab-variants', 'tab-reports', 'tab-glide', 'tab-methods', 'tab-trends']);
   let view = 'iso', fresh = false, resultProject = null, messageTimer;
+  let aircraftModel, aircraftResult, aircraftCamera = BipolAircraftPreview.camera(), aircraftFrame;
   const $ = id => document.getElementById(id);
   const announce = (message, error = false) => {
     const el = $('studioMessage');
@@ -71,8 +72,62 @@
 
   function renderAircraft() {
     if (!currentResults) return;
-    $('studioAircraft').innerHTML = BipolVisuals.aircraft(currentResults, view);
+    if (aircraftResult !== currentResults) {
+      aircraftResult = currentResults;
+      aircraftModel = BipolAircraftPreview.model(currentResults);
+      $('studioAircraftLegend').innerHTML = aircraftModel.parts.filter(part => ['engine','propeller','flap','aileron','flaperon','slat'].includes(part.id))
+        .map(part => `<span><i style="background:${part.color}"></i>${esc(part.label)}</span>`).join('');
+    }
+    $('studioAircraft').innerHTML = BipolAircraftPreview.render(aircraftModel, view, aircraftCamera);
+    for (const key of ['yaw','elevation']) {
+      $(`studioAircraft_${key}`).value = Math.round(aircraftCamera[key]);
+      $(`studioAircraft_${key}Value`).value = `${Math.round(aircraftCamera[key])}°`;
+    }
     document.querySelectorAll('[data-aircraft-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.aircraftView === view)));
+  }
+
+  function rotateAircraft(orientation) {
+    aircraftCamera = BipolAircraftPreview.camera('iso', orientation);
+    view = 'custom';
+    if (aircraftFrame) return;
+    aircraftFrame = requestAnimationFrame(() => { aircraftFrame = null; renderAircraft(); });
+  }
+
+  function setupAircraftRotation() {
+    const canvas = $('studioAircraft');
+    let drag;
+    canvas.addEventListener('pointerdown', event => {
+      if (!currentResults || !event.isPrimary || event.button !== 0) return;
+      drag = {id:event.pointerId, x:event.clientX, y:event.clientY, camera:{...aircraftCamera}};
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add('is-rotating');
+      canvas.focus({preventScroll:true});
+      event.preventDefault();
+    });
+    canvas.addEventListener('pointermove', event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      rotateAircraft({yaw:drag.camera.yaw+(event.clientX-drag.x)*.45,
+        elevation:drag.camera.elevation+(event.clientY-drag.y)*.45});
+    });
+    const finish = event => {
+      if (!drag || event.pointerId !== drag.id) return;
+      drag = null; canvas.classList.remove('is-rotating');
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+    };
+    for (const name of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(name, finish);
+    canvas.addEventListener('keydown', event => {
+      if (event.key === 'Home') {
+        event.preventDefault(); view = 'iso'; aircraftCamera = BipolAircraftPreview.camera(); renderAircraft(); return;
+      }
+      if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+      event.preventDefault();
+      const step = event.shiftKey ? 2 : 10;
+      rotateAircraft({yaw:aircraftCamera.yaw+({'ArrowLeft':-step,'ArrowRight':step}[event.key] || 0),
+        elevation:aircraftCamera.elevation+({'ArrowUp':step,'ArrowDown':-step}[event.key] || 0)});
+    });
+    for (const key of ['yaw','elevation']) $(`studioAircraft_${key}`).addEventListener('input', event => {
+      rotateAircraft({...aircraftCamera,[key]:Number(event.target.value)});
+    });
   }
 
   function renderOverview(result) {
@@ -193,6 +248,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     document.body.classList.add('studio-layout');
+    setupAircraftRotation();
     document.querySelectorAll('[data-studio-icon]').forEach(el => { el.innerHTML = BipolVisuals.icon(el.dataset.studioIcon, 19); });
     $('openReportBtn').addEventListener('click', event => { event.preventDefault(); event.stopImmediatePropagation(); navigate('tab-reports'); }, true);
     document.querySelectorAll('[data-studio-metadata]').forEach(input => input.addEventListener('input', () => {
@@ -229,7 +285,9 @@
       try {
         if (button.dataset.studioNav) navigate(button.dataset.studioNav);
         else if (button.dataset.studioTarget) navigate(button.dataset.studioTarget);
-        else if (button.dataset.aircraftView) { view = button.dataset.aircraftView; renderAircraft(); }
+        else if (button.dataset.aircraftView) {
+          view = button.dataset.aircraftView; aircraftCamera = BipolAircraftPreview.camera(view); renderAircraft();
+        }
         else if (button.dataset.studioAction) await action(button.dataset.studioAction);
         else if (button.dataset.loadVariant) {
           const variant = variants().find(v => v.id === button.dataset.loadVariant);

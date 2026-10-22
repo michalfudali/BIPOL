@@ -102,7 +102,7 @@ def validate_parameters(data):
     for key in ('trend_count', 'trend_engine_count', 'trend_year_min', 'trend_year_max'):
         if key in p and not float(p[key]).is_integer():
             raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
-    for key, allowed in {'trend_source': ('all', 'fast', 'cado', 'motogliders', 'geometry_trends'),
+    for key, allowed in {'trend_source': ('all', 'fast', 'cado', 'motogliders', 'geometry_trends', 'user'),
                          'wing_input_mode': ('loading', 'span_aspect', 'span_area', 'area_aspect'),
                          'payload_input_mode': ('seats', 'total'),
                          'power_input_mode': ('sized', 'fixed'),

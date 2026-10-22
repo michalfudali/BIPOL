@@ -12,60 +12,21 @@ Evaluates:
 5. Bug reproduction: KeyError: 'year' when aircraft is created without optional year attribute.
 """
 import copy
-import json
 import math
-import os
-import tempfile
 import time
 import pytest
 
 from app import app
 from calculations import AIRCRAFT_PRESETS, run_bipol_project
-from calculations.aircraft_db import get_aircraft_database
-from calculations.trends import CLASSES, DATA, get_trend_suggestions, load_aircraft
+from calculations.trends import CLASSES, get_trend_suggestions
 
 ALL_CLASSES = list(CLASSES.keys())
 
 
 @pytest.fixture
-def recalc_isolated_db():
-    """Thread-safe snapshot and atomic restore fixture for adversarial recalculation testing."""
-    db = get_aircraft_database()
-    with db.lock:
-        snapshots = {p.name: p.read_bytes() for p in DATA.glob("*.json")}
-    original_names = set(snapshots.keys())
-
-    try:
-        yield
-    finally:
-        with db.lock:
-            for name, content in snapshots.items():
-                target = DATA / name
-                temp_fd, temp_path = tempfile.mkstemp(prefix=f".rst-{name}-", suffix=".tmp", dir=DATA)
-                try:
-                    with os.fdopen(temp_fd, 'wb') as stream:
-                        stream.write(content)
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    for attempt in range(5):
-                        try:
-                            os.replace(temp_path, target)
-                            break
-                        except (PermissionError, OSError):
-                            time.sleep(0.05 * (attempt + 1))
-                except Exception:
-                    if os.path.exists(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except OSError:
-                            pass
-            for p in DATA.glob("*.json"):
-                if p.name not in original_names:
-                    try:
-                        p.unlink()
-                    except OSError:
-                        pass
-            load_aircraft.cache_clear()
+def recalc_isolated_db(isolated_db):
+    """The shared fixture restores the test database after each recalculation test."""
+    yield
 
 
 def _extract_metric_state(suggestions_dict):

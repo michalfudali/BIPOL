@@ -5,18 +5,17 @@
 Author: teamwork_preview_challenger (Challenger 2 for Milestone 1)
 Scope:
 1. Malformed parameter types (strings for m0, unsupported wing configs, null bytes, NaN/Inf).
-2. Consistency of regression outputs with the underlying reference database in data/aircraft/*.json.
+2. Consistency of regression outputs with the underlying reference database (data/aircraft/aircraft.sqlite3).
 3. Concurrent and rapid requests.
 4. Latency and resource bounds (<200 ms per query).
 """
 import concurrent.futures
-import json
 import math
 import statistics
 import time
-from pathlib import Path
 import pytest
 from app import app
+from calculations import aircraft_store
 from calculations.trends import (
     CLASSES,
     SOURCES,
@@ -24,7 +23,6 @@ from calculations.trends import (
     load_aircraft,
 )
 
-DATA_DIR = Path(__file__).resolve().parents[1] / 'data' / 'aircraft'
 G0 = 9.80665
 
 REQUIRED_PARAMS = [
@@ -193,7 +191,7 @@ class TestMalformedParameters:
 
 
 # ==============================================================================
-# Task 2: Empirical Consistency with Reference Database (data/aircraft/*.json)
+# Task 2: Empirical Consistency with Reference Database (data/aircraft/aircraft.sqlite3)
 # ==============================================================================
 
 class TestDatabaseConsistencyOracle:
@@ -201,32 +199,30 @@ class TestDatabaseConsistencyOracle:
 
     @classmethod
     def setup_class(cls):
-        """Load raw json files directly from disk without using load_aircraft cache."""
+        """Load raw rows with plain SQL, without the load_aircraft cache or derived()."""
         cls.raw_records = []
-        for source_file in ["cado.json", "fast.json", "geometry_trends.json", "motogliders.json"]:
-            path = DATA_DIR / source_file
-            assert path.exists(), f"Reference file {path} missing"
-            with open(path, "r", encoding="utf-8") as f:
-                records = json.load(f)
-                for r in records:
-                    rec = dict(r)
-                    mass = rec.get('m0')
-                    area = rec.get('s')
-                    span = rec.get('b')
-                    me = rec.get('me')
-                    p_kw = rec.get('p_kw')
-                    t_kn = rec.get('t_kn')
+        with aircraft_store.connect() as con:
+            records = con.execute('SELECT * FROM aircraft').fetchall()
+            assert records, "Reference database is empty"
+        for r in records:
+            rec = dict(r)
+            mass = rec.get('m0')
+            area = rec.get('s')
+            span = rec.get('b')
+            me = rec.get('me')
+            p_kw = rec.get('p_kw')
+            t_kn = rec.get('t_kn')
 
-                    rec['ar'] = (span * span / area) if (span and area and area > 0) else None
-                    rec['empty_fraction'] = (me / mass) if (me and mass and mass > 0) else None
-                    rec['wing_loading_kg_m2'] = (mass / area) if (mass and area and area > 0) else None
-                    rec['power_loading_kg_kw'] = (mass / p_kw) if (mass and p_kw and p_kw > 0) else None
-                    rec['thrust_to_weight'] = (t_kn * 1000 / (mass * G0)) if (t_kn and mass and mass > 0) else None
-                    cls.raw_records.append(rec)
+            rec['ar'] = (span * span / area) if (span and area and area > 0) else None
+            rec['empty_fraction'] = (me / mass) if (me and mass and mass > 0) else None
+            rec['wing_loading_kg_m2'] = (mass / area) if (mass and area and area > 0) else None
+            rec['power_loading_kg_kw'] = (mass / p_kw) if (mass and p_kw and p_kw > 0) else None
+            rec['thrust_to_weight'] = (t_kn * 1000 / (mass * G0)) if (t_kn and mass and mass > 0) else None
+            cls.raw_records.append(rec)
 
     @pytest.mark.parametrize("ac_class", list(CLASSES.keys()))
     def test_sample_counts_match_database_records(self, client, ac_class):
-        """Verify sample count N for each metric strictly equals matching records in data/aircraft/*.json."""
+        """Verify sample count N for each metric strictly equals matching records in the database."""
         res = client.get(f'/api/trends/suggestions?aircraft_type={ac_class}')
         assert res.status_code == 200
         suggestions = res.get_json()['suggestions']

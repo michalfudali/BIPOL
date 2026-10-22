@@ -44,7 +44,7 @@
     if (data.engine_type !== 'jet') data.t_kn = null;
     if (data.engine_type === 'none') data.n_engines = 0;
     if (!data.family) data.family = data.model;
-    data.source_id = original.source_id || 'geometry_trends';
+    data.source_id = original.source_id || 'user';
     return data;
   }
 

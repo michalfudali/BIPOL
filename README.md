@@ -59,13 +59,14 @@ K przelotu = 0,94 Kmax, pełne długości startu/lądowania, masa pasażera z ba
 przez CSV ze źródłem. Odczyt wszystkich pięciu fotografii, zakres wdrożenia
 i niejednoznaczne dopiski: [`docs/WYTYCZNE_PROWADZACEGO.md`](docs/WYTYCZNE_PROWADZACEGO.md).
 
-Widok **Baza i analiza trendów** zawiera **840 konstrukcji i wariantów** z FAST
-Aerobase oraz ENAC CADO: filtry i ręczny dobór próby, regresję udziału masy pustej,
+Widok **Baza i analiza trendów** korzysta z bazy SQLite `data/aircraft/aircraft.sqlite3`
+(**872 konstrukcje i warianty** z FAST Aerobase, ENAC CADO, zestawienia motoszybowców
+i geometrii): filtry i ręczny dobór próby, regresję udziału masy pustej,
 trendy czasowe z prognozą +5 lat, zależności osiągów i eksport danych ze źródłami.
 Daty certyfikacji są jawnie odróżnione od lat produkcji, a brakujące dane pozostają
 oznaczone. Wdrożenie obu materiałów P1 i ograniczenia metod opisuje
-[`docs/ANALIZA_TRENDOW.md`](docs/ANALIZA_TRENDOW.md), a pochodzenie i licencje baz
-[`data/aircraft/README.md`](data/aircraft/README.md).
+[`docs/ANALIZA_TRENDOW.md`](docs/ANALIZA_TRENDOW.md), a strukturę bazy, pochodzenie
+i licencje danych [`data/aircraft/README.md`](data/aircraft/README.md).
 
 Model służy do obliczeń dydaktycznych. Sprawdza wybrane warunki i nie stanowi
 potwierdzenia certyfikacji. Wszystkie poziomy CS-23 1–4 obejmuje limit 8618 kg

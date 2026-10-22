@@ -11,6 +11,10 @@ test('blank optional values clear existing observations without becoming zero', 
   assert.equal(data.source_id,'fast');
 });
 
+test('new records go to the user source, not a curated data set', () => {
+  assert.equal(editor.payload({model:'Nowy',engine_type:'prop',m0:'900'}).source_id,'user');
+});
+
 test('changing propulsion clears incompatible ratings and preserves zero engines', () => {
   const glider = editor.payload({engine_type:'none',p_kw:'100',t_kn:'10',n_engines:'1'});
   assert.equal(glider.p_kw,null);

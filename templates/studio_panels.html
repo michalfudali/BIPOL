@@ -3,7 +3,23 @@
   <span id="studioChecksSummary" class="studio-tag">Oczekiwanie na obliczenia</span>
   {% include "overview_metrics.html" %}
   <div class="studio-two-col studio-aircraft-grid">
-    <section class="studio-card"><div class="studio-card-heading"><div><h2>Koncepcja samolotu</h2></div><button class="btn btn-outline-sm" data-studio-action="export-svg">Pobierz SVG</button></div><div id="studioAircraft" class="studio-aircraft"></div><div class="studio-view-tabs" role="group" aria-label="Widok samolotu"><button type="button" data-aircraft-view="iso" aria-pressed="true">Perspektywa</button><button type="button" data-aircraft-view="top" aria-pressed="false">Z góry</button><button type="button" data-aircraft-view="side" aria-pressed="false">Z boku</button><button type="button" data-aircraft-view="front" aria-pressed="false">Z przodu</button></div><p class="studio-fine-print">Schemat poglądowy. Rysunek zestawieniowy jest dostępny w module CAD.</p></section>
+    <section class="studio-card">
+      <div class="studio-card-heading"><div><h2>Koncepcja samolotu</h2></div><button class="btn btn-outline-sm" data-studio-action="export-svg">Pobierz SVG</button></div>
+      <div id="studioAircraft" class="studio-aircraft" tabindex="0" role="group" aria-label="Obracany podgląd samolotu" aria-describedby="studioAircraftHelp" aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home"></div>
+      <p id="studioAircraftHelp" class="studio-fine-print studio-aircraft-help">Przeciągnij myszą lub palcem, aby obrócić samolot. Klawiatura: strzałki obracają, Home przywraca perspektywę.</p>
+      <div class="studio-view-tabs" role="group" aria-label="Widok samolotu">
+        <button type="button" data-aircraft-view="iso" aria-pressed="true" title="Przywróć domyślną perspektywę">Perspektywa ↺</button>
+        <button type="button" data-aircraft-view="top" aria-pressed="false">Z góry</button>
+        <button type="button" data-aircraft-view="side" aria-pressed="false">Z boku</button>
+        <button type="button" data-aircraft-view="front" aria-pressed="false">Z przodu</button>
+      </div>
+      <div class="studio-aircraft-controls">
+        <label for="studioAircraft_yaw">Obrót <output id="studioAircraft_yawValue" for="studioAircraft_yaw">38°</output><input id="studioAircraft_yaw" type="range" min="-180" max="180" value="38" step="1"></label>
+        <label for="studioAircraft_elevation">Wysokość spojrzenia <output id="studioAircraft_elevationValue" for="studioAircraft_elevation">25°</output><input id="studioAircraft_elevation" type="range" min="-90" max="90" value="25" step="1"></label>
+      </div>
+      <div id="studioAircraftLegend" class="studio-aircraft-legend" aria-label="Elementy widoczne w modelu"></div>
+      <p class="studio-fine-print">Lotki i klapy według wymiarów z obliczeń. Rozmieszczenie silników i slotów jest orientacyjne. Rysunek zestawieniowy jest dostępny w module CAD.</p>
+    </section>
     <section class="studio-card"><div class="studio-card-heading"><div><h2>Bilans masy</h2></div></div><div id="studioMassBars"></div><div class="studio-note" id="studioMassClosure"></div><button class="studio-text-button" data-studio-target="tab-p1-p2">Przejdź do bilansu i doboru napędu →</button></section>
   </div>
   <details class="quiet-disclosure"><summary>Misja i kontrola założeń</summary><div class="studio-two-col"><section class="studio-card"><h2>Profil misji</h2><div id="studioMission"></div><button class="studio-text-button" data-studio-target="tab-p1-p2">Edytuj założenia misji →</button></section><section class="studio-card"><h2>Kontrola założeń</h2><div id="studioChecks"></div><button class="studio-text-button" data-studio-target="tab-compliance">Wszystkie kryteria i uwagi →</button></section></div></details>

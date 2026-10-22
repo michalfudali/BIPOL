@@ -2,10 +2,9 @@
 
 Verifies:
 - Schema and physical invariant validation logic
-- Concurrency protection via threading.RLock
-- Atomic writes via tempfile.mkstemp and os.replace
-- Dynamic cache invalidation via load_aircraft.cache_clear()
-- CRUD operations across partitioned source files
+- Concurrent writes serialised by SQLite transactions
+- Catalogue cache reloaded when the database revision changes
+- CRUD operations across data sources
 """
 import copy
 import json

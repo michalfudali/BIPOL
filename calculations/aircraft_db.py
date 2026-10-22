@@ -1,22 +1,21 @@
 """Server-side reference aircraft database management and CRUD persistence.
 
-Provides thread-safe, atomic file modifications on data/aircraft/*.json with
-dynamic cache invalidation of descriptive regressions.
+Records are stored in SQLite (calculations/aircraft_store.py). Each write is one
+transaction; the database constraints repeat the validation rules below.
 """
-import json
 import math
-import os
 import re
-import tempfile
+import sqlite3
 import threading
-import time
-from pathlib import Path
 
-from calculations.trends import DATA, CLASSES, SOURCES, derived, load_aircraft
+from calculations import aircraft_store
+from calculations.aircraft_store import COLUMN_NAMES, COLUMN_TYPES
+from calculations.trends import CLASSES, SOURCES, derived, load_aircraft
 
 VALID_CLASSES = set(CLASSES.keys())
 VALID_ENGINE_TYPES = {'prop', 'jet', 'none'}
-KNOWN_SOURCES = ('geometry_trends', 'motogliders', 'cado', 'fast')
+KNOWN_SOURCES = tuple(SOURCES)
+USER_SOURCE = 'user'  # records added in the editor, kept apart from the curated data sets
 SAFE_ID_REGEX = re.compile(r'^[a-zA-Z0-9_\-]+$')
 
 DERIVED_KEYS = {
@@ -24,6 +23,8 @@ DERIVED_KEYS = {
     'power_loading_kg_kw', 'specific_power_kw_kg', 'thrust_to_weight',
     'takeoff_distance_m', 'landing_distance_m', 'quality_notes'
 }
+# API response wrappers, accepted back from clients that echo a record.
+RESPONSE_KEYS = {'status', 'message', 'aircraft', 'record'}
 
 
 class AircraftDatabaseError(Exception):
@@ -233,8 +234,23 @@ def validate_aircraft(data: dict, is_create: bool = True, existing: dict | None 
     if isinstance(cruise, (int, float)) and isinstance(stall, (int, float)) and stall >= cruise:
         raise AircraftValidationError('Prędkość przeciągnięcia musi być mniejsza od prędkości przelotowej.')
 
-    # Build clean output dictionary (stripping dynamically derived keys)
-    clean = {k: v for k, v in data.items() if k not in DERIVED_KEYS}
+    unknown = sorted(set(data) - set(COLUMN_NAMES) - DERIVED_KEYS - RESPONSE_KEYS)
+    if unknown:
+        raise AircraftValidationError(f"Nieznane pole rekordu: {', '.join(map(str, unknown))}.")
+    for key in COLUMN_NAMES:
+        value = data.get(key)
+        if value is None or key == 'variable_sweep':
+            continue
+        if COLUMN_TYPES[key] == 'TEXT' and not isinstance(value, str):
+            raise AircraftValidationError(f"Pole {key}: wymagany tekst.")
+        if COLUMN_TYPES[key] == 'REAL' and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                            or not math.isfinite(value)):
+            raise AircraftValidationError(f"Pole {key}: podaj skończoną liczbę.")
+    if not isinstance(data.get('variable_sweep', False), bool):
+        raise AircraftValidationError("Pole variable_sweep: wymagana wartość logiczna.")
+
+    # Build clean output dictionary (stripping derived keys and response wrappers)
+    clean = {k: v for k, v in data.items() if k not in DERIVED_KEYS | RESPONSE_KEYS}
     clean['year'] = int(year) if year is not None else None
     if aircraft_id:
         clean['id'] = aircraft_id.strip()
@@ -261,10 +277,14 @@ def validate_aircraft(data: dict, is_create: bool = True, existing: dict | None 
 
 
 class AircraftDatabase:
-    """Thread-safe persistent database service for reference aircraft records in JSON files."""
+    """CRUD service for the reference aircraft catalogue stored in SQLite.
 
-    def __init__(self, data_dir: Path | None = None):
-        self.data_dir = Path(data_dir) if data_dir else DATA
+    path=None follows aircraft_store.database_path() (BIPOL_AIRCRAFT_DB or the default file).
+    """
+
+    def __init__(self, path=None):
+        self.path = path
+        # SQLite serialises writers too; the lock only avoids busy waits inside one process.
         self.lock = threading.RLock()
 
     def get_all(self) -> tuple:
@@ -273,174 +293,68 @@ class AircraftDatabase:
 
     def get_by_id(self, aircraft_id: str) -> dict | None:
         """Finds aircraft by unique ID and returns full derived record, or None if not found."""
-        for r in load_aircraft():
-            if r.get('id') == aircraft_id:
-                return dict(r)
-        return None
-
-    def find_source_file(self, aircraft_id: str) -> tuple[Path, list, int] | None:
-        """Finds the JSON file path, record list, and list index containing aircraft_id."""
-        with self.lock:
-            # Check known sources in preferred order
-            for source in KNOWN_SOURCES:
-                path = self.data_dir / f"{source}.json"
-                if not path.exists():
-                    continue
-                records = None
-                for attempt in range(5):
-                    try:
-                        text = path.read_text(encoding='utf-8')
-                        records = json.loads(text) if text.strip() else []
-                        break
-                    except (PermissionError, OSError, json.JSONDecodeError):
-                        if attempt == 4:
-                            break
-                        time.sleep(0.025 * (2 ** attempt))
-                if records is None:
-                    continue
-                for idx, r in enumerate(records):
-                    if r.get('id') == aircraft_id:
-                        return path, records, idx
-
-            # Check any remaining json files in directory
-            for path in sorted(self.data_dir.glob("*.json")):
-                if path.stem in KNOWN_SOURCES or path.name.startswith('.'):
-                    continue
-                records = None
-                for attempt in range(5):
-                    try:
-                        text = path.read_text(encoding='utf-8')
-                        records = json.loads(text) if text.strip() else []
-                        break
-                    except (PermissionError, OSError, json.JSONDecodeError):
-                        if attempt == 4:
-                            break
-                        time.sleep(0.025 * (2 ** attempt))
-                if records is None:
-                    continue
-                for idx, r in enumerate(records):
-                    if r.get('id') == aircraft_id:
-                        return path, records, idx
-
-            return None
+        with aircraft_store.connect(self.path) as con:
+            record = aircraft_store.fetch(con, aircraft_id)
+        return derived(record) if record else None
 
     def create(self, record_data: dict) -> dict:
-        """Creates a new aircraft record, saves to disk atomically, and refreshes cache."""
+        """Validates and inserts a new aircraft record in one transaction."""
+        clean = validate_aircraft(record_data, is_create=True)
+        aid = clean['id']
+
+        clean['source_id'] = clean.get('source_id') or USER_SOURCE
+        if clean['source_id'] not in KNOWN_SOURCES:
+            raise AircraftValidationError(f"Nieznane źródło danych: '{clean['source_id']}'.")
+
+        # Provide safe standard defaults for optional metadata fields
+        if not clean.get('family'):
+            clean['family'] = clean['model'].split()[0] if clean.get('model') else aid
+        if not clean.get('source_locator'):
+            clean['source_locator'] = 'BIPOL Studio User Input'
+        if not clean.get('source_references'):
+            clean['source_references'] = 'User input via BIPOL Studio Database Editor'
+        clean.setdefault('empty_mass_definition', 'OEW / operating empty weight')
+        clean.setdefault('year_basis', 'certification')
+        clean.setdefault('variable_sweep', False)
+
         with self.lock:
-            clean = validate_aircraft(record_data, is_create=True)
-            aid = clean['id']
-
-            # Check uniqueness across all JSON files
-            if self.find_source_file(aid) is not None:
-                raise AircraftDuplicateError(f"Aircraft with id '{aid}' already exists.")
-
-            # Target file determination (geometry_trends.json by default)
-            source_id = clean.get('source_id')
-            if not source_id or source_id not in KNOWN_SOURCES:
-                source_id = 'geometry_trends'
-            clean['source_id'] = source_id
-
-            # Provide safe standard defaults for optional metadata fields
-            if 'family' not in clean or not clean['family']:
-                clean['family'] = clean['model'].split()[0] if clean.get('model') else aid
-            if 'source_locator' not in clean or not clean['source_locator']:
-                clean['source_locator'] = 'BIPOL Studio User Input'
-            if 'source_references' not in clean or not clean['source_references']:
-                clean['source_references'] = 'User input via BIPOL Studio Database Editor'
-            if 'empty_mass_definition' not in clean:
-                clean['empty_mass_definition'] = 'OEW / operating empty weight'
-            if 'year_basis' not in clean:
-                clean['year_basis'] = 'certification'
-            if 'variable_sweep' not in clean:
-                clean['variable_sweep'] = False
-            if 'year' not in clean:
-                clean['year'] = None
-
-            target_path = self.data_dir / f"{source_id}.json"
-            if target_path.exists():
-                records = []
-                for attempt in range(5):
-                    try:
-                        text = target_path.read_text(encoding='utf-8')
-                        records = json.loads(text) if text.strip() else []
-                        break
-                    except (PermissionError, OSError, json.JSONDecodeError):
-                        if attempt == 4:
-                            raise AircraftDatabaseError(f"Failed to read target aircraft database file {target_path.name}")
-                        time.sleep(0.025 * (2 ** attempt))
-            else:
-                records = []
-
-            records.append(clean)
-            self._atomic_save(target_path, records)
-            load_aircraft.cache_clear()
-
-            # Return derived record from refreshed cache or derived(clean)
-            result = self.get_by_id(aid)
-            return result if result is not None else derived(clean)
+            try:
+                with aircraft_store.transaction(self.path) as con:
+                    aircraft_store.insert(con, clean)
+            except sqlite3.IntegrityError as error:
+                raise _integrity_error(error, aid) from None
+        return self.get_by_id(aid)
 
     def update(self, aircraft_id: str, updates: dict) -> dict:
-        """Updates an existing aircraft record, saves to disk atomically, and refreshes cache."""
+        """Merges, validates and saves changes to an existing record in one transaction."""
+        if not isinstance(updates, dict):
+            raise AircraftValidationError("Payload must be a JSON object.")
         with self.lock:
-            match = self.find_source_file(aircraft_id)
-            if not match:
-                raise AircraftNotFoundError(f"Aircraft with id '{aircraft_id}' not found.")
-
-            path, records, idx = match
-            existing = records[idx]
-
-            # Merge updates while preserving the original immutable ID
-            merged = {**existing, **updates, 'id': aircraft_id}
-            clean = validate_aircraft(merged, is_create=False, existing=existing)
-
-            records[idx] = clean
-            self._atomic_save(path, records)
-            load_aircraft.cache_clear()
-
-            result = self.get_by_id(aircraft_id)
-            return result if result is not None else derived(clean)
+            try:
+                with aircraft_store.transaction(self.path) as con:
+                    existing = aircraft_store.fetch(con, aircraft_id)
+                    if existing is None:
+                        raise AircraftNotFoundError(f"Aircraft with id '{aircraft_id}' not found.")
+                    # Merge updates while preserving the original immutable ID
+                    merged = {**existing, **updates, 'id': aircraft_id}
+                    clean = validate_aircraft(merged, is_create=False, existing=existing)
+                    aircraft_store.update(con, aircraft_id, clean)
+            except sqlite3.IntegrityError as error:
+                raise _integrity_error(error, aircraft_id) from None
+        return self.get_by_id(aircraft_id)
 
     def delete(self, aircraft_id: str) -> bool:
-        """Deletes an aircraft record by ID from whichever file contains it and flushes cache."""
-        with self.lock:
-            match = self.find_source_file(aircraft_id)
-            if not match:
+        """Deletes an aircraft record by ID."""
+        with self.lock, aircraft_store.transaction(self.path) as con:
+            if not aircraft_store.delete(con, aircraft_id):
                 raise AircraftNotFoundError(f"Aircraft with id '{aircraft_id}' not found.")
+        return True
 
-            path, records, idx = match
-            del records[idx]
-            self._atomic_save(path, records)
-            load_aircraft.cache_clear()
-            return True
 
-    def _atomic_save(self, path: Path, records: list) -> None:
-        """Atomically writes JSON records to path using tempfile.mkstemp and os.replace."""
-        temp_fd, temp_path = tempfile.mkstemp(
-            prefix=f".{path.stem}-",
-            suffix=".tmp",
-            dir=path.parent
-        )
-        try:
-            with os.fdopen(temp_fd, 'w', encoding='utf-8') as stream:
-                json.dump(records, stream, ensure_ascii=False, indent=2, allow_nan=False)
-                stream.write("\n")
-                stream.flush()
-                os.fsync(stream.fileno())
-            for attempt in range(5):
-                try:
-                    os.replace(temp_path, path)
-                    break
-                except (PermissionError, OSError):
-                    if attempt == 4:
-                        raise
-                    time.sleep(0.025 * (2 ** attempt))
-        except Exception:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except OSError:
-                    pass
-            raise
+def _integrity_error(error, aircraft_id):
+    if 'UNIQUE constraint failed: aircraft.id' in str(error):
+        return AircraftDuplicateError(f"Aircraft with id '{aircraft_id}' already exists.")
+    return AircraftValidationError(f'Rekord narusza ograniczenia bazy danych ({error}).')
 
 
 # Module-level default instance and helper functions

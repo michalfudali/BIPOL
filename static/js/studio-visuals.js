@@ -17,67 +17,8 @@ function chart({series,xLabel='',yLabel='',width=640,height=270,xMin,xMax,yMin,y
  for(const p of points)if(p.x>=xMin&&p.x<=xMax&&p.y>=yMin&&p.y<=yMax)out+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="5" fill="${p.color||'#102d38'}" stroke="white" stroke-width="2"/><text x="${X(p.x)+9}" y="${Y(p.y)-9}" class="axis" fill="#102d38">${esc(p.label||'Projekt')}</text>`;
  out+=`<text x="${l+w/2}" y="${height-6}" class="axis-label" text-anchor="middle">${esc(xLabel)}</text><text transform="translate(15 ${t+h/2}) rotate(-90)" class="axis-label" text-anchor="middle">${esc(yLabel)}</text></svg><div class="legend">${series.map((s,i)=>`<span><i style="background:${s.color||COLORS[i%COLORS.length]}"></i>${esc(s.name)}</span>`).join('')}</div>`;return out;
 }
-function planeSVG(d,r,view='iso',withGrid=true){
- const {g}=r,L=d.length,fw=d.fuseWidth,zWing=d.wingPosition==='high'?fw*.36:d.wingPosition==='low'?-fw*.32:0,tailZ=d.tailType==='t'?g.hv*.85:fw*.1;
- const projection=p=>view==='top'?[p[1],-p[0]]:view==='side'?[p[0],-p[2]]:view==='front'?[p[1],-p[2]]:[.82*p[0]+.64*p[1],-.32*p[0]+.36*p[1]-.95*p[2]];
- const fitPoints=[[0,0,0],[L,0,0],[L,0,g.hv],[L*.49,fw*.65,-fw*.65],[L*.1,-fw*.3,-fw*.3],[L*.35,fw*.5,fw*.55]];
- const tx=d.wingX+g.b/2*Math.tan(d.sweep*Math.PI/180),tz=zWing+Math.tan(d.dihedral*Math.PI/180)*g.b/2,tc=g.sh/g.bh;
- for(const sign of [-1,1])fitPoints.push([d.wingX,0,zWing],[d.wingX+g.root,0,zWing],[tx,sign*g.b/2,tz],[tx+g.tip,sign*g.b/2,tz],[L-tc*.7,sign*g.bh/2,tailZ],[L+tc*.3,sign*g.bh/2,tailZ]);
- if(d.propulsion!=='jet' && d.propulsion!=='none'){const px=d.propPosition==='tractor'?-.1:L*.83,pz=d.propPosition==='tractor'?0:fw*.6;for(const sign of [-1,1])fitPoints.push([px,sign*d.propDiameter/2,pz],[px,0,pz+sign*d.propDiameter/2]);}
- const bounds=fitPoints.map(projection);
- const xmin=Math.min(...bounds.map(p=>p[0])),xmax=Math.max(...bounds.map(p=>p[0])),ymin=Math.min(...bounds.map(p=>p[1])),ymax=Math.max(...bounds.map(p=>p[1]));
- const W=760,H=410,scale=Math.min(590/(xmax-xmin),260/(ymax-ymin));
- const P=p=>{const q=projection(p);return [380+(q[0]-(xmin+xmax)/2)*scale,205+(q[1]-(ymin+ymax)/2)*scale];};
- const str=ps=>ps.map(p=>P(p).map(v=>v.toFixed(2)).join(',')).join(' ');
- const poly=(ps,fill='#e7f0f2',stroke='#527780',sw=1.2)=>`<polygon points="${str(ps)}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
- const line=(a,b,color='#82a6aa',dash='')=>`<line x1="${P(a)[0]}" y1="${P(a)[1]}" x2="${P(b)[0]}" y2="${P(b)[1]}" stroke="${color}" stroke-width="1" ${dash?'stroke-dasharray="4 4"':''}/>`;
- const tipX=d.wingX+g.b/2*Math.tan(d.sweep*Math.PI/180);
- const wing=s=>[[d.wingX,0,zWing],[tipX,s*g.b/2,zWing+Math.tan(d.dihedral*Math.PI/180)*g.b/2],[tipX+g.tip,s*g.b/2,zWing+Math.tan(d.dihedral*Math.PI/180)*g.b/2],[d.wingX+g.root,0,zWing]];
- const tailX=L-g.sh/g.bh*.7,tailChord=g.sh/g.bh;
- const tail=s=>[[tailX,0,tailZ],[tailX+.3*tailChord,s*g.bh/2,tailZ+.05],[tailX+tailChord,s*g.bh/2,tailZ+.05],[tailX+1.4*tailChord,0,tailZ]];
- let out=`<svg id="aircraft-svg-${view}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Schemat parametryczny samolotu ${esc(d.name)}, widok ${esc(view)}"><title>${esc(d.name)} — schemat poglądowy</title><defs><pattern id="draft-grid-${view}" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0H0V25" fill="none" stroke="#e6edef" stroke-width=".6"/></pattern><linearGradient id="body-shade-${view}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#f7fafb"/><stop offset="1" stop-color="#b7ced2"/></linearGradient></defs>`;
- if(withGrid)out+=`<rect width="760" height="410" fill="#f7fafb"/><rect width="760" height="410" fill="url(#draft-grid-${view})"/><path d="M20 205H740M380 20V390" stroke="#d6e2e5" stroke-dasharray="5 7"/>`;
- out+=line([-.4,0,0],[L+.3,0,0],'#bdced2',true)+poly(wing(-1),'#d5e5e8')+poly(tail(-1),'#d5e5e8');
- const stations=[[0,.01,.02],[.1,.3,.32],[.24,.5,.45],[.43,.48,.55],[.58,.34,.37],[.8,.17,.18],[1,.02,.03]],ring=[];
- for(const [x,w,h] of stations)ring.push(Array.from({length:10},(_,i)=>[x*L,Math.cos(i*Math.PI/5)*w*fw,Math.sin(i*Math.PI/5)*h*fw]));
- for(let side=4;side>=0;side--)for(let j=0;j<ring.length-1;j++){const k=side,k2=(side+1)%10;out+=poly([ring[j][k],ring[j+1][k],ring[j+1][k2],ring[j][k2]],side>2?'#cfdee1':'#e8f0f2','#91aab0',.65);}
- out+=poly([[L-.75*tailChord,0,0],[L-.45*tailChord,0,g.hv],[L+.18*tailChord,0,g.hv*.85],[L+.12*tailChord,0,0]],'#d0e2e5');
- out+=poly(tail(1),'#e2edef')+poly(wing(1),'#eaf3f4');
- for(const s of [-1,1]){const wp=wing(s);out+=line([d.wingX+g.root*.72,0,zWing+.005],[tipX+g.tip*.72,s*g.b/2,zWing+Math.tan(d.dihedral*Math.PI/180)*g.b/2]);out+=line([d.wingX+g.root*.3,0,zWing+.005],[tipX+g.tip*.3,s*g.b/2,zWing+Math.tan(d.dihedral*Math.PI/180)*g.b/2],'#c0d0d4',true);}
- // Canopy is a dimensional envelope, not a cockpit layout.
- out+=poly([[L*.23,-fw*.32,fw*.23],[L*.34,-fw*.3,fw*.49],[L*.48,-fw*.21,fw*.4],[L*.46,fw*.22,fw*.4],[L*.32,fw*.3,fw*.46],[L*.23,fw*.32,fw*.23]],'#1b515d','#426f79',1.1);
- if(d.propulsion!=='jet' && d.propulsion!=='none'){
-  const px=d.propPosition==='tractor'?-.1:L*.83,zc=d.propPosition==='tractor'?0:fw*.6;
-  const prop=[];for(let i=0;i<=50;i++)prop.push([px,Math.cos(i*Math.PI/25)*d.propDiameter/2,zc+Math.sin(i*Math.PI/25)*d.propDiameter/2]);
-  out+=`<polyline points="${str(prop)}" fill="#168c8308" stroke="#168c83" stroke-width="1.2" stroke-dasharray="4 4"/>`+line([px,0,zc-d.propDiameter/2],[px,0,zc+d.propDiameter/2],'#168c83');
- }
- for(const s of [-1,1]){const p1=[L*.47,s*fw*.22,-fw*.1],p2=[L*.49,s*fw*.65,-fw*.65];out+=line(p1,p2,'#57727c');const p=P(p2);out+=`<ellipse cx="${p[0]}" cy="${p[1]}" rx="${Math.max(2,scale*fw*.08)}" ry="${Math.max(3,scale*fw*.13)}" fill="#2a424b"/>`;}
- const extraWheel=[d.gear==='tailwheel'?L*.92:L*.14,0,-fw*.65],ew=P(extraWheel);out+=line([extraWheel[0],0,-fw*.15],extraWheel,'#57727c')+`<ellipse cx="${ew[0]}" cy="${ew[1]}" rx="${Math.max(2,scale*fw*.06)}" ry="${Math.max(3,scale*fw*.10)}" fill="#2a424b"/>`;
- const cg=P([r.cg.cg,0,0]);out+=`<circle cx="${cg[0]}" cy="${cg[1]}" r="4.5" fill="#e1a94c" stroke="white" stroke-width="1.5"/>`;
- if(view==='top'||view==='iso'){
-  const p1=P([d.wingX-.6,-g.b/2,zWing]),p2=P([d.wingX-.6,g.b/2,zWing]);
-  out+=`<path d="M${p1[0]},${p1[1]}L${p2[0]},${p2[1]}" fill="none" stroke="#168c83" stroke-width="1" stroke-dasharray="3 4"/><rect x="${(p1[0]+p2[0])/2-40}" y="${(p1[1]+p2[1])/2-10}" width="80" height="20" rx="5" fill="#f4f9f9"/><text x="${(p1[0]+p2[0])/2}" y="${(p1[1]+p2[1])/2+4}" fill="#147e76" text-anchor="middle" font-family="monospace" font-size="12">b = ${fmt(g.b,2)} m</text>`;
- }
- out+=`<text x="25" y="33" font-size="11" fill="#7c939b" font-family="monospace">${({iso:'AXONOMETRIA',top:'RZUT Z GÓRY',side:'RZUT Z BOKU',front:'RZUT Z PRZODU'})[view]}</text><text x="25" y="389" font-size="11" fill="#7c939b" font-family="monospace">${esc(d.name.toUpperCase())} / S = ${fmt(d.area,2)} m²</text><text x="735" y="389" font-size="11" fill="#7c939b" text-anchor="end" font-family="monospace">SC ● / SCHEMAT POGLĄDOWY</text></svg>`;
- return out;
-}
-
-function aircraft(result, view = 'iso') {
- const w = result.geometry.wing, f = result.geometry.fuselage;
- const ht = result.geometry.horizontal_tail, vt = result.geometry.vertical_tail;
- const quarterSweep = w.sweep_deg * Math.PI / 180;
- const leadingSweep = Math.atan(Math.tan(quarterSweep) + (w.cr - w.ct) / (2 * w.b)) * 180 / Math.PI;
- const d = {
-   name: result.params.name, area: w.S, length: f.length, fuseWidth: f.diameter,
-   wingX: result.balance.x_le_wing_m, wingPosition: w.wing_config === 'braced_high' ? 'high' : w.wing_config,
-   tailType: 'conventional', sweep: leadingSweep, dihedral: w.dihedral_deg,
-   propulsion: result.params.engine_type, propPosition: result.params.engine_location === 'nose' ? 'tractor' : 'pusher',
-   propDiameter: result.bipol_projects?.p4?.paturski_propulsion?.propeller_selection?.diameter_m || Math.min(3, w.b * 0.2),
-   gear: 'tricycle'
- };
- const r = {g: {b:w.b, root:w.cr, tip:w.ct, sh:ht.S_h, bh:ht.b_h, hv:vt.h_v},
-   cg:{cg:result.balance.loading_states.at(-1).xcg_m}};
- return planeSVG(d,r,view);
+function aircraft(result, view = 'iso', orientation) {
+ return root.BipolAircraftPreview.render(root.BipolAircraftPreview.model(result), view, orientation);
 }
 root.BipolVisuals = {icon, chart, aircraft};
 })(globalThis);

@@ -2,90 +2,38 @@
 
 Covers:
 1. Multi-threaded concurrent Create, Read, Update, and Delete requests against AircraftDatabase and REST API.
-2. Race condition prevention (threading.RLock and atomic file replace).
+2. Race condition prevention (SQLite transactions and UNIQUE constraints).
 3. Lost update and duplicate key collision detection under concurrent access.
-4. Continuous read-during-write stress (zero partial writes, zero JSONDecodeError).
+4. Continuous read-during-write stress (consistent snapshots, no partial writes).
 5. Schema integrity and physical invariant enforcement during concurrent mutations.
 6. Persistence survival across independent Python sub-process restarts.
 """
-import copy
-import json
-import math
-import os
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from pathlib import Path
 import pytest
 
 from app import app
+from calculations import aircraft_store
 from calculations.aircraft_db import (
-    AircraftDatabase,
     AircraftDatabaseError,
     AircraftValidationError,
-    AircraftNotFoundError,
     AircraftDuplicateError,
     get_aircraft_database,
 )
-from calculations.trends import DATA, SOURCES, load_aircraft, reference_catalog
+from calculations.trends import load_aircraft, reference_catalog
 
 
 # ==============================================================================
-# Robust Isolation Fixture for Stress Testing
+# Isolation Fixture for Stress Testing
 # ==============================================================================
 
 @pytest.fixture
-def atomic_isolated_db():
-    """Robust snapshot and atomic restore fixture designed for high-concurrency stress testing.
-    
-    Uses atomic file replacement with retry logic to prevent Windows [Errno 22] file-lock race conditions.
-    """
-    snapshots = {}
-    for p in DATA.glob("*.json"):
-        snapshots[p.name] = p.read_bytes()
-    original_names = set(snapshots.keys())
-
-    try:
-        yield
-    finally:
-        db = get_aircraft_database()
-        with db.lock:
-            # Atomic restore with retries
-            for name, content in snapshots.items():
-                target = DATA / name
-                # Write to temp file first and atomic replace
-                temp_fd, temp_path = tempfile.mkstemp(prefix=f".restore-{name}-", suffix=".tmp", dir=DATA)
-                try:
-                    with os.fdopen(temp_fd, 'wb') as stream:
-                        stream.write(content)
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    
-                    # Retry loop for Windows file sharing contention
-                    for attempt in range(5):
-                        try:
-                            os.replace(temp_path, target)
-                            break
-                        except OSError:
-                            time.sleep(0.05 * (attempt + 1))
-                    else:
-                        os.replace(temp_path, target)
-                except Exception:
-                    if os.path.exists(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except OSError:
-                            pass
-
-            for p in DATA.glob("*.json"):
-                if p.name not in original_names:
-                    try:
-                        p.unlink()
-                    except OSError:
-                        pass
-            load_aircraft.cache_clear()
+def atomic_isolated_db(isolated_db):
+    """The shared fixture restores the test database after each stress test."""
+    yield
 
 
 @pytest.fixture
@@ -188,7 +136,7 @@ def test_stress_concurrent_duplicate_id_collision(atomic_isolated_db):
     Verifies:
     - Exactly ONE thread succeeds in creating the record.
     - Exactly 9 threads receive AircraftDuplicateError.
-    - Exactly one copy of the aircraft exists in data/aircraft/ on disk.
+    - Exactly one copy of the aircraft exists in the database.
     """
     db = get_aircraft_database()
     target_id = "stress-race-collision-target"
@@ -235,11 +183,10 @@ def test_stress_concurrent_duplicate_id_collision(atomic_isolated_db):
     assert len(successes) == 1, f"Expected exactly 1 success, got {len(successes)}"
     assert len(duplicates) == num_threads - 1, f"Expected {num_threads - 1} duplicates, got {len(duplicates)}"
 
-    # Check disk file directly
-    target_path = DATA / "geometry_trends.json"
-    records = json.loads(target_path.read_text(encoding='utf-8'))
-    matches = [r for r in records if r.get('id') == target_id]
-    assert len(matches) == 1, f"Expected exactly 1 record with id {target_id} on disk, found {len(matches)}"
+    # Check the stored rows directly
+    with aircraft_store.connect() as con:
+        matches = con.execute('SELECT COUNT(*) FROM aircraft WHERE id = ?', (target_id,)).fetchone()[0]
+    assert matches == 1, f"Expected exactly 1 record with id {target_id} in the database, found {matches}"
 
 
 # ==============================================================================
@@ -250,9 +197,8 @@ def test_stress_readers_during_continuous_writes(atomic_isolated_db):
     """Stress tests readers querying the database while writers are in an aggressive mutation loop.
     
     Verifies:
-    - Readers NEVER experience JSONDecodeError or partial file reads.
-    - Readers NEVER observe corrupt or unparseable JSON files.
-    - Atomic file replacement guarantees reader isolation.
+    - Readers NEVER observe partial writes or a corrupt database.
+    - Transactions guarantee reader isolation.
     """
     db = get_aircraft_database()
     stop_event = threading.Event()
@@ -262,7 +208,11 @@ def test_stress_readers_during_continuous_writes(atomic_isolated_db):
 
     def writer_worker():
         try:
-            for cycle in range(25):
+            # SQLite writes take milliseconds: keep writing until every reader has
+            # overlapped several write cycles, not for a fixed number of cycles.
+            cycle = 0
+            while cycle < 25 or (min(read_counts) <= 5 and cycle < 2000):
+                cycle += 1
                 aid = f"stress-rw-plane-{cycle}"
                 payload = {
                     "id": aid,
@@ -298,22 +248,11 @@ def test_stress_readers_during_continuous_writes(atomic_isolated_db):
                 cat = reference_catalog()
                 assert cat['total'] >= 840
                 
-                # Read raw files directly from disk to ensure no intermediate empty file is visible
-                for source in SOURCES:
-                    p = DATA / f"{source}.json"
-                    if p.exists():
-                        content = None
-                        for _ in range(5):
-                            try:
-                                content = p.read_text(encoding='utf-8')
-                                break
-                            except (PermissionError, OSError):
-                                time.sleep(0.01)
-                        if content is not None:
-                            assert len(content) > 10
-                            parsed = json.loads(content)
-                            assert isinstance(parsed, list)
-                
+                # Read raw rows directly, bypassing the cache
+                with aircraft_store.connect() as con:
+                    assert con.execute('SELECT COUNT(*) FROM aircraft').fetchone()[0] >= 840
+                    assert con.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+
                 read_counts[reader_idx] += 1
                 time.sleep(0.005)
         except Exception as e:
@@ -551,35 +490,24 @@ sys.exit(0)
 
 
 # ==============================================================================
-# 7. Raw JSON Strict Validation & Formatting Invariants Across All Files
+# 7. Database Integrity After Concurrent Mutations
 # ==============================================================================
 
-def test_stress_all_json_files_strict_validity(atomic_isolated_db):
-    """Inspects every JSON file in data/aircraft/ to ensure:
-    - 100% valid JSON with no trailing commas or NaN/Infinity tokens.
-    - Array root structure with strictly valid dictionaries.
-    - Zero duplicate IDs across all files.
-    - File ends with newline.
-    """
-    seen_ids = {}
-    json_files = list(DATA.glob("*.json"))
-    assert len(json_files) >= 4, f"Expected at least 4 database files in {DATA}, found {len(json_files)}"
+def test_stress_database_integrity_after_concurrent_writes(atomic_isolated_db):
+    """After concurrent writes the database passes SQLite integrity and foreign-key checks
+    and holds every created record exactly once."""
+    db = get_aircraft_database()
+    threads = [threading.Thread(target=db.create, args=({
+        "id": f"integrity-plane-{i}", "model": f"Integrity {i}", "manufacturer": "Test",
+        "aircraft_type": "piston_ga", "engine_type": "prop", "m0": 900.0 + i, "p_kw": 80.0},))
+        for i in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=10.0)
 
-    for json_file in json_files:
-        raw_text = json_file.read_text(encoding='utf-8')
-        # File must be valid JSON
-        records = json.loads(raw_text)
-
-        # Check for NaN / Infinity
-        assert 'NaN' not in raw_text, f"File {json_file.name} contains invalid JSON token 'NaN'"
-        assert 'Infinity' not in raw_text, f"File {json_file.name} contains invalid JSON token 'Infinity'"
-
-        records = json.loads(raw_text)
-        assert isinstance(records, list), f"Root of {json_file.name} must be a JSON array, got {type(records)}"
-
-        for idx, rec in enumerate(records):
-            assert isinstance(rec, dict), f"Record {idx} in {json_file.name} is not an object"
-            aid = rec.get('id')
-            assert aid and isinstance(aid, str), f"Record {idx} in {json_file.name} has missing/invalid ID: {aid}"
-            assert aid not in seen_ids, f"Duplicate ID '{aid}' found in {json_file.name} (previously seen in {seen_ids[aid]})"
-            seen_ids[aid] = json_file.name
+    with aircraft_store.connect() as con:
+        assert con.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
+        assert con.execute('PRAGMA foreign_key_check').fetchall() == []
+        assert con.execute('SELECT COUNT(*) - COUNT(DISTINCT id) FROM aircraft').fetchone()[0] == 0
+        assert con.execute("SELECT COUNT(*) FROM aircraft WHERE id LIKE 'integrity-plane-%'").fetchone()[0] == 10

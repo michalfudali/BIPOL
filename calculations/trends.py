@@ -4,41 +4,16 @@ All masses use kg. Regressions are exploratory and never silently replace sizing
 Missing observations stay missing; each fit reports its own sample size.
 """
 from collections import Counter
-from functools import lru_cache
-from pathlib import Path
-import json
 import math
-import time
+import threading
 
+from calculations import aircraft_store
+from calculations.aircraft_store import CLASSES, DATA
 from calculations.atmosphere import G0
 from calculations.instructor import MIN_AIRCRAFT
 
-DATA = Path(__file__).resolve().parents[1] / 'data' / 'aircraft'
-CLASSES = {
-    'piston_ga': 'Samoloty tłokowe GA', 'turboprop_regional': 'Samoloty turbośmigłowe',
-    'jet_business': 'Odrzutowce biznesowe', 'jet_transport': 'Odrzutowce transportowe',
-    'glider': 'Szybowce', 'motoglider': 'Motoszybowce', 'uav': 'Bezzałogowe płatowce',
-}
-SOURCES = {
-    'fast': {'name': 'FAST Aerobase — University of Michigan IDEAS Lab',
-        'url': 'https://github.com/ideas-um/FAST/tree/482e77b921d616d00d9cdb5c0c673d55f511c52b/+DatabasePkg',
-        'license': 'Apache-2.0', 'license_file': 'FAST-Apache-2.0.txt',
-        'citation': 'FAST / IDEAS Lab, The Regents of the University of Michigan. Snapshot 482e77b (2026).'},
-    'cado': {'name': 'ENAC CADO Airplane Database v1.0',
-        'url': 'https://doi.org/10.57745/LLRJO0', 'license': 'ODbL-1.0', 'license_file': 'CADO-ODbL-1.0.txt',
-        'citation': 'Monrolin, Druot, Peteilh, Roches, Kambiri (2024). CADO airplane database. DOI:10.57745/LLRJO0.',
-        'attribution': 'Contains information from CADO Airplane Database, which is made available here under the Open Database License (ODbL).'},
-    'motogliders': {'name': 'Baza Motoszybowców EASA CS-22 / ULC / MEiL PW',
-        'url': 'https://www.easa.europa.eu/en/document-library/type-certificate-data-sheets',
-        'license': 'Public-Data', 'license_file': 'EASA-TCDS.txt',
-        'citation': 'EASA TCDS (CS-22), ULC, dokumentacja techniczna MEiL PW / PRz oraz instrukcje użytkowania w locie AFM/POH.',
-        'attribution': 'Zestawienie certyfikowanych motoszybowców turystycznych TMG i z napędem chowanym o szerokiej rozpiętości śmigieł (0.83–1.75 m).'},
-    'geometry_trends': {'name': 'Baza Cech Geometrycznych i Sterów (Raymer, Roskam, Corke, TCDS, MEiL PW)',
-        'url': 'https://www.easa.europa.eu/en/document-library/type-certificate-data-sheets',
-        'license': 'Public-Data', 'license_file': 'EASA-TCDS.txt',
-        'citation': 'Roskam (Airplane Design II & III), Raymer (Aircraft Design Table 6.4), Corke (Design of Aircraft Table 5.1/5.2), Gudmundsson, EASA/FAA TCDS, MEiL PW BIPOL.',
-        'attribution': 'Zestawienie empiryczne 82 certyfikowanych statków powietrznych obejmujące cechy objętościowe usterzeń V_H, względne cięciwy sterów (b_ail/b, c_ail/c, c_e/c_H, c_r/c_V) oraz kąt wzniosu Gamma.'},
-}
+# Provenance and licence of each data set, stored with the records.
+SOURCES = aircraft_store.load_sources()
 
 
 def derived(row):
@@ -75,28 +50,36 @@ def derived(row):
     return r
 
 
-@lru_cache(maxsize=1)
+_catalog = {'revision': None, 'rows': ()}
+_catalog_lock = threading.Lock()
+
+
 def load_aircraft():
-    records = []
-    for source in SOURCES:
-        src_path = DATA / f'{source}.json'
-        if src_path.exists():
-            for attempt in range(5):
-                try:
-                    text = src_path.read_text(encoding='utf-8')
-                    if text.strip():
-                        records.extend(derived(r) for r in json.loads(text))
-                    break
-                except (PermissionError, OSError, json.JSONDecodeError):
-                    if attempt == 4:
-                        raise
-                    time.sleep(0.025 * (2 ** attempt))
-    return tuple(records)
+    """All reference aircraft with derived values, reloaded only when the database revision changes."""
+    with _catalog_lock:
+        revision, records = aircraft_store.read_catalog(_catalog['revision'])
+        if records is not None:
+            _catalog.update(revision=revision, rows=tuple(derived(r) for r in records))
+        return _catalog['rows']
+
+
+def _clear_catalog_cache():
+    with _catalog_lock:
+        _catalog.update(revision=None, rows=())
+
+
+load_aircraft.cache_clear = _clear_catalog_cache
+
+
+def sources_in_use(rows):
+    """Sources with at least one record; an empty user source is neither listed nor cited."""
+    used = {r['source_id'] for r in rows}
+    return {key: meta for key, meta in SOURCES.items() if key in used}
 
 
 def reference_catalog():
     rows = load_aircraft()
-    return {'schema': 1, 'total': len(rows), 'classes': CLASSES, 'sources': SOURCES,
+    return {'schema': 1, 'total': len(rows), 'classes': CLASSES, 'sources': sources_in_use(rows),
             'counts': dict(Counter(r['aircraft_type'] for r in rows)), 'aircraft': rows}
 
 
@@ -534,7 +517,7 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         'reg_A': mass_fit['A'] if mass_fit else None, 'reg_C': mass_fit['C'] if mass_fit else None,
         'mass_fit': mass_fit, 'k_vs': k_vs, 'we_wo_trend': trend_value, 'we_wo_actual': m_empty/m0 if m0 else None,
         'similar_aircraft': rows, 'averages': averages, 'warnings': warnings,
-        'time_trends': time_trends, 'relationships': relationships, 'sources': SOURCES,
+        'time_trends': time_trends, 'relationships': relationships, 'sources': sources_in_use(load_aircraft()),
         'report_charts': report_charts,
         'mass_trend_decreasing': mass_fit['C'] < 0 if mass_fit else None,
         'year_basis': 'Rok certyfikacji wariantu (nie rok produkcji)',

@@ -1,12 +1,13 @@
 """Read-only editor preview and persistence of optional catalogue data."""
 import pytest
 
-from calculations.trends import DATA, load_aircraft
+from calculations import aircraft_store
+from calculations.trends import load_aircraft
 
 
 def test_preview_recalculates_without_touching_shared_files(client):
     record = dict(load_aircraft()[0])
-    before = {path.name: path.read_bytes() for path in DATA.glob('*.json')}
+    before = aircraft_store.database_path().read_bytes()
     response = client.post('/api/aircraft/preview', json={
         'id': record['id'], 'record': {'m0': record['m0'] * 1.1}})
     assert response.status_code == 200
@@ -14,7 +15,7 @@ def test_preview_recalculates_without_touching_shared_files(client):
     assert preview['m0'] == pytest.approx(record['m0'] * 1.1)
     assert preview['wing_loading_kg_m2'] == pytest.approx(preview['m0'] / record['s'])
     assert client.get('/api/aircraft/' + record['id']).json['m0'] == record['m0']
-    assert {path.name: path.read_bytes() for path in DATA.glob('*.json')} == before
+    assert aircraft_store.database_path().read_bytes() == before
 
 
 def test_editor_allows_missing_optional_values_and_can_clear_them(client, isolated_db):

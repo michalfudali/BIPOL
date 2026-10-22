@@ -7,9 +7,10 @@ import os
 import json
 import math
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, abort
+from flask import Flask, Response, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
 from calculations import run_bipol_project, AIRCRAFT_PRESETS
+from calculations.aircraft_store import export_source
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend
 from calculations.trends import reference_catalog, SOURCES, DATA, CLASSES, get_trend_suggestions
@@ -229,7 +230,10 @@ def aircraft_source_download(source, kind):
         abort(404)
     if kind == 'license':
         return send_from_directory(DATA / 'licenses', SOURCES[source]['license_file'], as_attachment=True)
-    return send_from_directory(DATA, source + '.json', as_attachment=True)
+    # Exported from the database; ODbL requires the CADO-derived records to stay downloadable.
+    body = json.dumps(export_source(source), ensure_ascii=False, indent=2, allow_nan=False) + '\n'
+    return Response(body, mimetype='application/json',
+                    headers={'Content-Disposition': f'attachment; filename={source}.json'})
 
 # Course materials are not redistributed: the app links to the source pages
 # and lists only the user's own local copies (git-ignored scraped_materials/).

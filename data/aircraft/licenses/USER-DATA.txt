@@ -1,0 +1,12 @@
+Wpisy użytkownika — edytor bazy BIPOL Studio
+=============================================
+
+Rekordy ze źródłem `user` dodano ręcznie w edytorze bazy (lub przez API /api/aircraft)
+bez wskazania jednego z wyselekcjonowanych zbiorów (FAST, CADO, motoszybowce, geometria).
+
+Każdy rekord podaje własne źródło w polach `source_references` (dokument, warunki pomiaru)
+i `source_locator` (strona, tabela, wiersz). Wartości są danymi faktograficznymi z tych
+dokumentów; prawa do samych dokumentów (TCDS, AFM/POH, karty katalogowe) należą do ich wydawców.
+
+Zestawienie wpisów jest częścią repozytorium i podlega jego plikowi LICENSE.
+Przed użyciem wpisu w sprawozdaniu sprawdź wskazane źródło.

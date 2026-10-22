@@ -7,11 +7,11 @@ The Trend Analysis Integration consists of four main architectural subsystems:
    - Computes empirical parameter suggestions across all 7 aircraft classes (`piston_ga`, `turboprop_regional`, `jet_business`, `jet_transport`, `glider`, `motoglider`, `uav`).
    - Supports power-law ($\ln y = \ln A + C \ln x$) and linear regressions using Weighted Ordinary Least Squares with centered sums ($S_{xx}, S_{yy}$).
    - Exposes `GET /api/trends/suggestions` returning dynamic predictions, LaTeX equations, $R^2$, sample counts $N$, distributions, and literature ranges.
-2. **Server-Side Aircraft Database & CRUD Persistence (`calculations/aircraft_db.py`, `app.py`, `data/aircraft/*.json`)**:
-   - Manages 840+ reference aircraft records partitioned across JSON files (`cado.json`, `fast.json`, `geometry_trends.json`, `motogliders.json`).
-   - Provides thread-safe (`threading.RLock`) atomic updates (`tempfile.mkstemp` + `os.replace`) for Create, Read, Update, Delete.
+2. **Server-Side Aircraft Database & CRUD Persistence (`calculations/aircraft_store.py`, `calculations/aircraft_db.py`, `app.py`, `data/aircraft/aircraft.sqlite3`)**:
+   - Manages 870+ reference aircraft records in a SQLite database (tables `sources`, `aircraft`; source per record via foreign key).
+   - Every Create, Update, Delete is one SQLite transaction; `STRICT` tables and `CHECK` constraints repeat the validation rules.
    - Enforces physical and structural validation rules ($0 < m_e < m_0$, $S > 0$, $b > 0$, required identifiers, engine type mutual exclusivity).
-   - Triggers `load_aircraft.cache_clear()` on every mutation for immediate in-memory reactive recalculation.
+   - `load_aircraft()` reloads the catalogue whenever `catalog_state.revision` changes (set by triggers on every write), so recalculation reflects edits from any process.
 3. **Dual-Location UI Integration (`templates/`, `static/js/`)**:
    - **Location 1 (Module 1 P1 Mission Inputs & Project Wizard)**: Trend suggestion recommendation cards and "Zastosuj z trendów" action buttons that populate inputs, synchronize `BipolDesignBasis.sync()`, and trigger `performCalculation()`.
    - **Location 2 (Baza i trendy Transfer Panel)**: Dedicated panel `#trendTransferPanel` in the Results sub-panel comparing regression predictions $y_{trend}$ with active project values $y_{proj}$, showing delta badges and one-click injection.
@@ -24,7 +24,9 @@ The Trend Analysis Integration consists of four main architectural subsystems:
 - `calculations/trends.py` — Core trend analysis and regression algorithms.
 - `calculations/aircraft_db.py` — Database service for atomic CRUD operations and validation.
 - `app.py` — Flask application exposing REST endpoints (`/api/trends/suggestions`, `/api/aircraft`, `/api/aircraft/<id>`).
-- `data/aircraft/*.json` — Persistent aircraft storage (`cado.json`, `fast.json`, `geometry_trends.json`, `motogliders.json`).
+- `calculations/aircraft_store.py` — SQLite schema, connections, transactions and row mapping.
+- `data/aircraft/aircraft.sqlite3` — Persistent aircraft storage (sources: `fast`, `cado`, `motogliders`, `geometry_trends`).
+- `tools/aircraft_db.py` — Database check, SQL dump and per-source JSON export.
 - `templates/inputs_panel.html` — Module 1 UI template containing trend suggestions container.
 - `templates/trends_panel.html` — Trends tab template containing Transfer Panel and Editor elements.
 - `templates/wizard_basis.html` & `templates/index.html` — Project Wizard templates for trend default adoption.
@@ -41,7 +43,7 @@ The Trend Analysis Integration consists of four main architectural subsystems:
 | 1 | Empirical Parameter Regressions | Compute $W/S$, $\Lambda$, $m_e/m_0$, $P/W$, $T/W$, $V_H$, aileron, elevator, rudder ratios across 7 classes | M1 | ORIGINAL_REQUEST §R1 |
 | 2 | Suggestions REST Endpoint | `GET /api/trends/suggestions` returning values, equations, $N$, $R^2$, and distributions | M1 | ORIGINAL_REQUEST §R1 |
 | 3 | Small Cohort Fallback Handling | Statistical fallback (mean/median/literature) for small classes ($N < 3$) such as UAV/glider | M1 | ORIGINAL_REQUEST §R1 & Survey |
-| 4 | Atomic CRUD Engine | Thread-safe, atomic file modification (`tempfile` + `os.replace`) for `data/aircraft/*.json` | M2 | ORIGINAL_REQUEST §R3 |
+| 4 | Atomic CRUD Engine | Transactional SQLite writes to `data/aircraft/aircraft.sqlite3` (originally atomic JSON file replacement) | M2 | ORIGINAL_REQUEST §R3 |
 | 5 | CRUD REST Endpoints | `POST /api/aircraft`, `GET /api/aircraft/<id>`, `PUT /api/aircraft/<id>`, `DELETE /api/aircraft/<id>` | M2 | ORIGINAL_REQUEST §R3 |
 | 6 | Database Input Validation | Reject negative masses, zero wing areas, missing required identifiers, duplicate IDs | M2 | ORIGINAL_REQUEST §R3 & Acceptance Criteria |
 | 7 | In-Memory Cache Invalidation | Live cache clearing via `load_aircraft.cache_clear()` on every CRUD mutation | M2 | ORIGINAL_REQUEST §R3 |

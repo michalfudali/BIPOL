@@ -1,18 +1,23 @@
 """Reproducible, offline conversion of the upstream FAST and CADO downloads.
 
 Usage: python tools/import_aircraft_data.py --fast path.xlsx --cado path.csv
-Only this development tool needs openpyxl; the application reads ordinary JSON.
+Replaces the fast and cado records in the aircraft database, one transaction per source.
+Only this development tool needs openpyxl.
 No missing values, dates, wing areas or performance figures are imputed.
 """
 import argparse
 import csv
 import hashlib
-import json
 import math
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from calculations import aircraft_store  # noqa: E402
 FAST_REVISION = "482e77b921d616d00d9cdb5c0c673d55f511c52b"
 FAST_SHA256 = "3f31aadde6b71dab9c8a41b46d9b9707aceb9f2f4e35c02b9b5436b7f02eeaa4"
 CADO_SHA256 = "6b986349811e66f50039347f7c3450636f8700b1ed0ad5ee7e523d89b8777180"
@@ -150,10 +155,8 @@ def import_cado(path):
 
 
 def write(name, records):
-    target = ROOT / 'data' / 'aircraft' / (name + '.json')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(records, ensure_ascii=False, indent=2, allow_nan=False) + '\n', encoding='utf-8')
-    print(f'{target.relative_to(ROOT)}: {len(records)} aircraft')
+    aircraft_store.replace_source(name, records)
+    print(f'{aircraft_store.database_path()}: {len(records)} aircraft from {name}')
 
 
 def main():

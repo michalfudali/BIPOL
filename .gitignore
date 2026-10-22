@@ -10,3 +10,8 @@ static/scraped_materials/
 # Skrypty pobierające materiały zza logowania: dane logowania podaje się w zmiennych środowiskowych.
 scrape_*.py
 .env
+
+# Pliki tymczasowe SQLite (dziennik transakcji).
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm

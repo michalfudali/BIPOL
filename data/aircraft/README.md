@@ -1,9 +1,38 @@
 # Baza referencyjna do analiz P1
 
-716 pozycji: 428 wariantów z FAST i 288 z CADO. To liczba rekordów,
-nie liczba niezależnych rodzin. Te same konstrukcje mogą występować w obu
+Katalog jest bazą SQLite `aircraft.sqlite3` (872 rekordy): 428 wariantów z FAST,
+288 z CADO, 42 motoszybowce i 114 konstrukcji z zestawienia geometrii. To liczba
+rekordów, nie liczba niezależnych rodzin. Te same konstrukcje mogą występować w obu
 źródłach pod różnymi nazwami. Do analizy wrażliwości wybierz jedno źródło.
-Pliki stanowią oddzielne, lokalne migawki; aplikacja nie pobiera ich w trakcie pracy.
+Baza jest lokalną migawką; aplikacja nie pobiera danych w trakcie pracy.
+
+## Struktura bazy
+
+- `sources`: pochodzenie każdego zbioru (nazwa, adres, licencja, plik licencji,
+  cytowanie, atrybucja): `fast`, `cado`, `motogliders`, `geometry_trends` oraz `user`
+  dla wpisów z edytora. Każdy samolot wskazuje źródło kluczem obcym `source_id`.
+- `aircraft`: jeden wiersz na konstrukcję lub wariant, w jednostkach SI
+  (kg, m², m, kW, kN, km/h, km). Brak danej w źródle to `NULL`, nie zero.
+  Ograniczenia `CHECK` odpowiadają walidacji aplikacji, np. `0 < me < m0`,
+  rodzaj napędu zgodny z mocą lub ciągiem, definicja długości startu.
+  Tabela jest `STRICT`, więc nie przyjmie tekstu w kolumnie liczbowej.
+  Kolumna `entry_no` zachowuje kolejność wpisów.
+- `catalog_state.revision`: zmienia się przy każdym zapisie (wyzwalacze). Aplikacja
+  przeładowuje katalog dopiero po zmianie rewizji, także po edycji innym narzędziem.
+
+Bazę można przeglądać i edytować np. w [DB Browser for SQLite](https://sqlitebrowser.org/).
+Polecenia pomocnicze:
+
+```sh
+python tools/aircraft_db.py check              # spójność, klucze obce, liczności
+python tools/aircraft_db.py export cado        # rekordy jednego źródła jako JSON
+python tools/aircraft_db.py dump               # pełny zrzut SQL
+git config diff.sqlite3.textconv "python tools/aircraft_db.py dump"   # czytelny git diff
+```
+
+Zmienna `BIPOL_AIRCRAFT_DB` wskazuje inny plik bazy (testy używają kopii).
+Do wersji `4565553` katalog był zapisany w plikach `fast.json`, `cado.json`,
+`motogliders.json` i `geometry_trends.json`; przeniesiono je do bazy bez zmian wartości.
 
 ## FAST Aerobase
 
@@ -16,7 +45,7 @@ arkusz `EAP_Databases_Offline.xlsx`, rewizja
 SHA-256: `3f31aadde6b71dab9c8a41b46d9b9707aceb9f2f4e35c02b9b5436b7f02eeaa4`.
 
 Licencja: [Apache-2.0](licenses/FAST-Apache-2.0.txt).
-`fast.json` to zmodyfikowana reprezentacja danych: wybrano pola z arkuszy
+Rekordy `source_id = 'fast'` to zmodyfikowana reprezentacja danych: wybrano pola z arkuszy
 Jet Aircraft i Propeller Aircraft, ujednolicono nazwy i jednostki,
 obliczono łączne parametry napędu i dodano klasy oraz grupowanie rodzin.
 Każdy rekord wskazuje arkusz/kolumnę i zachowuje pole Sources.
@@ -39,8 +68,9 @@ Monrolin, N.; Druot, T.; Peteilh, N.; Roches, P.; Kambiri, Y.-A. (2024),
 Contains information from CADO Airplane Database, which is made available here
 under the Open Database License (ODbL).
 
-`cado.json` jest przekształconą bazą pochodną udostępnioną na
-[ODbL-1.0](licenses/CADO-ODbL-1.0.txt). Zmiany: wybrano kolumny, dodano identyfikatory,
+Rekordy `source_id = 'cado'` są przekształconą bazą pochodną udostępnioną na
+[ODbL-1.0](licenses/CADO-ODbL-1.0.txt); można je pobrać jako JSON w aplikacji
+(`/download/aircraft/cado/data`) lub poleceniem `export`. Zmiany: wybrano kolumny, dodano identyfikatory,
 klasy i heurystyczne rodziny, przeliczono moc/ciąg pojedynczego silnika na sumę,
 oddzielono wartości Mach od km/h oraz odczytano lata z niepustych dat certyfikacji.
 Numery w `source_locator` odpowiadają fizycznym wierszom oryginalnego CSV
@@ -53,7 +83,7 @@ Nie zmieniano wartości liczbowych katalogu poza jawną konwersją jednostek.
 Nazwy i jakość danych zachowują ograniczenia oryginału; to baza do projektu
 wstępnego, a nie do planowania rzeczywistych operacji lotniczych.
 
-## Baza Geometrii i Trendów (geometry_trends.json) oraz Motoszybowców (motogliders.json)
+## Baza Geometrii i Trendów (`geometry_trends`) oraz Motoszybowców (`motogliders`)
 
 Zestawienie certyfikowanych konstrukcji lotniczych (EASA, FAA, ULC, MEiL PW) rozszerzające
 próbę o brakujące w FAST/CADO kategorie:
@@ -66,6 +96,17 @@ próbę o brakujące w FAST/CADO kategorie:
 
 Dane pochodzą z oficjalnych arkuszy TCDS (EASA/FAA), instrukcji użytkowania w locie (AFM/POH) oraz dokumentacji technicznej MEiL PW.
 
+## Wpisy użytkownika (`user`)
+
+Nowe samoloty dodane w edytorze (lub przez `POST /api/aircraft` bez `source_id`)
+trafiają do osobnego źródła `user`, a nie do wyselekcjonowanych zbiorów powyżej.
+Dzięki temu w analizie można je odfiltrować (filtr „Wpisy użytkownika”), a w raporcie
+nie mieszają się z cytowaniem FAST, CADO czy zestawienia geometrii. Każdy wpis podaje
+własne źródło w `source_references`; zasady opisuje [USER-DATA.txt](licenses/USER-DATA.txt).
+Puste źródło nie pojawia się w katalogu ani w bibliografii. Rekord dopisywany skryptem
+z jawnym `source_id` (np. `geometry_trends` w `tools/merge_aircraft.py`) zachowuje to
+źródło; nieznane `source_id` jest odrzucane.
+
 ## Odtworzenie
 
 Pobierz powyższe, przypięte wersje źródeł oraz:
@@ -75,6 +116,7 @@ python -m pip install -r requirements-data.txt
 python tools/import_aircraft_data.py --fast /path/EAP_Databases_Offline.xlsx --cado /path/CADO_airplane_database_v1.0.csv
 ```
 
-Importer sprawdza SHA-256 i nie wymaga sieci. Nowa wersja źródła wymaga przeglądu
+Importer sprawdza SHA-256, nie wymaga sieci i zastępuje w bazie wyłącznie rekordy
+`fast` i `cado`, w osobnej transakcji dla każdego źródła. Nowa wersja źródła wymaga przeglądu
 mapowania pól i świadomej aktualizacji skrótu. Do uruchomienia aplikacji nie jest
 potrzebny openpyxl ani dostęp do źródeł zewnętrznych.

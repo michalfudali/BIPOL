@@ -2,16 +2,14 @@
 
 Covers:
 - Requirement R3: Persistent database management and REST endpoints (GET, POST, PUT, DELETE /api/aircraft)
-- Requirement R4: Physical validation rules, schema contracts, and atomic disk persistence
+- Requirement R4: Physical validation rules, schema contracts, and transactional database persistence
 - Tier 1: Core Feature Coverage (>=5 test cases per feature)
 - Tier 2: Boundary, Negative & Invariant Enforcement Cases (>=5 test cases per feature)
-- Tier 3: Pairwise Interactions (CRUD mutations with disk persistence and cache invalidation)
+- Tier 3: Pairwise Interactions (CRUD mutations with database persistence and cache invalidation)
 """
-import json
 import time
 import pytest
-from pathlib import Path
-from calculations.trends import DATA, load_aircraft
+from calculations import aircraft_store
 
 
 VALID_AIRCRAFT_PAYLOAD = {
@@ -320,27 +318,22 @@ def test_tier2_r3_boundary_empty_or_malformed_json_body(client, isolated_db):
 
 @pytest.mark.tier3
 def test_tier3_interaction_crud_persistence_on_disk(client, isolated_db):
-    """Verifies that CRUD mutations physically persist to JSON files on disk and survive cache clears."""
+    """Verifies that CRUD mutations are committed to the database file, read by a fresh connection."""
     payload = dict(VALID_AIRCRAFT_PAYLOAD)
-    source_file = payload.get('source_id', 'geometry_trends') + '.json'
-    target_path = DATA / source_file
-    
-    # 1. Create and verify in JSON file directly
+
+    def stored_models():
+        with aircraft_store.connect() as con:
+            return [row['model'] for row in con.execute(
+                'SELECT model FROM aircraft WHERE id = ?', (payload['id'],))]
+
+    # 1. Create and verify the committed row
     client.post('/api/aircraft', json=payload)
-    content_after_create = json.loads(target_path.read_text(encoding='utf-8'))
-    found = [r for r in content_after_create if r.get('id') == payload['id']]
-    assert len(found) == 1, f"Record {payload['id']} not physically found on disk in {target_path}"
-    assert found[0]['model'] == payload['model']
-    
-    # 2. Update and verify modification on disk
+    assert stored_models() == [payload['model']], f"Record {payload['id']} not committed to the database"
+
+    # 2. Update and verify the modification
     client.put(f"/api/aircraft/{payload['id']}", json={"model": "Disk Persisted Model V2"})
-    content_after_update = json.loads(target_path.read_text(encoding='utf-8'))
-    found_up = [r for r in content_after_update if r.get('id') == payload['id']]
-    assert len(found_up) == 1
-    assert found_up[0]['model'] == "Disk Persisted Model V2"
-    
-    # 3. Delete and verify complete removal from disk
+    assert stored_models() == ["Disk Persisted Model V2"]
+
+    # 3. Delete and verify complete removal
     client.delete(f"/api/aircraft/{payload['id']}")
-    content_after_delete = json.loads(target_path.read_text(encoding='utf-8'))
-    found_del = [r for r in content_after_delete if r.get('id') == payload['id']]
-    assert len(found_del) == 0, f"Record {payload['id']} still physically present in {target_path} after DELETE"
+    assert stored_models() == [], f"Record {payload['id']} still present in the database after DELETE"
