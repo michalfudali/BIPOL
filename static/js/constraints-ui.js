@@ -175,7 +175,9 @@ async function renderInitialSuggestions() {
   try {
     const [cResp, tResp] = await Promise.all([
       fetch(`/api/constraints/suggestions?category=${encodeURIComponent(cat)}&aircraft_type=${encodeURIComponent(acType)}`),
-      fetch(`/api/trends/suggestions?aircraft_type=${encodeURIComponent(acType)}`)
+      fetch(`/api/trends/suggestions?${new URLSearchParams({aircraft_type: acType,
+        engine_type: document.getElementById('engine_type')?.value || '',
+        wing_configuration: document.getElementById('wing_config')?.value || ''})}`)
     ]);
     const cData = cResp.ok ? await cResp.json() : {suggestions: []};
     const tData = tResp.ok ? await tResp.json() : {suggestions: {}};
@@ -184,30 +186,32 @@ async function renderInitialSuggestions() {
     const suggestions = (cData.suggestions || []).filter(s=>!noEngine||!['engine_power_kw','takeoff_run_m'].includes(s.param));
 
     if (tData.suggestions) {
-      if (tData.suggestions.ar) {
-        const s = tData.suggestions.ar;
+      const ar = tData.suggestions.ar;
+      if (ar?.suggested_value != null) {
         suggestions.push({
           id: 'trend_ar',
           param: 'aspect_ratio',
-          title: `Wydłużenie skrzydła Λ (${s.suggested_value}) — Trend empiryczny`,
-          value: s.suggested_value,
+          title: `Wydłużenie skrzydła Λ (${ar.suggested_value}) — analiza trendów`,
+          value: ar.suggested_value,
           unit: '—',
-          description: `Regresja bazy samolotów: ${s.equation}. Typowy zakres: ${s.typical_range ? s.typical_range.join(' – ') : '—'}. R²=${s.r2 != null ? (+s.r2).toFixed(3) : 'mediana'} (n=${s.n}).`,
-          standard: 'BIPOL I / Analiza trendów',
-          icon: '📈'
+          description: `${ar.provenance.method}: ${ar.equation}. Typowy zakres: ${ar.typical_range ? ar.typical_range.join(' – ') : '—'}; n = ${ar.n}.`,
+          standard: 'BIPOL_1 / Analiza trendów',
+          icon: '📈',
+          trend: ar
         });
       }
-      if (tData.suggestions.dihedral_deg) {
-        const s = tData.suggestions.dihedral_deg;
+      const dihedral = tData.suggestions.dihedral_deg;
+      if (dihedral?.suggested_value != null) {
         suggestions.push({
           id: 'trend_dihedral',
           param: 'dihedral_deg',
-          title: `Wznios skrzydła Γ (${s.suggested_value}°) — Baza konstrukcji`,
-          value: s.suggested_value,
+          title: `Wznios skrzydła Γ (${dihedral.suggested_value}°) — średnia z bazy`,
+          value: dihedral.suggested_value,
           unit: '°',
-          description: `Wyznaczony na podstawie geometrii certyfikowanych konstrukcji (${s.equation}).`,
-          standard: 'Raymer / Roskam / MEiL',
-          icon: '📐'
+          description: `${dihedral.provenance.method}: ${dihedral.equation}; n = ${dihedral.n}.`,
+          standard: 'BIPOL_1 / Średnie parametry',
+          icon: '📐',
+          trend: dihedral
         });
       }
     }
@@ -225,6 +229,7 @@ async function renderInitialSuggestions() {
             <span>${s.title}</span>
           </div>
           <div class="suggestion-card-desc">${s.description}</div>
+          ${s.trend ? `<details class="trend-provenance-box"><summary>Skąd ta wartość?</summary>${BipolTrendProvenance.render(s.trend)}</details>` : ''}
         </div>
         <div class="suggestion-card-footer">
           <span style="font-size:0.75rem; font-weight:700; color:#0284c7;">Wartość: ${s.value} ${s.unit}</span>

@@ -2468,32 +2468,6 @@ function initWizardSystem() {
     suggestBtn.addEventListener('click', () => suggestStepDefaults(2));
   }
 
-  const suggestTrendsBtn = document.getElementById('wizSuggestTrendsBtn');
-  if (suggestTrendsBtn) {
-    suggestTrendsBtn.addEventListener('click', async () => {
-      const acType = document.getElementById('wiz_aircraft_type')?.value || 'piston_ga';
-      try {
-        suggestTrendsBtn.textContent = 'Ładowanie...';
-        const res = await fetch(`/api/trends/suggestions?aircraft_type=${encodeURIComponent(acType)}`);
-        if (!res.ok) throw new Error('Błąd API');
-        const data = await res.json();
-        if (data.suggestions && data.suggestions.ar) {
-          const ar = data.suggestions.ar.suggested_value;
-          const arEl = document.getElementById('wiz_aspect_ratio');
-          if (arEl) arEl.value = ar;
-          if (typeof window.BipolDesignBasis?.sync === 'function') {
-            window.BipolDesignBasis.sync('wiz_');
-          }
-          suggestTrendsBtn.textContent = `✅ Zastosowano AR=${ar}`;
-          setTimeout(() => { suggestTrendsBtn.textContent = 'Zastosuj z trendów'; }, 2500);
-        }
-      } catch (e) {
-        suggestTrendsBtn.textContent = 'Błąd!';
-        setTimeout(() => { suggestTrendsBtn.textContent = 'Zastosuj z trendów'; }, 2000);
-      }
-    });
-  }
-
   // Live change listeners dla rodzaju napędu i klasy statku w Kreatorze
   const wizEngSel = document.getElementById('wiz_engine_type');
   const wizAcSel = document.getElementById('wiz_aircraft_type');

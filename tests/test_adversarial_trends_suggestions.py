@@ -32,6 +32,7 @@ REQUIRED_PARAMS = [
     'pw',
     'tw',
     'vh',
+    'v_v',
     'b_ail_ratio',
     'c_ail_ratio',
     'c_e_ratio',
@@ -222,24 +223,30 @@ class TestDatabaseConsistencyOracle:
 
     @pytest.mark.parametrize("ac_class", list(CLASSES.keys()))
     def test_sample_counts_match_database_records(self, client, ac_class):
-        """Verify sample count N for each metric strictly equals matching records in the database."""
+        """Without m0 the sample is the whole class with its default propulsion; counts match raw SQL."""
         res = client.get(f'/api/trends/suggestions?aircraft_type={ac_class}')
         assert res.status_code == 200
-        suggestions = res.get_json()['suggestions']
+        data = res.get_json()
+        suggestions = data['suggestions']
 
-        class_records = [r for r in self.raw_records if r.get('aircraft_type') == ac_class]
+        class_records = [r for r in self.raw_records if r.get('aircraft_type') == ac_class
+                         and r.get('engine_type') == data['engine_type']]
+        assert data['sample']['selected_n'] == len(class_records)
+        for item in suggestions.values():
+            # Every value is traceable: n equals the observations listed in its provenance.
+            if item['provenance'] and item['suggested_value'] is not None:
+                assert item['n'] == len(item['provenance']['observations'])
 
-        # 1. ws (Wing Loading)
-        expected_ws_pts = [r for r in class_records if r.get('m0') and r.get('wing_loading_kg_m2')]
-        assert suggestions['ws']['n'] == len(expected_ws_pts), (
-            f"ws N mismatch for {ac_class}: api={suggestions['ws']['n']} vs db={len(expected_ws_pts)}"
-        )
+        # 1. ws and 2. ar: all observations, or only dated ones when the time trend is used
+        def dated(rows):
+            return [r for r in rows if r.get('year') is not None]
 
-        # 2. ar (Aspect Ratio, filtered 2 <= ar <= 60)
-        expected_ar_pts = [r for r in class_records if r.get('m0') and r.get('ar') and 2 <= r['ar'] <= 60]
-        assert suggestions['ar']['n'] == len(expected_ar_pts), (
-            f"ar N mismatch for {ac_class}: api={suggestions['ar']['n']} vs db={len(expected_ar_pts)}"
-        )
+        for key, metric_rows in (('ws', [r for r in class_records if r.get('wing_loading_kg_m2')]),
+                                 ('ar', [r for r in class_records if r.get('ar') and 2 <= r['ar'] <= 60])):
+            item = suggestions[key]
+            assert item['available_n'] == len(metric_rows)
+            expected = len(dated(metric_rows)) if item['model_type'] == 'time_trend' else len(metric_rows)
+            assert item['n'] == expected, f"{key} N mismatch for {ac_class}: api={item['n']} vs db={expected}"
 
         # 3. me_m0 (Empty mass fraction, filtered 0.15 < empty_fraction < 0.95)
         expected_me_pts = [r for r in class_records if r.get('m0') and r.get('empty_fraction') and 0.15 < r['empty_fraction'] < 0.95]
@@ -247,21 +254,13 @@ class TestDatabaseConsistencyOracle:
             f"me_m0 N mismatch for {ac_class}: api={suggestions['me_m0']['n']} vs db={len(expected_me_pts)}"
         )
 
-        # 4. pw (Power loading, only for prop classes)
-        if ac_class in ('piston_ga', 'turboprop_regional', 'motoglider'):
-            expected_pw_pts = [r for r in class_records if r.get('m0') and r.get('power_loading_kg_kw')]
-            assert suggestions['pw']['n'] == len(expected_pw_pts), (
-                f"pw N mismatch for {ac_class}: api={suggestions['pw']['n']} vs db={len(expected_pw_pts)}"
-            )
+        # 4. pw for propeller propulsion, 5. tw for jets
+        if data['engine_type'] == 'prop':
+            assert suggestions['pw']['available_n'] == len([r for r in class_records if r.get('power_loading_kg_kw')])
         else:
             assert suggestions['pw']['n'] == 0
-
-        # 5. tw (Thrust loading, only for jet classes)
-        if ac_class in ('jet_business', 'jet_transport'):
-            expected_tw_pts = [r for r in class_records if r.get('m0') and r.get('thrust_to_weight')]
-            assert suggestions['tw']['n'] == len(expected_tw_pts), (
-                f"tw N mismatch for {ac_class}: api={suggestions['tw']['n']} vs db={len(expected_tw_pts)}"
-            )
+        if data['engine_type'] == 'jet':
+            assert suggestions['tw']['available_n'] == len([r for r in class_records if r.get('thrust_to_weight')])
         else:
             assert suggestions['tw']['n'] == 0
 
@@ -270,6 +269,7 @@ class TestDatabaseConsistencyOracle:
         assert suggestions['vh']['n'] == len(expected_vh_pts), (
             f"vh N mismatch for {ac_class}: api={suggestions['vh']['n']} vs db={len(expected_vh_pts)}"
         )
+        assert suggestions['v_v']['n'] == len([r for r in class_records if r.get('v_v') is not None])
 
         # 7. Control surfaces
         expected_ba = [r for r in class_records if r.get('aileron_span_fraction') is not None]
@@ -291,8 +291,10 @@ class TestDatabaseConsistencyOracle:
     def test_statistical_distribution_consistency(self, client, ac_class):
         """Verify stats (min, max, mean, median) are strictly consistent with database values."""
         res = client.get(f'/api/trends/suggestions?aircraft_type={ac_class}')
-        suggestions = res.get_json()['suggestions']
-        class_records = [r for r in self.raw_records if r.get('aircraft_type') == ac_class]
+        data = res.get_json()
+        suggestions = data['suggestions']
+        class_records = [r for r in self.raw_records if r.get('aircraft_type') == ac_class
+                         and r.get('engine_type') == data['engine_type']]
 
         # Check wing loading stats if sample exists
         ws_vals = [r['wing_loading_kg_m2'] for r in class_records if r.get('m0') and r.get('wing_loading_kg_m2')]
@@ -340,7 +342,7 @@ class TestConcurrencyAndRapidBursts:
             assert res.status_code == 200
             data = res.get_json()
             assert data['status'] == 'ok'
-            assert len(data['suggestions']) == 11
+            assert len(data['suggestions']) == 12
 
         throughput = 100 / elapsed
         print(f"\n[Concurrency] 100 concurrent requests completed in {elapsed*1000:.1f}ms ({throughput:.1f} req/s)")

@@ -203,7 +203,10 @@ def get_trends_suggestions():
             return jsonify(status='error', message="Invalid 'm0' parameter: must be a number"), 400
 
     wing_cfg = request.args.get('wing_configuration', request.args.get('wing_config'))
-    res = get_trend_suggestions(aircraft_type, m0=m0, wing_configuration=wing_cfg)
+    engine_type = request.args.get('engine_type') or None
+    if engine_type not in (None, 'prop', 'jet', 'none'):
+        return jsonify(status='error', message=f"Unknown engine_type: '{engine_type}'"), 400
+    res = get_trend_suggestions(aircraft_type, m0=m0, wing_configuration=wing_cfg, engine_type=engine_type)
     return jsonify(res)
 
 

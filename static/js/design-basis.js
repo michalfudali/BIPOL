@@ -152,6 +152,15 @@
     syncAircraftClassAndEASAUI(true);syncWizardPropulsionUI(false);renderWizardStep4Mechanics();
     sync('wiz_');topicNote();
   }
+  // Fields without a wizard input still travel with the wizard snapshot.
+  function applyWizardTrend(key, val) {
+    const patch = BipolTrendInputs.patch(key, val, {wing_input_mode: value('wiz_', 'wing_input_mode')}, 0);
+    for (const [field, fieldValue] of Object.entries(patch)) {
+      wizardBase[field] = fieldValue;
+      if ($('wiz_' + field)) set('wiz_', field, fieldValue);
+    }
+    sync('wiz_');
+  }
   function snapshot() {
     sync('wiz_');
     const p={...wizardBase};
@@ -227,26 +236,11 @@
     syncAssumption('wiz_basis_range_km', 'wiz_range_km', 'range_km');
     syncAssumption('wiz_basis_cruise_speed_kmh', 'wiz_cruise_speed_kmh', 'cruise_speed_kmh');
     syncAssumption('wiz_basis_v_stall_kmh', 'wiz_v_stall_kmh', 'v_stall_kmh');
-    $('wizApplyTrendGeometryBtn')?.addEventListener('click', async () => {
-      const btn = $('wizApplyTrendGeometryBtn');
-      const acType = value('wiz_', 'aircraft_type') || 'piston_ga';
-      try {
-        if (btn) btn.textContent = 'Ładowanie...';
-        const res = await fetch(`/api/trends/suggestions?aircraft_type=${encodeURIComponent(acType)}`);
-        if (!res.ok) throw new Error('Błąd API');
-        const data = await res.json();
-        if (data.suggestions && data.suggestions.ar) {
-          const arVal = data.suggestions.ar.suggested_value;
-          set('wiz_', 'aspect_ratio', arVal);
-          sync('wiz_');
-          if (btn) btn.textContent = `✅ Zastosowano AR=${arVal}`;
-          setTimeout(() => { if (btn) btn.textContent = 'Zastosuj z trendów'; }, 2500);
-        }
-      } catch (e) {
-        if (btn) btn.textContent = 'Błąd!';
-        setTimeout(() => { if (btn) btn.textContent = 'Zastosuj z trendów'; }, 2000);
-      }
-    });
+    $('wizApplyTrendGeometryBtn')?.addEventListener('click', () => BipolTrendProvenance.applyInWizard(
+      $('wizApplyTrendGeometryBtn'), $('wizTrendProvenanceBasis'), ['ar'], applyWizardTrend));
+    $('wizSuggestTrendsBtn')?.addEventListener('click', () => BipolTrendProvenance.applyInWizard(
+      $('wizSuggestTrendsBtn'), $('wizTrendProvenanceGeometry'),
+      ['ar', 'vh', 'v_v', 'b_ail_ratio', 'c_ail_ratio', 'c_e_ratio', 'c_r_ratio', 'dihedral_deg'], applyWizardTrend));
     document.addEventListener('input',event=>{
       const input=event.target;if(!input.matches('#designForm input, #projectWizardBackdrop input'))return;
       const prefix=input.id.startsWith('wiz_')?'wiz_':'';sync(prefix);

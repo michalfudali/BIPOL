@@ -65,8 +65,9 @@ def test_tier3_interaction_crud_create_then_suggestions_recalculation(client, is
         pytest.skip("Suggestions API not yet implemented")
     
     data_before = res_before.get_json()
-    n_before = data_before['suggestions']['ws']['n']
-    
+    n_before = data_before['sample']['selected_n']
+    vh_before = data_before['suggestions']['vh']['n']
+
     # 2. Add a new custom GA aircraft
     new_aircraft = {
         "id": "pairwise-ga-new-1",
@@ -102,9 +103,10 @@ def test_tier3_interaction_crud_create_then_suggestions_recalculation(client, is
     res_after = client.get('/api/trends/suggestions?aircraft_type=piston_ga')
     assert res_after.status_code == 200
     data_after = res_after.get_json()
-    n_after = data_after['suggestions']['ws']['n']
-    
+    n_after = data_after['sample']['selected_n']
+
     assert n_after == n_before + 1, f"Expected N to increment from {n_before} to {n_before + 1}, got {n_after}"
+    assert data_after['suggestions']['vh']['n'] == vh_before + 1
 
 
 @pytest.mark.tier3
@@ -431,9 +433,12 @@ def test_tier4_scenario5_motoglider_cs22_soaring_sizing_session(client):
     ws = sugg['ws']['suggested_value']
     ar = sugg['ar']['suggested_value']
     
-    # Motogliders have low wing loading (25-70 kg/m²) and high AR (13-28)
+    # Motogliders have low wing loading (25-70 kg/m²) and high AR. The default sample mixes touring
+    # and high-performance types, so AR may exceed the touring range; the provenance must say so.
     assert 25.0 <= ws <= 70.0, f"Motoglider W/S out of range: {ws}"
-    assert 13.0 <= ar <= 28.0, f"Motoglider AR out of range: {ar}"
+    assert 13.0 <= ar <= 35.0, f"Motoglider AR out of range: {ar}"
+    if ar > sugg['ar']['typical_range'][1]:
+        assert any('zakresem literaturowym' in w for w in sugg['ar']['provenance']['warnings'])
     
     motoglider_payload = copy.deepcopy(AIRCRAFT_PRESETS['motoglider_aos'])
     motoglider_payload['wing_loading'] = ws

@@ -38,6 +38,7 @@ def _extract_metric_state(suggestions_dict):
             'model_type': item.get('model_type'),
             'r2': item.get('r2'),
             'n': item.get('n'),
+            'available_n': item.get('available_n'),
             'stats': copy.deepcopy(item.get('stats')),
             'equation': item.get('equation'),
         }
@@ -98,7 +99,9 @@ def test_reactive_lifecycle_full_crud_cycle(client, recalc_isolated_db, target_c
     4. DELETE aircraft -> verifies exact reversion to original baseline.
     """
     m0_test = 1200.0 if target_class in ('piston_ga', 'motoglider') else 15000.0
-    res_base = client.get(f'/api/trends/suggestions?aircraft_type={target_class}&m0={m0_test}')
+    # Without m0 the whole class is the sample, so a new aircraft always enters it.
+    query = f'/api/trends/suggestions?aircraft_type={target_class}'
+    res_base = client.get(query)
     assert res_base.status_code == 200
     base_data = res_base.get_json()['suggestions']
     base_snapshot = _extract_metric_state(base_data)
@@ -130,25 +133,18 @@ def test_reactive_lifecycle_full_crud_cycle(client, recalc_isolated_db, target_c
         post_res = _robust_post(client, '/api/aircraft', post_payload)
         assert post_res.status_code == 201, f"POST failed: {post_res.data}"
 
-        res_after_post = client.get(f'/api/trends/suggestions?aircraft_type={target_class}&m0={m0_test}')
+        res_after_post = client.get(query)
         assert res_after_post.status_code == 200
         post_data = res_after_post.get_json()['suggestions']
 
-        # Assert N incremented by 1 for wing loading, aspect ratio, empty mass fraction, tail volume
-        assert post_data['ws']['n'] == base_snapshot['ws']['n'] + 1
-        assert post_data['ar']['n'] == base_snapshot['ar']['n'] + 1
-        assert post_data['me_m0']['n'] == base_snapshot['me_m0']['n'] + 1
-        assert post_data['vh']['n'] == base_snapshot['vh']['n'] + 1
-        assert post_data['b_ail_ratio']['n'] == base_snapshot['b_ail_ratio']['n'] + 1
-        assert post_data['c_ail_ratio']['n'] == base_snapshot['c_ail_ratio']['n'] + 1
-        assert post_data['c_e_ratio']['n'] == base_snapshot['c_e_ratio']['n'] + 1
-        assert post_data['c_r_ratio']['n'] == base_snapshot['c_r_ratio']['n'] + 1
-        assert post_data['dihedral_deg']['n'] == base_snapshot['dihedral_deg']['n'] + 1
+        # The new aircraft enters every metric it documents
+        for key in ('ws', 'ar', 'me_m0', 'vh', 'b_ail_ratio', 'c_ail_ratio', 'c_e_ratio', 'c_r_ratio', 'dihedral_deg'):
+            assert post_data[key]['available_n'] == base_snapshot[key]['available_n'] + 1, key
 
         if propulsion == 'prop':
-            assert post_data['pw']['n'] == base_snapshot['pw']['n'] + 1
+            assert post_data['pw']['available_n'] == base_snapshot['pw']['available_n'] + 1
         elif propulsion == 'jet':
-            assert post_data['tw']['n'] == base_snapshot['tw']['n'] + 1
+            assert post_data['tw']['available_n'] == base_snapshot['tw']['available_n'] + 1
 
         # Step 3: PUT update with altered parameters
         put_payload = {
@@ -160,20 +156,20 @@ def test_reactive_lifecycle_full_crud_cycle(client, recalc_isolated_db, target_c
         put_res = _robust_put(client, f'/api/aircraft/{aid}', put_payload)
         assert put_res.status_code == 200, f"PUT failed: {put_res.data}"
 
-        res_after_put = client.get(f'/api/trends/suggestions?aircraft_type={target_class}&m0={m0_test}')
+        res_after_put = client.get(query)
         assert res_after_put.status_code == 200
         put_data = res_after_put.get_json()['suggestions']
 
         # N remains the same as post-step
-        assert put_data['ws']['n'] == base_snapshot['ws']['n'] + 1
-        assert put_data['vh']['n'] == base_snapshot['vh']['n'] + 1
+        assert put_data['ws']['available_n'] == base_snapshot['ws']['available_n'] + 1
+        assert put_data['vh']['available_n'] == base_snapshot['vh']['available_n'] + 1
 
     finally:
         # Step 4: DELETE aircraft
         _robust_delete(client, f'/api/aircraft/{aid}')
 
     # Step 5: Verify exact reversion to baseline
-    res_after_del = client.get(f'/api/trends/suggestions?aircraft_type={target_class}&m0={m0_test}')
+    res_after_del = client.get(query)
     assert res_after_del.status_code == 200
     del_data = res_after_del.get_json()['suggestions']
     del_snapshot = _extract_metric_state(del_data)
@@ -598,6 +594,6 @@ def test_adversarial_zero_wing_configuration_variations(client, recalc_isolated_
     assert res_high.status_code == 200
     dih_high = res_high.get_json()['suggestions']['dihedral_deg']['suggested_value']
 
-    # High wing must have lower dihedral recommendation than default/low wing
-    assert dih_high <= dih_default
-    assert dih_high == 1.5
+    # BIPOL_1 average of the sample; the layout changes only the comparison range
+    assert dih_high == dih_default
+    assert res_high.get_json()['suggestions']['dihedral_deg']['typical_range'] == [0.0, 2.5]

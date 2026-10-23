@@ -20,6 +20,7 @@ REQUIRED_PARAMS = [
     'pw',
     'tw',
     'vh',
+    'v_v',
     'b_ail_ratio',
     'c_ail_ratio',
     'c_e_ratio',
@@ -39,6 +40,8 @@ REQUIRED_SUGGESTION_FIELDS = [
     'n',
     'stats',
     'typical_range',
+    'available_n',
+    'provenance',
 ]
 
 
@@ -100,29 +103,27 @@ def test_direct_python_get_trend_suggestions_all_classes(ac_class):
 # 2. Dynamic Evaluation with m0 Provided vs Omitted
 # =========================================================================
 
-def test_piston_ga_dynamic_m0_evaluation(client):
-    """Verify dynamic evaluation of wing loading and power loading for piston_ga."""
-    # When m0 is omitted -> returns median
+def test_piston_ga_sample_follows_design_mass(client):
+    """Without m0 the whole class is the sample; with m0 the 50 aircraft nearest in mass (as in P1)."""
     res_no_m0 = client.get('/api/trends/suggestions?aircraft_type=piston_ga').get_json()
     assert res_no_m0['m0'] is None
-    ws_median = res_no_m0['suggestions']['ws']['suggested_value']
-    assert 85.0 <= ws_median <= 90.0
-    assert res_no_m0['suggestions']['ws']['model_type'] == 'power'
+    class_rows = [r for r in load_aircraft() if r['aircraft_type'] == 'piston_ga' and r['engine_type'] == 'prop']
+    assert res_no_m0['sample']['selected_n'] == len(class_rows)
+    # Equation (1) needs the design mass: without it the BIPOL_1 average is shown.
+    assert res_no_m0['suggestions']['me_m0']['model_type'] == 'mean'
 
-    # When m0 is supplied (trainer, 1150 kg) -> dynamic regression evaluation
     res_with_m0 = client.get('/api/trends/suggestions?aircraft_type=piston_ga&m0=1150.0').get_json()
     assert res_with_m0['m0'] == 1150.0
-    ws_dynamic = res_with_m0['suggestions']['ws']['suggested_value']
-    # W/S = 1.556 * 1150^0.5609 ≈ 81.0 kg/m²
-    assert 78.0 <= ws_dynamic <= 84.0
-    assert ws_dynamic != ws_median
-
-    # Power loading dynamic evaluation
-    pw_dynamic = res_with_m0['suggestions']['pw']['suggested_value']
-    # m0/P = 41.67 * 1150^-0.2333 ≈ 8.05 kg/kW
-    assert 7.5 <= pw_dynamic <= 8.5
-    assert res_with_m0['suggestions']['pw']['model_type'] == 'power'
-    assert res_with_m0['suggestions']['pw']['r2'] is not None
+    assert res_with_m0['sample']['selected_n'] == 50
+    assert '1150 kg' in res_with_m0['sample']['description']
+    me = res_with_m0['suggestions']['me_m0']
+    assert me['model_type'] == 'power'
+    fit = me['provenance']['fit']
+    assert me['suggested_value'] == pytest.approx(fit['A'] * 1150.0 ** fit['C'] * fit['k_vs'], abs=5e-4)
+    for key in ('ws', 'pw'):
+        item = res_with_m0['suggestions'][key]
+        assert item['suggested_value'] > 0
+        assert item['model_type'] in ('time_trend', 'mean')
 
 
 def test_jet_transport_dynamic_m0_evaluation(client):
@@ -132,15 +133,15 @@ def test_jet_transport_dynamic_m0_evaluation(client):
     assert res_a320['m0'] == 77000.0
     ws_a320 = res_a320['suggestions']['ws']['suggested_value']
     tw_a320 = res_a320['suggestions']['tw']['suggested_value']
-    # W/S should be ~571 kg/m²
-    assert 550.0 <= ws_a320 <= 600.0
+    # A320: 77 000 kg / 122,6 m² ≈ 628 kg/m²
+    assert 550.0 <= ws_a320 <= 650.0
     # T/W should be ~0.30
     assert 0.25 <= tw_a320 <= 0.35
 
-    # Wide-body heavy jet (B747, 390000 kg)
+    # Wide-body heavy jet (B747, 390000 kg): a different nearest-mass sample
     res_heavy = client.get('/api/trends/suggestions?aircraft_type=jet_transport&m0=390000').get_json()
     ws_heavy = res_heavy['suggestions']['ws']['suggested_value']
-    # Wing loading must increase with mass for jet transports
+    # Heavier similar aircraft have higher wing loading
     assert ws_heavy > ws_a320
     assert 650.0 <= ws_heavy <= 800.0
 
@@ -194,25 +195,20 @@ def test_unpowered_glider_propulsion_is_null(client):
 # 4. Wing Configuration Effect on Dihedral Suggestion
 # =========================================================================
 
-def test_wing_configuration_affects_dihedral_suggestion(client):
-    """Verify high wing requires lower dihedral than low wing due to pendulum stability."""
+def test_dihedral_is_the_sample_average_and_configuration_only_sets_the_comparison_range(client):
+    """BIPOL_1 asks for the average dihedral; the wing layout changes only the literature range and warnings."""
     res_low = client.get('/api/trends/suggestions?aircraft_type=piston_ga&wing_configuration=low').get_json()
     res_high = client.get('/api/trends/suggestions?aircraft_type=piston_ga&wing_configuration=high').get_json()
-    res_braced = client.get('/api/trends/suggestions?aircraft_type=piston_ga&wing_configuration=strut_braced').get_json()
-
-    dih_low = res_low['suggestions']['dihedral_deg']['suggested_value']
-    dih_high = res_high['suggestions']['dihedral_deg']['suggested_value']
-    dih_braced = res_braced['suggestions']['dihedral_deg']['suggested_value']
-
-    assert dih_low >= 3.5
-    assert dih_high <= 2.5
-    assert dih_braced <= 2.5
-    assert dih_low > dih_high
-
-    # Also test for turboprop_regional
-    tp_low = client.get('/api/trends/suggestions?aircraft_type=turboprop_regional&wing_configuration=low').get_json()
-    tp_high = client.get('/api/trends/suggestions?aircraft_type=turboprop_regional&wing_configuration=high').get_json()
-    assert tp_low['suggestions']['dihedral_deg']['suggested_value'] > tp_high['suggestions']['dihedral_deg']['suggested_value']
+    low, high = res_low['suggestions']['dihedral_deg'], res_high['suggestions']['dihedral_deg']
+    assert low['suggested_value'] == high['suggested_value']
+    assert low['model_type'] == 'mean'
+    observations = low['provenance']['observations']
+    weights = [o['weight'] for o in observations]
+    mean = sum(o['value'] * o['weight'] for o in observations) / sum(weights)
+    assert low['suggested_value'] == pytest.approx(mean, abs=0.05)
+    assert low['typical_range'] == [3.5, 7.0] and high['typical_range'] == [0.0, 2.5]
+    # The class mean is a low-wing value; a high-wing design is warned, not silently changed.
+    assert any('górnopłatów' in w for w in high['provenance']['warnings'])
 
 
 # =========================================================================
@@ -251,15 +247,13 @@ def test_control_surfaces_and_tail_volume_within_literature(ac_class):
 # =========================================================================
 
 def test_uav_small_cohort_handles_gracefully(client):
-    """Verify small cohort (UAV, N=8) regression produces genuine, non-crashing predictions."""
+    """A small cohort (UAV) gives values traceable to every observation, with the sample-size warning."""
     res = client.get('/api/trends/suggestions?aircraft_type=uav&m0=25.0').get_json()
     assert res['status'] == 'ok'
     ws = res['suggestions']['ws']
-    # UAV has strong wing loading correlation across mass range
-    assert ws['r2'] is not None and ws['r2'] > 0.90
-    assert ws['n'] >= 8
-    assert 15.0 <= ws['suggested_value'] <= 35.0
-    # Empty mass fraction
+    assert ws['n'] == len(ws['provenance']['observations']) >= 8
+    assert ws['provenance']['observations'][0]['source']
+    assert any('20 samolotów' in w for w in ws['provenance']['warnings'])
     me_m0 = res['suggestions']['me_m0']
     assert 0.45 <= me_m0['suggested_value'] <= 0.65
 
@@ -311,13 +305,14 @@ def test_api_non_numeric_m0_returns_400(client):
     assert data['status'] == 'error'
 
 
-def test_api_zero_m0_falls_back_to_median(client):
-    """Verify m0=0 is treated as unspecified m0 and returns cohort median without error."""
+def test_api_zero_m0_is_treated_as_unknown_mass(client):
+    """m0=0 means the design mass is unknown: the whole class is the sample, as without m0."""
     res = client.get('/api/trends/suggestions?aircraft_type=piston_ga&m0=0')
     assert res.status_code == 200
     data = res.get_json()
     assert data['m0'] is None
-    assert data['suggestions']['ws']['suggested_value'] == data['suggestions']['ws']['stats']['median']
+    plain = client.get('/api/trends/suggestions?aircraft_type=piston_ga').get_json()
+    assert data['suggestions'] == plain['suggestions']
 
 
 def test_direct_python_validation():
@@ -341,4 +336,5 @@ def test_cache_clearing_reloads_catalog_without_crash():
     load_aircraft.cache_clear()
     res = get_trend_suggestions('piston_ga', m0=1200.0)
     assert res['status'] == 'ok'
-    assert res['suggestions']['ws']['n'] >= 67
+    assert res['sample']['selected_n'] == 50
+    assert res['suggestions']['ws']['available_n'] == 50

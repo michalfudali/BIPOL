@@ -29,6 +29,7 @@ NUMERIC_LIMITS = {
     "wing_area_m2": (0, 1000), "engine_power_kw": (0, 100000),
     "break_span_ratio": (0.1, 0.9), "m_payload": (0, 500000),
     "empty_mass_fraction": (0.15, 0.95), "n_engines": (0, 8),
+    "empty_mass_trend_A": (1e-6, 1e6), "empty_mass_trend_C": (-2, 2),
     "elevator_chord_ratio": (0.05, 1), "rudder_chord_ratio": (0.05, 1),
     "ce_ch": (0.05, 1), "cr_cv": (0.05, 1),
 }
@@ -143,6 +144,8 @@ def validate_parameters(data):
         raise ValueError('Początkowy rok próby musi być nie większy od końcowego.')
     if 'variable_sweep' in p and not isinstance(p['variable_sweep'], bool):
         raise ValueError('Pole variable_sweep: wymagana wartość logiczna.')
+    if ('empty_mass_trend_A' in p) != ('empty_mass_trend_C' in p):
+        raise ValueError('Równanie (1) masy pustej wymaga obu współczynników: A i C.')
     if 'locked_params' in p and not isinstance(p['locked_params'], list):
         raise ValueError('Pole locked_params: wymagana lista identyfikatorów parametrów.')
     if any(not isinstance(k, str) for k in p.get('locked_params', [])):

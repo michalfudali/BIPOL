@@ -7,11 +7,12 @@
 {% with prefix='wiz_' %}{% include 'basis_selectors.html' %}{% endwith %}
 
 <div class="wizard-suggest-banner" style="margin: 8px 0; background:#f0f9ff; border:1px solid #bae6fd; padding:6px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-  <span style="font-size:0.78rem; color:#0369a1;">📊 <strong>Trendy statystyczne:</strong> Dopasuj wstępne wydłużenie skrzydła (AR) z regresji bazy:</span>
+  <span style="font-size:0.78rem; color:#0369a1;">📊 <strong>Analiza trendów (BIPOL_1):</strong> przyjmij wydłużenie skrzydła AR z trendu podobnych samolotów:</span>
   <button type="button" class="btn btn-outline" id="wizApplyTrendGeometryBtn" style="padding:2px 8px; font-size:0.75rem; background:#ffffff; font-weight:700; color:#0284c7;">
     Zastosuj z trendów
   </button>
 </div>
+<div class="trend-provenance-box" id="wizTrendProvenanceBasis" hidden></div>
 
 <div class="input-row basis-dimensions">
   {% for key,label,unit,value,minimum,maximum in [('wingspan_m','Rozpiętość docelowa','m',15,0,100),('wing_area_m2','Powierzchnia skrzydła','m²',12,0,1000),('aspect_ratio','Wydłużenie skrzydła','—',18,2,35)] %}

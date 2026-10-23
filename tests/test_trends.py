@@ -1,5 +1,6 @@
 """Reference provenance, unit conversions and independently checked P1 equations."""
 import copy
+from datetime import date
 import json
 import math
 from pathlib import Path
@@ -90,12 +91,15 @@ def test_cohort_respects_class_source_engine_count_and_manual_ids():
     assert select_references({**params,'trend_aircraft_ids':[]},1200) == []
 
 
-def test_forecast_uses_last_observed_date_plus_five_and_does_not_invent_production_dates():
+def test_forecast_is_five_years_after_design_year_and_does_not_invent_production_dates():
     a=analyze_trends({'aircraft_type':'jet_transport','engine_type':'jet','trend_source':'fast','trend_count':0},70000,42000)
     assert a['mass_fit']['n'] >= 20
+    # BIPOL_1, s. 1: extrapolate five years ahead of the design, not of the newest record.
+    assert a['forecast_year'] == date.today().year + 5 == a['reference_year'] + 5
     for trend in a['time_trends']:
         if trend['fit']:
-            assert trend['forecast_year']==trend['fit']['x_max']+5
+            assert trend['forecast_year'] == a['forecast_year']
+            assert trend['extrapolation_years'] == pytest.approx(a['forecast_year'] - trend['fit']['x_max'])
             assert trend['forecast'] == pytest.approx(predict(trend['fit'],trend['forecast_year']))
     assert all(r['year_basis']=='certification' for r in a['similar_aircraft'])
     ga=analyze_trends({'aircraft_type':'piston_ga','engine_type':'prop','trend_source':'cado','trend_count':0},1100,700)

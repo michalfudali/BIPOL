@@ -25,4 +25,12 @@
 #tab-trends .studio-card { min-width: 0; }
 #tab-trends .studio-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 #trendSources p { overflow-wrap: anywhere; }
+.trend-provenance { font-size: 13px; line-height: 1.5; color: #234550; background: #f6fafb; border-left: 3px solid #168c83; border-radius: 5px; padding: 10px 14px; margin: 6px 0; text-align: left; white-space: normal; }
+.trend-provenance p { margin: 4px 0; }
+.trend-provenance ol, .trend-provenance-warnings { margin: 6px 0 6px 20px; padding: 0; }
+.trend-provenance-basis { color: #4f6873; }
+.trend-provenance-warnings { color: #765020; }
+.trend-provenance-data summary, .trend-provenance-box summary { cursor: pointer; font-weight: 650; color: #0f6c80; }
+.trend-provenance-box { font-size: 13px; margin: 6px 0 12px; }
+.trend-provenance-row > td { background: #fbfdfd; }
 @media(max-width:600px) { .trend-controls { grid-template-columns: 1fr; } #tab-trends .studio-heading { display: block; } #tab-trends .studio-actions { margin-top: 14px; } .trend-chart svg text { font-size: 14px; } }

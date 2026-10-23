@@ -56,6 +56,7 @@ REQUIRED_KEYS = [
     'pw',
     'tw',
     'vh',
+    'v_v',
     'b_ail_ratio',
     'c_ail_ratio',
     'c_e_ratio',
@@ -82,17 +83,18 @@ def test_empirical_estimation_correctness(ac_class):
     assert res['aircraft_type'] == ac_class
     s = res['suggestions']
 
-    # All 11 parameters must be present
+    # All 12 parameters must be present
     assert set(s.keys()) == set(REQUIRED_KEYS)
 
-    # Verify sample sizes are consistent with raw catalog
-    all_ac = [r for r in load_aircraft() if r.get('aircraft_type') == ac_class]
+    # Verify sample sizes are consistent with raw catalog (class and its default propulsion)
+    all_ac = [r for r in load_aircraft() if r.get('aircraft_type') == ac_class and r.get('engine_type') == res['engine_type']]
     n_total = len(all_ac)
     assert n_total > 0, f"Class {ac_class} has 0 records in catalog"
+    assert res['sample']['selected_n'] == n_total
 
     # Wing loading n
     n_ws_catalog = len([r for r in all_ac if r.get('m0') and r.get('wing_loading_kg_m2')])
-    assert s['ws']['n'] == n_ws_catalog
+    assert s['ws']['available_n'] == n_ws_catalog
     assert s['ws']['suggested_value'] > 0
 
     # Empty mass fraction n
@@ -171,27 +173,18 @@ def test_physical_invariants_hold(ac_class, mass):
     ar_val = s['ar']['suggested_value']
     assert 2.0 <= ar_val <= 60.0, f"Aspect ratio invariant violated: {ar_val} for {ac_class} m0={mass}"
 
-    # Horizontal tail volume: V_H > 0 (typically 0.3 to 1.5)
-    vh_val = s['vh']['suggested_value']
-    assert 0.2 <= vh_val <= 2.0, f"Tail volume V_H invariant violated: {vh_val} for {ac_class} m0={mass}"
-
-    # Control surface ratios: 0 < ratio < 1
-    b_ail = s['b_ail_ratio']['suggested_value']
-    c_ail = s['c_ail_ratio']['suggested_value']
-    c_e = s['c_e_ratio']['suggested_value']
-    c_r = s['c_r_ratio']['suggested_value']
-
-    assert 0.0 < b_ail < 1.0, f"Aileron span ratio violated: {b_ail}"
-    assert 0.0 < c_ail < 1.0, f"Aileron chord ratio violated: {c_ail}"
-    assert 0.0 < c_e < 1.0, f"Elevator chord ratio violated: {c_e}"
-    assert 0.0 < c_r < 1.0, f"Rudder chord ratio violated: {c_r}"
-
-    # Dihedral angle: non-negative and <= 15 deg
-    dih = s['dihedral_deg']['suggested_value']
-    assert 0.0 <= dih <= 15.0, f"Dihedral angle violated: {dih}"
+    # Geometry averages exist only where the nearest-mass sample has geometry data;
+    # a missing average stays missing and says so instead of taking a default.
+    for key, low, high in (('vh', 0.2, 2.0), ('b_ail_ratio', 0.0, 1.0), ('c_ail_ratio', 0.0, 1.0),
+                           ('c_e_ratio', 0.0, 1.0), ('c_r_ratio', 0.0, 1.0), ('dihedral_deg', 0.0, 15.0)):
+        value = s[key]['suggested_value']
+        if value is None:
+            assert s[key]['available_n'] == 0 and s[key]['provenance']['warnings']
+        else:
+            assert low <= value <= high, f"{key} invariant violated: {value} for {ac_class} m0={mass}"
 
     # Propulsion exclusivity and positivity
-    if ac_class in ('piston_ga', 'turboprop_regional', 'motoglider'):
+    if ac_class in ('piston_ga', 'turboprop_regional', 'motoglider', 'uav'):
         pw_val = s['pw']['suggested_value']
         assert pw_val is not None and pw_val > 0, f"Power loading must be positive for {ac_class}"
         assert s['tw']['suggested_value'] is None, f"Thrust loading must be None for prop class {ac_class}"
@@ -199,8 +192,7 @@ def test_physical_invariants_hold(ac_class, mass):
         tw_val = s['tw']['suggested_value']
         assert tw_val is not None and 0.0 < tw_val < 1.0, f"Thrust loading must be in (0, 1) for {ac_class}"
         assert s['pw']['suggested_value'] is None, f"Power loading must be None for jet class {ac_class}"
-    elif ac_class in ('glider', 'uav'):
-        # Glider has no engine; UAV currently has no power data in catalog
+    elif ac_class == 'glider':
         assert s['pw']['suggested_value'] is None
         assert s['tw']['suggested_value'] is None
 
@@ -228,12 +220,12 @@ def test_direct_call_rejects_invalid_class(invalid_ac):
 # =========================================================================
 
 def test_api_zero_m0_behavior(client):
-    """m0=0 in query param is treated as unspecified m0 (fallback to median)."""
+    """m0=0 in query param is treated as unspecified m0: the whole class is the sample."""
     res = client.get('/api/trends/suggestions?aircraft_type=piston_ga&m0=0')
     assert res.status_code == 200
     data = res.get_json()
     assert data['m0'] is None
-    assert data['suggestions']['ws']['suggested_value'] == data['suggestions']['ws']['stats']['median']
+    assert 'masa projektu jeszcze nieznana' in data['sample']['description']
 
 
 @pytest.mark.parametrize('bad_param', ['m0=-5', 'm0=-1e-15', 'm0=nan', 'm0=inf', 'm0=-inf', 'm0=text'])

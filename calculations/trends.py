@@ -4,6 +4,7 @@ All masses use kg. Regressions are exploratory and never silently replace sizing
 Missing observations stay missing; each fit reports its own sample size.
 """
 from collections import Counter
+from datetime import date
 import math
 import threading
 
@@ -14,6 +15,15 @@ from calculations.instructor import MIN_AIRCRAFT
 
 # Provenance and licence of each data set, stored with the records.
 SOURCES = aircraft_store.load_sources()
+
+# BIPOL_1, s. 1: trends are extrapolated five years ahead of the design date.
+FORECAST_HORIZON_YEARS = 5
+BIPOL_1_SAMPLE = 20
+ENGINE_LABELS = {'prop': 'napęd śmigłowy', 'jet': 'napęd odrzutowy', 'none': 'bez napędu'}
+DEFAULT_ENGINE = {'glider': 'none', 'jet_business': 'jet', 'jet_transport': 'jet'}
+# BIPOL_1, s. 1: the eight averages listed in the handout, in its order.
+BIPOL_1_AVERAGES = ('v_h', 'v_v', 'empty_fraction', 'aileron_span_fraction', 'aileron_chord_ratio',
+                    'elevator_chord_ratio', 'rudder_chord_ratio', 'dihedral_deg')
 
 
 def derived(row):
@@ -102,9 +112,82 @@ def select_references(params, m0):
     ids = params.get('trend_aircraft_ids')
     if ids is not None:
         pool = [r for r in pool if r['id'] in ids]
+    if not m0:
+        # Without a design mass there is no "nearest" aircraft; keep the whole class.
+        return sorted(pool, key=lambda r: r['id'])
     pool = sorted(pool, key=lambda r: (abs(math.log(r['m0'] / max(m0, 1))), r['id']))
     count = int(params.get('trend_count', 50))
     return pool[:count] if count else pool
+
+
+def valid_value(key, row):
+    """Observation usable in a fit or average; outliers are excluded consistently."""
+    value = row.get(key)
+    if value is None:
+        return False
+    if key == 'empty_fraction':
+        return .15 < value < .95
+    if key == 'ar':
+        return 2 <= value <= 60
+    return True
+
+
+def sample_weights(weighting):
+    def weights(subset):
+        # Recount within each fit: missing data must not reduce a family's total weight.
+        families = Counter(r['family'] for r in subset)
+        return [1/families[r['family']] if weighting == 'family' else 1. for r in subset]
+    return weights
+
+
+def forecast_years(today=None):
+    reference = (today or date.today()).year
+    return reference, reference + FORECAST_HORIZON_YEARS
+
+
+def time_trend(rows, key, weights, forecast_year):
+    subset = [r for r in rows if r.get('year') is not None and valid_value(key, r)]
+    fit = fit_regression([(r['year'], r[key]) for r in subset], weights(subset))
+    # Do not pretend to extrapolate a single generation of aircraft.
+    if fit and fit['x_max'] - fit['x_min'] < 5:
+        fit = None
+    return subset, fit, predict(fit, forecast_year) if fit else None
+
+
+def two_point_coefficients(fit):
+    """BIPOL_1, eq. (1): C and A from two points read off the fitted mass line."""
+    x1, x2 = fit['x_min'], fit['x_max']
+    y1, y2 = predict(fit, x1), predict(fit, x2)
+    c = math.log(y1 / y2) / math.log(x1 / x2)
+    return {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'C': c, 'A': y1 / x1 ** c}
+
+
+def describe_sample(params, rows, m0):
+    engine = params.get('engine_type', 'prop')
+    parts = [f"klasa „{CLASSES[params.get('aircraft_type', 'piston_ga')]}”, {ENGINE_LABELS.get(engine, engine)}"]
+    count = int(params.get('trend_count', 50))
+    if params.get('trend_aircraft_ids') is not None:
+        parts.append('konstrukcje zaznaczone ręcznie')
+    elif m0 and count:
+        parts.append(f'{count} konstrukcji najbliższych masą m₀ = {_pl(m0, 0)} kg')
+    else:
+        parts.append('wszystkie pasujące konstrukcje' + ('' if m0 else ' (masa projektu jeszcze nieznana)'))
+    if params.get('trend_source', 'all') != 'all':
+        parts.append(f"źródło: {SOURCES.get(params['trend_source'], {}).get('name', params['trend_source'])}")
+    if int(params.get('trend_engine_count', 0)):
+        parts.append(f"liczba silników: {int(params['trend_engine_count'])}")
+    ymin, ymax = int(params.get('trend_year_min', 0)), int(params.get('trend_year_max', 0))
+    if ymin or ymax:
+        parts.append(f"certyfikacja {ymin or '…'}–{ymax or '…'}")
+    weighting = params.get('trend_weighting', 'family')
+    parts.append('równa waga rodzin' if weighting == 'family' else 'równa waga wariantów')
+    return {'description': '; '.join(parts), 'selected_n': len(rows),
+            'families_n': len({r['family'] for r in rows}), 'weighting': weighting}
+
+
+def _pl(value, digits=3, significant=False):
+    text = f'{value:.{digits}g}' if significant else f'{value:.{digits}f}'
+    return text.replace('-', '−').replace('.', ',')
 
 
 def fit_regression(points, weights=None, power=False):
@@ -160,6 +243,7 @@ METRICS = {
     'thrust_to_weight': ('Obciążenie ciągu T/W', '−'),
     'ld_max': ('Doskonałość maksymalna', '−'),
     'v_h': ('Cecha objętościowa usterzenia poziomego V_H', '−'),
+    'v_v': ('Cecha objętościowa usterzenia pionowego V_V', '−'),
     'aileron_span_fraction': ('Część rozpiętości objęta lotkami b_ail/(b/2)', '−'),
     'aileron_chord_ratio': ('Względna cięciwa lotek c_ail/c', '−'),
     'elevator_chord_ratio': ('Względna cięciwa steru wysokości c_e/c_H', '−'),
@@ -392,12 +476,11 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     rows = select_references(params, m0)
     counts = Counter(r['family'] for r in rows)
     weighting = params.get('trend_weighting', 'family')
-    def weights(subset):
-        # Recount within each fit: missing data must not reduce a family's total weight.
-        families = Counter(r['family'] for r in subset)
-        return [1/families[r['family']] if weighting == 'family' else 1. for r in subset]
-    valid_mass = [r for r in rows if r['empty_fraction'] is not None and .15 < r['empty_fraction'] < .95]
+    weights = sample_weights(weighting)
+    reference_year, forecast_year = forecast_years()
+    valid_mass = [r for r in rows if valid_value('empty_fraction', r)]
     mass_fit = fit_regression([(r['m0'], r['empty_fraction']) for r in valid_mass], weights(valid_mass), power=True)
+    two_point = two_point_coefficients(mass_fit) if mass_fit else None
     k_vs = 1.04 if params.get('variable_sweep', False) else 1.
     prediction = predict(mass_fit, m0)
     trend_value = prediction * k_vs if prediction is not None else None
@@ -406,11 +489,11 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         warnings.append(f'Wymaganie prowadzącego: minimum 8 podobnych konstrukcji. Wybrano {len(counts)} rodzin; uzupełnij próbę.')
     if mass_fit and mass_fit['C'] >= 0:
         warnings.append('Trend OEW/MTOW nie jest malejący (C ≥ 0). Sprawdź dobór podobnych konstrukcji, definicje mas i źródła; nie odwracaj sztucznie regresji.')
-    if len(rows) < 20:
+    if len(rows) < BIPOL_1_SAMPLE:
         warnings.append(f'Wybrano {len(rows)} konstrukcji. Materiał BIPOL_1 zaleca co najmniej 20 podobnych samolotów; poszerz dobór lub uzupełnij źródła.')
-    if rows and len(counts) < 20:
+    if rows and len(counts) < BIPOL_1_SAMPLE:
         warnings.append(f'Próba zawiera {len(counts)} rodzin i {len(rows)} wariantów. Warianty jednej rodziny nie są niezależnymi projektami.')
-    if len(valid_mass) < 20:
+    if len(valid_mass) < BIPOL_1_SAMPLE:
         warnings.append(f'Regresja masowa ma {len(valid_mass)} kompletnych obserwacji; wynik jest poglądowy.')
     if mass_fit and not mass_fit['x_min'] <= m0 <= mass_fit['x_max']:
         warnings.append('Masa projektu leży poza zakresem próby — porównanie masowe jest ekstrapolacją.')
@@ -418,19 +501,14 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         warnings.append('Ekstrapolacja daje niefizyczny udział masy. Nie używaj jej do bilansu mas.')
     time_trends = []
     for key, (label, unit) in METRICS.items():
-        subset = [r for r in rows if r.get('year') is not None and r.get(key) is not None]
-        fit = fit_regression([(r['year'], r[key]) for r in subset], weights(subset))
-        # Do not pretend to extrapolate a single generation of aircraft.
-        if fit and fit['x_max'] - fit['x_min'] < 5:
-            fit = None
-        forecast_year = int(fit['x_max']) + 5 if fit else None
-        forecast = predict(fit, forecast_year) if fit else None
+        subset, fit, forecast = time_trend(rows, key, weights, forecast_year)
         time_trends.append({'key': key, 'label': label, 'unit': unit, 'fit': fit,
             'available_n': len(subset), 'points': [{'x': r['year'], 'y': r[key], 'model': r['model']} for r in subset],
-            'forecast_year': forecast_year, 'forecast': forecast,
+            'forecast_year': forecast_year if fit else None, 'forecast': forecast,
+            'extrapolation_years': forecast_year - fit['x_max'] if fit else None,
             'forecast_physical': forecast is not None and forecast > 0 and (key != 'empty_fraction' or forecast < 1),
-            'provisional': len(subset) < 20})
-    if max((t['available_n'] for t in time_trends), default=0) < 20:
+            'provisional': len(subset) < BIPOL_1_SAMPLE})
+    if max((t['available_n'] for t in time_trends), default=0) < BIPOL_1_SAMPLE:
         warnings.append('Za mało udokumentowanych dat dla pełnej analizy czasowej. Dat certyfikacji nie zastępujemy domyślnym rokiem produkcji.')
     relationships = []
     x_keys = ['ar', 'wing_loading_kg_m2']
@@ -459,11 +537,12 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
                 'y_key': key, 'y_label': METRICS[key][0], 'y_unit': METRICS[key][1], 'fit': fit,
                 'points': [{'x': r[x_key], 'y': r[key], 'model': r['model']} for r in subset]})
     averages = {}
-    for key in ('empty_fraction', 'ar', 'wing_loading_kg_m2', 'prop_diameter_m', 'h_tail_area', 'v_tail_area',
-                'v_h', 'aileron_span_fraction', 'aileron_chord_ratio', 'elevator_chord_ratio', 'rudder_chord_ratio', 'dihedral_deg'):
-        subset = [r for r in rows if r.get(key) is not None]
+    for key in (*BIPOL_1_AVERAGES, 'ar', 'wing_loading_kg_m2', 'prop_diameter_m', 'h_tail_area', 'v_tail_area'):
+        subset = [r for r in rows if valid_value(key, r)]
         ws = weights(subset)
         averages[key] = {'mean': sum(r[key]*w for r,w in zip(subset,ws))/sum(ws) if subset else None, 'n': len(subset)}
+    sample = describe_sample(params, rows, m0)
+    suggestions = trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample)
 
     geometry_trends_analysis = analyze_geometry_trends(params, geom_res)
 
@@ -515,13 +594,15 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     return {'database_total': len(load_aircraft()), 'selected_n': len(rows), 'families_n': len(counts),
         'class_label': CLASSES[params.get('aircraft_type', 'piston_ga')], 'weighting': weighting,
         'reg_A': mass_fit['A'] if mass_fit else None, 'reg_C': mass_fit['C'] if mass_fit else None,
-        'mass_fit': mass_fit, 'k_vs': k_vs, 'we_wo_trend': trend_value, 'we_wo_actual': m_empty/m0 if m0 else None,
+        'mass_fit': mass_fit, 'two_point': two_point, 'k_vs': k_vs, 'we_wo_trend': trend_value,
+        'we_wo_actual': m_empty/m0 if m0 else None,
         'similar_aircraft': rows, 'averages': averages, 'warnings': warnings,
         'time_trends': time_trends, 'relationships': relationships, 'sources': sources_in_use(load_aircraft()),
-        'report_charts': report_charts,
+        'report_charts': report_charts, 'sample': sample, 'suggestions': suggestions,
+        'reference_year': reference_year, 'forecast_year': forecast_year,
         'mass_trend_decreasing': mass_fit['C'] < 0 if mass_fit else None,
         'year_basis': 'Rok certyfikacji wariantu (nie rok produkcji)',
-        'method': 'Ważona regresja log(OEW/MTOW) = log(A) + C·log(m₀ [kg]). Domyślnie rodziny mają równą wagę.',
+        'method': 'Linia trendu log(OEW/MTOW) = log(A) + C·log(m₀ [kg]) z ważonej regresji; A i C odczytano z dwóch punktów tej linii wzorami BIPOL_1. Domyślnie rodziny mają równą wagę.',
         'limitations': 'OEW obejmuje wyposażenie operacyjne i nie jest tożsama z masą własną każdego projektu. Cechy geometryczne i sterów (V_H, lotki, stery, wznios) oparto na 82 certyfikowanych konstrukcjach (Raymer, Roskam, Corke, TCDS, MEiL PW). Rodziny są grupowane heurystycznie. Korelacja nie dowodzi przyczynowości.',
         'geometry_trends_analysis': geometry_trends_analysis}
 
@@ -563,413 +644,224 @@ SUGGESTION_TYPICAL_RANGES = {
         'jet_business': [0.25, 0.48],
         'jet_transport': [0.22, 0.40],
     },
+    # Raymer, Aircraft Design, Tab. 6.4 (c_VT): szybowiec 0,02; GA 0,04–0,07; turbośmigłowy 0,08; odrzutowy 0,09.
+    'v_v': {
+        'piston_ga': [0.03, 0.07],
+        'turboprop_regional': [0.06, 0.10],
+        'jet_business': [0.06, 0.10],
+        'jet_transport': [0.07, 0.11],
+        'glider': [0.015, 0.03],
+        'motoglider': [0.02, 0.035],
+        'uav': [0.02, 0.06],
+    },
+}
+
+# key, metric, label, symbol, unit, rule, decimals. Rules follow BIPOL_1, s. 1–2:
+# "time" — trend in time extrapolated five years ahead, "mass" — eq. (1), "mean" — sample average.
+SUGGESTION_SPECS = (
+    ('ws', 'wing_loading_kg_m2', 'Obciążenie powierzchni', 'm₀/S', 'kg/m²', 'time', 1),
+    ('ar', 'ar', 'Wydłużenie skrzydła', 'AR', '−', 'time', 2),
+    ('me_m0', 'empty_fraction', 'Udział masy pustej', 'mₑ/m₀', '−', 'mass', 3),
+    ('pw', 'power_loading_kg_kw', 'Obciążenie mocy', 'm₀/P', 'kg/kW', 'time', 2),
+    ('tw', 'thrust_to_weight', 'Stosunek ciągu do ciężaru', 'T/W', '−', 'time', 3),
+    ('vh', 'v_h', 'Cecha objętościowa usterzenia poziomego', 'V_H', '−', 'mean', 3),
+    ('v_v', 'v_v', 'Cecha objętościowa usterzenia pionowego', 'V_V', '−', 'mean', 4),
+    ('b_ail_ratio', 'aileron_span_fraction', 'Część rozpiętości objęta lotkami', 'b_ail/(b/2)', '−', 'mean', 3),
+    ('c_ail_ratio', 'aileron_chord_ratio', 'Względna cięciwa lotki', 'c_ail/c', '−', 'mean', 3),
+    ('c_e_ratio', 'elevator_chord_ratio', 'Względna cięciwa steru wysokości', 'c_e/c_H', '−', 'mean', 3),
+    ('c_r_ratio', 'rudder_chord_ratio', 'Względna cięciwa steru kierunku', 'c_r/c_V', '−', 'mean', 3),
+    ('dihedral_deg', 'dihedral_deg', 'Wznios', 'Γ', '°', 'mean', 1),
+)
+# Sanity limits of an extrapolated value; outside them the sample mean is proposed instead.
+PHYSICAL_BOUNDS = {'wing_loading_kg_m2': (1, 2000), 'ar': (2, 60), 'empty_fraction': (.15, .95),
+                   'power_loading_kg_kw': (.5, 100), 'thrust_to_weight': (.01, 2)}
+BIPOL_1_BASIS = {
+    'time': 'BIPOL_1.pdf, s. 1: zależność od roku produkcji ekstrapolowana na 5 lat naprzód',
+    'mass': 'BIPOL_1.pdf, s. 1, równanie (1) ze wzorami na A i C; s. 4: równanie (1) wstawia się do równania (5)',
+    'mean': 'BIPOL_1.pdf, s. 1: „Obliczyć średnie parametry”',
 }
 
 
-def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None):
-    """Compute empirical design parameter suggestions for a given aircraft class.
+def suggestion_range(key, metric, aircraft_type, wing_configuration):
+    """Literature range shown for comparison only; it never replaces the sample result."""
+    if key == 'dihedral_deg':
+        high = wing_configuration in ('high', 'braced_high', 'strut_braced')
+        if aircraft_type in ('piston_ga', 'turboprop_regional'):
+            return [0.0, 2.5] if high else [3.5, 7.0]
+        if high:
+            return [0.0, 3.0]
+    if key in SUGGESTION_TYPICAL_RANGES:
+        return SUGGESTION_TYPICAL_RANGES[key].get(aircraft_type)
+    if metric in GEOMETRY_METRICS_INFO:
+        return list(GEOMETRY_METRICS_INFO[metric]['typical_ranges'][aircraft_type][:2])
+    return None
 
-    Supports dynamic evaluation if m0 is provided, otherwise returns cohort median/mean.
-    Gracefully handles small cohorts (N < 3 or low variance) and class-specific propulsion.
+
+def trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample):
+    """Design values proposed by the BIPOL_1 trend analysis of one comparison sample, with provenance."""
+    engine = params.get('engine_type', 'prop')
+    aircraft_type = params.get('aircraft_type', 'piston_ga')
+    wing_cfg = params.get('wing_configuration', params.get('wing_config'))
+    k_vs = 1.04 if params.get('variable_sweep', False) else 1.
+    result = {}
+    for key, metric, label, symbol, unit, rule, digits in SUGGESTION_SPECS:
+        item = {'key': key, 'name': label, 'symbol': symbol, 'unit': unit, 'suggested_value': None,
+                'model_type': None, 'equation': None, 'equation_latex': None, 'r2': None, 'n': 0,
+                'available_n': 0, 'stats': None, 'typical_range': None, 'provenance': None}
+        result[key] = item
+        if key == 'pw' and engine != 'prop' or key == 'tw' and engine != 'jet':
+            continue
+        item['typical_range'] = suggestion_range(key, metric, aircraft_type, wing_cfg)
+        basis = BIPOL_1_BASIS[rule] + ('; s. 2: wydłużenie skrzydła założyć na podstawie analizy trendów' if key == 'ar' else '')
+        prov = {'basis': basis, 'sample': sample, 'method': None, 'formula': None, 'steps': [],
+                'observations': [], 'x_label': None, 'fit': None, 'alternatives': [], 'warnings': []}
+        item['provenance'] = prov
+        subset = [r for r in rows if valid_value(metric, r)]
+        item['available_n'] = len(subset)
+        if not subset:
+            prov['method'] = 'Brak obserwacji w próbie'
+            prov['warnings'].append('Żadna konstrukcja w próbie nie ma tej wielkości w bazie. Poszerz dobór lub uzupełnij dane; program nie podstawia wartości domyślnej.')
+            continue
+        values = [r[metric] for r in subset]
+        stats = compute_vector_stats(values)
+        item['stats'] = {k: round(stats[k], 4) for k in ('min', 'max', 'mean', 'median')}
+        sw = weights(subset)
+        weighted_sum = sum(v * w for v, w in zip(values, sw))
+        mean = weighted_sum / sum(sw)
+        mean_label = 'Średnia ważona z próby — każda rodzina ma łączną wagę 1' if any(w != 1 for w in sw) else 'Średnia arytmetyczna z próby'
+        unit_text = '' if unit == '−' else ' ' + unit
+        mean_steps = [f'Σ wᵢ·xᵢ = {_pl(weighted_sum, 4)}; Σ wᵢ = {_pl(sum(sw), 3)}',
+                      f'x̄ = Σ wᵢ·xᵢ / Σ wᵢ = {_pl(mean, digits + 1)}']
+        mean_obs = [{'model': r['model'], 'x': None, 'value': r[metric], 'weight': w, 'source': r['source_id']}
+                    for r, w in zip(subset, sw)]
+        alternative = {'label': f'{mean_label} (n = {len(subset)})', 'value': round(mean, digits)}
+
+        def use_mean(method):
+            formula = 'x̄ = Σ wᵢ·xᵢ / Σ wᵢ'
+            prov.update(method=method, formula=f"{prov['formula']};  {formula}" if prov['formula'] else formula,
+                        observations=prov['observations'] or mean_obs)
+            prov['steps'].extend(mean_steps)
+            item['equation'] = f'{symbol} = x̄ = {_pl(mean, digits)}'
+            item['equation_latex'] = rf'\bar{{x}} = {mean:.{digits}f}'
+            return mean, 'mean', len(subset)
+
+        lo, hi = PHYSICAL_BOUNDS.get(metric, (-math.inf, math.inf))
+        if rule == 'time':
+            dated, fit, forecast = time_trend(rows, metric, weights, forecast_year)
+            # A forecast beyond every similar aircraft is an extrapolation artefact, not a design value.
+            supported = fit and forecast is not None and lo < forecast < hi and fit['y_min'] <= forecast <= fit['y_max']
+            if supported:
+                value, model, n = forecast, 'time_trend', len(dated)
+                prov.update(method=f'Trend w funkcji roku certyfikacji ekstrapolowany na {forecast_year} r.',
+                            formula=f'{symbol}(rok) = a·rok + b', x_label='Rok certyfikacji', fit=dict(fit),
+                            observations=[{'model': r['model'], 'x': r['year'], 'value': r[metric], 'weight': w,
+                                           'source': r['source_id']} for r, w in zip(dated, weights(dated))])
+                prov['steps'] += [f"a = {_pl(fit['slope'], 4, True)}{unit_text}/rok; b = {_pl(fit['intercept'], 6, True)}{unit_text}",
+                                  f"R² = {_pl(fit['r2'], 3) if fit['r2'] is not None else '—'}; n = {fit['n']}; lata {fit['x_min']:.0f}–{fit['x_max']:.0f}",
+                                  f'{symbol}({forecast_year}) = a·{forecast_year} + b = {_pl(forecast, digits + 1)}']
+                prov['alternatives'].append(alternative)
+                item['equation'] = f"{symbol} = {_pl(fit['slope'], 4, True)}·rok {'+' if fit['intercept'] >= 0 else '−'} {_pl(abs(fit['intercept']), 6, True)} → {_pl(forecast, digits)} ({forecast_year})"
+                item['equation_latex'] = rf"{symbol}({forecast_year}) = {fit['slope']:.4g}\cdot{forecast_year} {'+' if fit['intercept'] >= 0 else '-'} {abs(fit['intercept']):.6g}"
+                item['r2'] = round(fit['r2'], 4) if fit['r2'] is not None else None
+                gap = forecast_year - fit['x_max']
+                if gap > 2 * FORECAST_HORIZON_YEARS:
+                    prov['warnings'].append(f"Ekstrapolacja o {gap:.0f} lat poza najnowszą obserwację ({fit['x_max']:.0f} r.). Porównaj z wartością średnią.")
+                if fit['r2'] is not None and fit['r2'] < .2:
+                    prov['warnings'].append('Słaba zależność od roku (R² < 0,2): trend wyjaśnia niewielką część rozrzutu.')
+            else:
+                outside = fit and forecast is not None and lo < forecast < hi
+                reason = ('mniej niż 3 konstrukcje z datą' if len(dated) < 3 else
+                          'daty obejmują mniej niż 5 lat' if not fit else
+                          f"prognoza {_pl(forecast, digits)}{unit_text} wychodzi poza zakres próby "
+                          f"({_pl(fit['y_min'], digits)}–{_pl(fit['y_max'], digits)}{unit_text})" if outside else
+                          f'prognoza {_pl(forecast, digits)}{unit_text} jest niefizyczna')
+                value, model, n = use_mean(f'{mean_label}; prognoza trendu w czasie nie została przyjęta')
+                if fit:
+                    prov['fit'] = dict(fit)
+                    prov['steps'].insert(0, f"Trend: {symbol} = {_pl(fit['slope'], 4, True)}·rok {'+' if fit['intercept'] >= 0 else '−'} {_pl(abs(fit['intercept']), 6, True)}; "
+                                            f"R² = {_pl(fit['r2'], 3) if fit['r2'] is not None else '—'}; n = {fit['n']}; {symbol}({forecast_year}) = {_pl(forecast, digits + 1)}")
+                if outside:
+                    prov['alternatives'].append({'label': f'Prognoza trendu na {forecast_year} r.', 'value': round(forecast, digits)})
+                prov['warnings'].append(f'Nie przyjęto prognozy w funkcji roku: {reason}. Zaproponowano średnią z próby.')
+        elif rule == 'mass':
+            if mass_fit:
+                tp = two_point_coefficients(mass_fit)
+                prov.update(formula='mₑ/m₀ = A·m₀^C·K_vs;  C = log(y₁/y₂) / log(x₁/x₂);  A = y₁ / x₁^C', x_label='m₀ [kg]', fit={**mass_fit, 'A': tp['A'], 'C': tp['C'], 'k_vs': k_vs},
+                            observations=[{'model': r['model'], 'x': r['m0'], 'value': r['empty_fraction'], 'weight': w,
+                                           'source': r['source_id']} for r, w in zip(subset, sw)])
+                prov['steps'] += [
+                    f"Dwa punkty linii trendu: x₁ = {_pl(tp['x1'], 0)} kg, y₁ = {_pl(tp['y1'], 4)}; x₂ = {_pl(tp['x2'], 0)} kg, y₂ = {_pl(tp['y2'], 4)}",
+                    f"C = log({_pl(tp['y1'], 4)}/{_pl(tp['y2'], 4)}) / log({_pl(tp['x1'], 0)}/{_pl(tp['x2'], 0)}) = {_pl(tp['C'], 5)}",
+                    f"A = y₁ / x₁^C = {_pl(tp['A'], 5)}",
+                    f"K_vs = {_pl(k_vs, 2)} ({'skos zmienny wzdłuż rozpiętości' if k_vs != 1 else 'skos stały'})"]
+                item['apply'] = {'empty_mass_trend_A': tp['A'], 'empty_mass_trend_C': tp['C'], 'empty_mass_fraction': None}
+                item['r2'] = round(mass_fit['r2'], 4) if mass_fit['r2'] is not None else None
+                item['equation'] = f"mₑ/m₀ = {_pl(tp['A'], 4, True)}·m₀^{_pl(tp['C'], 4, True)}·{_pl(k_vs, 2)}"
+                item['equation_latex'] = rf"m_e/m_0 = {tp['A']:.4g}\cdot m_0^{{{tp['C']:.4g}}}\cdot{k_vs:.2f}"
+                prediction = predict(mass_fit, m0) if m0 else None
+                equation_value = prediction * k_vs if prediction is not None else None
+                if equation_value is not None and lo < equation_value < hi:
+                    value, model, n = equation_value, 'power', mass_fit['n']
+                    prov['method'] = 'Równanie (1): linia trendu mₑ/m₀ = f(m₀) z próby'
+                    prov['steps'].append(f"mₑ/m₀ = {_pl(tp['A'], 5)}·{_pl(m0, 0)}^{_pl(tp['C'], 5)}·{_pl(k_vs, 2)} = {_pl(equation_value, 4)}")
+                    item['equation'] += f' = {_pl(equation_value, 3)}'
+                    prov['alternatives'].append(alternative)
+                    if not mass_fit['x_min'] <= m0 <= mass_fit['x_max']:
+                        prov['warnings'].append(f"Masa projektu {_pl(m0, 0)} kg leży poza zakresem próby ({_pl(mass_fit['x_min'], 0)}–{_pl(mass_fit['x_max'], 0)} kg); wynik jest ekstrapolacją.")
+                else:
+                    value, model, n = use_mean(f'{mean_label}; równanie (1) wymaga masy projektu' if not m0 else
+                                               f'{mean_label}; równanie (1) daje wartość niefizyczną')
+                    if m0:
+                        prov['warnings'].append('Dla masy projektu równanie (1) daje udział spoza zakresu 0,15–0,95. Zaproponowano średnią z próby.')
+                    else:
+                        prov['warnings'].append('Masa projektu nie jest jeszcze znana. „Zastosuj” wstawia równanie (1) do bilansu masy; jako liczbę pokazano średnią z próby.')
+                if mass_fit['C'] >= 0:
+                    prov['warnings'].append('C ≥ 0: udział masy pustej nie maleje z masą startową. Sprawdź dobór próby i definicje mas.')
+            else:
+                value, model, n = use_mean(f'{mean_label}; za mało zróżnicowanych mas do linii trendu')
+                item['apply'] = {'empty_mass_fraction': round(mean, digits), 'empty_mass_trend_A': None, 'empty_mass_trend_C': None}
+                prov['warnings'].append('Linia trendu wymaga co najmniej 3 konstrukcji o różnych masach.')
+        else:
+            value, model, n = use_mean(mean_label)
+        item.update(suggested_value=round(value, digits), model_type=model, n=n)
+        if n < 3:
+            prov['warnings'].append('Mniej niż 3 obserwacje: wartość orientacyjna. Poszerz próbę, np. „Wszystkie pasujące”.')
+        elif n < BIPOL_1_SAMPLE:
+            prov['warnings'].append(f'n = {n}: mniej niż 20 samolotów zalecanych w BIPOL_1.')
+        rng = item['typical_range']
+        if rng and not rng[0] <= value <= rng[1]:
+            prov['warnings'].append(
+                f"Wartość poza orientacyjnym zakresem literaturowym {_pl(rng[0], 2)}–{_pl(rng[1], 2)}{'' if unit == '−' else ' ' + unit}." +
+                (' Baza nie rozróżnia dolno- i górnopłatów, więc średnia może mieszać układy skrzydła.' if key == 'dihedral_deg' else ''))
+    return result
+
+
+def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None, engine_type=None):
+    """BIPOL_1 suggestions before a project is calculated (wizard, input panel).
+
+    Without m0 the whole class and propulsion type form the sample; with m0 the
+    sample is the same nearest-mass selection that P1 uses by default.
     """
     if aircraft_type not in CLASSES:
         raise ValueError(f"Unknown aircraft_type: '{aircraft_type}'")
-
     if m0 is not None:
         try:
             m0 = float(m0)
             if not math.isfinite(m0) or m0 <= 0:
-                raise ValueError("m0 must be a positive finite number")
+                raise ValueError
         except (TypeError, ValueError):
-            raise ValueError("m0 must be a positive finite number")
-
-    all_ac = load_aircraft()
-    class_ac = [r for r in all_ac if r.get('aircraft_type') == aircraft_type]
-
-    def _format_stats(st):
-        if not st:
-            return None
-        return {
-            'min': round(st['min'], 3),
-            'max': round(st['max'], 3),
-            'mean': round(st['mean'], 3),
-            'median': round(st['median'], 3),
-        }
-
-    suggestions = {}
-
-    # 1. Wing Loading (ws)
-    pts_ws = [(r['m0'], r['wing_loading_kg_m2']) for r in class_ac if r.get('m0') and r.get('wing_loading_kg_m2')]
-    st_ws = compute_vector_stats([y for _, y in pts_ws])
-    fit_ws = fit_regression(pts_ws, power=True)
-    if fit_ws and fit_ws.get('A') and fit_ws.get('C'):
-        eq_ws = f"m₀/S = {fit_ws['A']:.4g} · m0^{fit_ws['C']:.4g}"
-        eq_ws_tex = f"m_0/S = {fit_ws['A']:.4g} \\cdot m_0^{{{fit_ws['C']:.4g}}}"
-        r2_ws = round(fit_ws['r2'], 4) if fit_ws.get('r2') is not None else None
-        model_ws = 'power'
-        if m0 is not None:
-            pred_ws = predict(fit_ws, m0)
-            val_ws = round(max(10.0, pred_ws), 2) if pred_ws else (round(st_ws['median'], 2) if st_ws else 80.0)
-        else:
-            val_ws = round(st_ws['median'], 2) if st_ws else 80.0
-    else:
-        model_ws = 'median'
-        val_ws = round(st_ws['median'], 2) if st_ws else 80.0
-        r2_ws = None
-        eq_ws = f"m₀/S = {val_ws}"
-        eq_ws_tex = f"m_0/S = {val_ws}"
-
-    suggestions['ws'] = {
-        'key': 'ws',
-        'name': 'Wing Loading',
-        'symbol': 'm₀/S',
-        'unit': 'kg/m²',
-        'suggested_value': val_ws,
-        'model_type': model_ws,
-        'equation': eq_ws,
-        'equation_latex': eq_ws_tex,
-        'r2': r2_ws,
-        'n': len(pts_ws),
-        'stats': _format_stats(st_ws),
-        'typical_range': SUGGESTION_TYPICAL_RANGES['ws'].get(aircraft_type, [50.0, 150.0]),
-    }
-
-    # 2. Aspect Ratio (ar)
-    pts_ar = [(r['m0'], r['ar']) for r in class_ac if r.get('m0') and r.get('ar') and 2 <= r['ar'] <= 60]
-    st_ar = compute_vector_stats([y for _, y in pts_ar])
-    fit_ar = fit_regression(pts_ar, power=False)
-    if fit_ar and fit_ar.get('r2') is not None and fit_ar['r2'] >= 0.20:
-        sign = '+' if fit_ar['intercept'] >= 0 else '-'
-        eq_ar = f"AR = {fit_ar['slope']:.6g} · m0 {sign} {abs(fit_ar['intercept']):.4g}"
-        eq_ar_tex = f"\\Lambda = {fit_ar['slope']:.6g} \\cdot m_0 {sign} {abs(fit_ar['intercept']):.4g}"
-        r2_ar = round(fit_ar['r2'], 4)
-        model_ar = 'linear'
-        if m0 is not None:
-            pred_ar = predict(fit_ar, m0)
-            val_ar = round(min(50.0, max(3.0, pred_ar)), 2) if pred_ar else (round(st_ar['median'], 2) if st_ar else 7.5)
-        else:
-            val_ar = round(st_ar['median'], 2) if st_ar else 7.5
-    else:
-        model_ar = 'median'
-        val_ar = round(st_ar['median'], 2) if st_ar else 7.5
-        r2_ar = round(fit_ar['r2'], 4) if fit_ar and fit_ar.get('r2') is not None else None
-        eq_ar = f"AR = {val_ar}"
-        eq_ar_tex = f"\\Lambda = {val_ar}"
-
-    suggestions['ar'] = {
-        'key': 'ar',
-        'name': 'Aspect Ratio',
-        'symbol': 'AR',
-        'unit': '−',
-        'suggested_value': val_ar,
-        'model_type': model_ar,
-        'equation': eq_ar,
-        'equation_latex': eq_ar_tex,
-        'r2': r2_ar,
-        'n': len(pts_ar),
-        'stats': _format_stats(st_ar),
-        'typical_range': SUGGESTION_TYPICAL_RANGES['ar'].get(aircraft_type, [6.0, 10.0]),
-    }
-
-    # 3. Empty Mass Fraction (me_m0)
-    pts_me = [(r['m0'], r['empty_fraction']) for r in class_ac if r.get('m0') and r.get('empty_fraction') and 0.15 < r['empty_fraction'] < 0.95]
-    st_me = compute_vector_stats([y for _, y in pts_me])
-    fit_me = fit_regression(pts_me, power=True)
-    if fit_me and fit_me.get('A') and fit_me.get('C'):
-        eq_me = f"m_e/m0 = {fit_me['A']:.4g} · m0^{fit_me['C']:.4g}"
-        eq_me_tex = f"m_e/m_0 = {fit_me['A']:.4g} \\cdot m_0^{{{fit_me['C']:.4g}}}"
-        r2_me = round(fit_me['r2'], 4) if fit_me.get('r2') is not None else None
-        model_me = 'power'
-        if m0 is not None:
-            pred_me = predict(fit_me, m0)
-            val_me = round(min(0.90, max(0.20, pred_me)), 3) if pred_me else (round(st_me['median'], 3) if st_me else 0.60)
-        else:
-            val_me = round(st_me['median'], 3) if st_me else 0.60
-    else:
-        model_me = 'median'
-        val_me = round(st_me['median'], 3) if st_me else 0.60
-        r2_me = None
-        eq_me = f"m_e/m0 = {val_me}"
-        eq_me_tex = f"m_e/m_0 = {val_me}"
-
-    suggestions['me_m0'] = {
-        'key': 'me_m0',
-        'name': 'Empty Mass Fraction',
-        'symbol': 'm_e/m_0',
-        'unit': '−',
-        'suggested_value': val_me,
-        'model_type': model_me,
-        'equation': eq_me,
-        'equation_latex': eq_me_tex,
-        'r2': r2_me,
-        'n': len(pts_me),
-        'stats': _format_stats(st_me),
-        'typical_range': SUGGESTION_TYPICAL_RANGES['me_m0'].get(aircraft_type, [0.50, 0.70]),
-    }
-
-    # 4. Power Loading (pw) - Prop and motoglider classes
-    if aircraft_type in ('piston_ga', 'turboprop_regional', 'motoglider'):
-        pts_pw = [(r['m0'], r['power_loading_kg_kw']) for r in class_ac if r.get('m0') and r.get('power_loading_kg_kw')]
-        st_pw = compute_vector_stats([y for _, y in pts_pw])
-        fit_pw = fit_regression(pts_pw, power=True)
-        if fit_pw and fit_pw.get('A') and fit_pw.get('C'):
-            eq_pw = f"m0/P = {fit_pw['A']:.4g} · m0^{fit_pw['C']:.4g}"
-            eq_pw_tex = f"m_0/P = {fit_pw['A']:.4g} \\cdot m_0^{{{fit_pw['C']:.4g}}}"
-            r2_pw = round(fit_pw['r2'], 4) if fit_pw.get('r2') is not None else None
-            model_pw = 'power'
-            if m0 is not None:
-                pred_pw = predict(fit_pw, m0)
-                val_pw = round(max(2.0, pred_pw), 2) if pred_pw else (round(st_pw['median'], 2) if st_pw else 7.5)
-            else:
-                val_pw = round(st_pw['median'], 2) if st_pw else 7.5
-        else:
-            model_pw = 'median'
-            val_pw = round(st_pw['median'], 2) if st_pw else 7.5
-            r2_pw = None
-            eq_pw = f"m0/P = {val_pw}"
-            eq_pw_tex = f"m_0/P = {val_pw}"
-
-        suggestions['pw'] = {
-            'key': 'pw',
-            'name': 'Power Loading',
-            'symbol': 'P/W',
-            'unit': 'kg/kW',
-            'suggested_value': val_pw,
-            'model_type': model_pw,
-            'equation': eq_pw,
-            'equation_latex': eq_pw_tex,
-            'r2': r2_pw,
-            'n': len(pts_pw),
-            'stats': _format_stats(st_pw),
-            'typical_range': SUGGESTION_TYPICAL_RANGES['pw'].get(aircraft_type, [4.0, 12.0]),
-        }
-    else:
-        suggestions['pw'] = {
-            'key': 'pw',
-            'name': 'Power Loading',
-            'symbol': 'P/W',
-            'unit': 'kg/kW',
-            'suggested_value': None,
-            'model_type': None,
-            'equation': None,
-            'equation_latex': None,
-            'r2': None,
-            'n': 0,
-            'stats': None,
-            'typical_range': None,
-        }
-
-    # 5. Thrust Loading (tw) - Jet classes
-    if aircraft_type in ('jet_business', 'jet_transport'):
-        pts_tw = [(r['m0'], r['thrust_to_weight']) for r in class_ac if r.get('m0') and r.get('thrust_to_weight')]
-        st_tw = compute_vector_stats([y for _, y in pts_tw])
-        fit_tw = fit_regression(pts_tw, power=False)
-        if fit_tw:
-            sign = '+' if fit_tw['intercept'] >= 0 else '-'
-            eq_tw = f"T/W = {fit_tw['slope']:.7g} · m0 {sign} {abs(fit_tw['intercept']):.4g}"
-            eq_tw_tex = f"T/W = {fit_tw['slope']:.7g} \\cdot m_0 {sign} {abs(fit_tw['intercept']):.4g}"
-            r2_tw = round(fit_tw['r2'], 4) if fit_tw.get('r2') is not None else None
-            model_tw = 'linear'
-            if m0 is not None:
-                pred_tw = predict(fit_tw, m0)
-                val_tw = round(min(0.80, max(0.15, pred_tw)), 3) if pred_tw else (round(st_tw['median'], 3) if st_tw else 0.30)
-            else:
-                val_tw = round(st_tw['median'], 3) if st_tw else 0.30
-        else:
-            model_tw = 'median'
-            val_tw = round(st_tw['median'], 3) if st_tw else 0.30
-            r2_tw = None
-            eq_tw = f"T/W = {val_tw}"
-            eq_tw_tex = f"T/W = {val_tw}"
-
-        suggestions['tw'] = {
-            'key': 'tw',
-            'name': 'Thrust Loading',
-            'symbol': 'T/W',
-            'unit': '−',
-            'suggested_value': val_tw,
-            'model_type': model_tw,
-            'equation': eq_tw,
-            'equation_latex': eq_tw_tex,
-            'r2': r2_tw,
-            'n': len(pts_tw),
-            'stats': _format_stats(st_tw),
-            'typical_range': SUGGESTION_TYPICAL_RANGES['tw'].get(aircraft_type, [0.20, 0.45]),
-        }
-    else:
-        suggestions['tw'] = {
-            'key': 'tw',
-            'name': 'Thrust Loading',
-            'symbol': 'T/W',
-            'unit': '−',
-            'suggested_value': None,
-            'model_type': None,
-            'equation': None,
-            'equation_latex': None,
-            'r2': None,
-            'n': 0,
-            'stats': None,
-            'typical_range': None,
-        }
-
-    # 6. Horizontal Tail Volume (vh)
-    pts_vh = [(r['m0'], r['v_h']) for r in class_ac if r.get('m0') and r.get('v_h') is not None]
-    st_vh = compute_vector_stats([y for _, y in pts_vh])
-    fit_vh = fit_regression(pts_vh, power=False)
-    vh_typ_range = list(GEOMETRY_METRICS_INFO['v_h']['typical_ranges'][aircraft_type][:2])
-    if fit_vh and fit_vh.get('r2') is not None and fit_vh['r2'] >= 0.50:
-        sign = '+' if fit_vh['intercept'] >= 0 else '-'
-        eq_vh = f"V_H = {fit_vh['slope']:.7g} · m0 {sign} {abs(fit_vh['intercept']):.4g}"
-        eq_vh_tex = f"V_H = {fit_vh['slope']:.7g} \\cdot m_0 {sign} {abs(fit_vh['intercept']):.4g}"
-        r2_vh = round(fit_vh['r2'], 4)
-        model_vh = 'linear'
-        if m0 is not None:
-            pred_vh = predict(fit_vh, m0)
-            val_vh = round(min(1.5, max(0.3, pred_vh)), 2) if pred_vh else (round(st_vh['median'], 2) if st_vh else 0.70)
-        else:
-            val_vh = round(st_vh['median'], 2) if st_vh else 0.70
-    else:
-        model_vh = 'median'
-        val_vh = round(st_vh['median'], 2) if st_vh else 0.70
-        r2_vh = round(fit_vh['r2'], 4) if fit_vh and fit_vh.get('r2') is not None else None
-        eq_vh = f"V_H = {val_vh}"
-        eq_vh_tex = f"V_H = {val_vh}"
-
-    suggestions['vh'] = {
-        'key': 'vh',
-        'name': 'Horizontal Tail Volume',
-        'symbol': 'V_H',
-        'unit': '−',
-        'suggested_value': val_vh,
-        'model_type': model_vh,
-        'equation': eq_vh,
-        'equation_latex': eq_vh_tex,
-        'r2': r2_vh,
-        'n': len(pts_vh),
-        'stats': _format_stats(st_vh),
-        'typical_range': vh_typ_range,
-    }
-
-    # 7. Aileron Span Ratio (b_ail_ratio)
-    pts_ba = [r['aileron_span_fraction'] for r in class_ac if r.get('aileron_span_fraction') is not None]
-    st_ba = compute_vector_stats(pts_ba)
-    val_ba = round(st_ba['median'], 2) if st_ba else 0.40
-    suggestions['b_ail_ratio'] = {
-        'key': 'b_ail_ratio',
-        'name': 'Aileron Span Ratio',
-        'symbol': 'b_ail/(b/2)',
-        'unit': '−',
-        'suggested_value': val_ba,
-        'model_type': 'median',
-        'equation': f"b_ail/(b/2) = {val_ba}",
-        'equation_latex': f"\\frac{{b_{{ail}}}}{{b/2}} = {val_ba}",
-        'r2': None,
-        'n': len(pts_ba),
-        'stats': _format_stats(st_ba),
-        'typical_range': list(GEOMETRY_METRICS_INFO['aileron_span_fraction']['typical_ranges'][aircraft_type][:2]),
-    }
-
-    # 8. Aileron Chord Ratio (c_ail_ratio)
-    pts_ca = [r['aileron_chord_ratio'] for r in class_ac if r.get('aileron_chord_ratio') is not None]
-    st_ca = compute_vector_stats(pts_ca)
-    val_ca = round(st_ca['median'], 2) if st_ca else 0.20
-    suggestions['c_ail_ratio'] = {
-        'key': 'c_ail_ratio',
-        'name': 'Aileron Chord Ratio',
-        'symbol': 'c_ail/c',
-        'unit': '−',
-        'suggested_value': val_ca,
-        'model_type': 'median',
-        'equation': f"c_ail/c = {val_ca}",
-        'equation_latex': f"\\frac{{c_{{ail}}}}{{c}} = {val_ca}",
-        'r2': None,
-        'n': len(pts_ca),
-        'stats': _format_stats(st_ca),
-        'typical_range': list(GEOMETRY_METRICS_INFO['aileron_chord_ratio']['typical_ranges'][aircraft_type][:2]),
-    }
-
-    # 9. Elevator Chord Ratio (c_e_ratio)
-    pts_ce = [r['elevator_chord_ratio'] for r in class_ac if r.get('elevator_chord_ratio') is not None]
-    st_ce = compute_vector_stats(pts_ce)
-    val_ce = round(st_ce['median'], 2) if st_ce else 0.35
-    suggestions['c_e_ratio'] = {
-        'key': 'c_e_ratio',
-        'name': 'Elevator Chord Ratio',
-        'symbol': 'c_e/c_H',
-        'unit': '−',
-        'suggested_value': val_ce,
-        'model_type': 'median',
-        'equation': f"c_e/c_H = {val_ce}",
-        'equation_latex': f"\\frac{{c_e}}{{c_H}} = {val_ce}",
-        'r2': None,
-        'n': len(pts_ce),
-        'stats': _format_stats(st_ce),
-        'typical_range': list(GEOMETRY_METRICS_INFO['elevator_chord_ratio']['typical_ranges'][aircraft_type][:2]),
-    }
-
-    # 10. Rudder Chord Ratio (c_r_ratio)
-    pts_cr = [r['rudder_chord_ratio'] for r in class_ac if r.get('rudder_chord_ratio') is not None]
-    st_cr = compute_vector_stats(pts_cr)
-    val_cr = round(st_cr['median'], 2) if st_cr else 0.35
-    suggestions['c_r_ratio'] = {
-        'key': 'c_r_ratio',
-        'name': 'Rudder Chord Ratio',
-        'symbol': 'c_r/c_V',
-        'unit': '−',
-        'suggested_value': val_cr,
-        'model_type': 'median',
-        'equation': f"c_r/c_V = {val_cr}",
-        'equation_latex': f"\\frac{{c_r}}{{c_V}} = {val_cr}",
-        'r2': None,
-        'n': len(pts_cr),
-        'stats': _format_stats(st_cr),
-        'typical_range': list(GEOMETRY_METRICS_INFO['rudder_chord_ratio']['typical_ranges'][aircraft_type][:2]),
-    }
-
-    # 11. Dihedral (dihedral_deg)
-    pts_dih = [r['dihedral_deg'] for r in class_ac if r.get('dihedral_deg') is not None]
-    st_dih = compute_vector_stats(pts_dih)
-    is_high_wing = (wing_configuration in ('high', 'braced_high', 'strut_braced'))
-    if is_high_wing:
-        if aircraft_type in ('piston_ga', 'turboprop_regional'):
-            typ_dih = [0.0, 2.5]
-            val_dih = 1.5
-        else:
-            typ_dih = [0.0, 3.0]
-            val_dih = 1.5
-        model_dih = 'literature'
-    else:
-        if aircraft_type == 'piston_ga':
-            typ_dih = [3.5, 7.0]
-            val_dih = round(st_dih['median'], 1) if (st_dih and 3.5 <= st_dih['median'] <= 7.0) else 5.0
-        elif aircraft_type == 'turboprop_regional':
-            typ_dih = [4.0, 6.5]
-            val_dih = 5.0
-        else:
-            typ_dih = list(GEOMETRY_METRICS_INFO['dihedral_deg']['typical_ranges'][aircraft_type][:2])
-            val_dih = round(st_dih['median'], 1) if st_dih else 3.0
-        model_dih = 'median' if (st_dih and not wing_configuration) else 'literature'
-
-    suggestions['dihedral_deg'] = {
-        'key': 'dihedral_deg',
-        'name': 'Dihedral Angle',
-        'symbol': 'Gamma',
-        'unit': '°',
-        'suggested_value': val_dih,
-        'model_type': model_dih,
-        'equation': f"Gamma = {val_dih}°",
-        'equation_latex': f"\\Gamma = {val_dih}^\\circ",
-        'r2': None,
-        'n': len(pts_dih),
-        'stats': _format_stats(st_dih),
-        'typical_range': typ_dih,
-    }
-
-    return {
-        'status': 'ok',
-        'aircraft_type': aircraft_type,
-        'class_name': CLASSES[aircraft_type],
-        'm0': m0,
-        'suggestions': suggestions,
-    }
-
+            raise ValueError("m0 must be a positive finite number") from None
+    engine = engine_type or DEFAULT_ENGINE.get(aircraft_type, 'prop')
+    if engine not in ENGINE_LABELS:
+        raise ValueError(f"Unknown engine_type: '{engine_type}'")
+    params = {'aircraft_type': aircraft_type, 'engine_type': engine, 'wing_configuration': wing_configuration}
+    rows = select_references(params, m0)
+    weights = sample_weights('family')
+    valid_mass = [r for r in rows if valid_value('empty_fraction', r)]
+    mass_fit = fit_regression([(r['m0'], r['empty_fraction']) for r in valid_mass], weights(valid_mass), power=True)
+    reference_year, forecast_year = forecast_years()
+    sample = describe_sample(params, rows, m0)
+    return {'status': 'ok', 'aircraft_type': aircraft_type, 'class_name': CLASSES[aircraft_type],
+            'engine_type': engine, 'm0': m0, 'sample': sample,
+            'reference_year': reference_year, 'forecast_year': forecast_year,
+            'suggestions': trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample)}
