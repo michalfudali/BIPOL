@@ -27,6 +27,9 @@ def test_conclusions_report_failed_criteria_and_governing_gusts(result):
     changed['balance']['stability']['static_margin_aft_pct'] = 2
     changed['performance']['climb']['wy_max_ms'] = 0
     changed['geometry']['control_surfaces']['ailerons']['roll_authority_ok'] = False
+    # Define the gust-governing scenario explicitly; a preset need not have it.
+    limits = changed['envelope']['limits']
+    limits['n_gust_max'] = limits['n_max'] + 1
     doc = report_document(changed, ['p3','p4','p5','p6'])
     assert 'nie jest spełnione' in ' '.join(doc['conclusions']['p3'])
     assert 'nie jest spełniony' in ' '.join(doc['conclusions']['p5'])

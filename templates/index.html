@@ -1275,7 +1275,7 @@
 
               <div class="subpoint-card">
                 <div class="subpoint-header">
-                  <h4><span class="subpoint-badge required">Podpunkt 2.5</span> Analiza Kosztów Produkcji Samolotu wg Corke DAPCA IV (3 pkt)</h4>
+                  <h4><span class="subpoint-badge required">Podpunkt 2.5</span> Analiza Kosztów Samolotu wg BIPOL_2 (Corke, 1970/1986 → ekstrapolacja) (3 pkt)</h4>
                   <span class="badge badge-success">Obowiązkowe</span>
                 </div>
                 <div class="subpoint-body">
@@ -1283,8 +1283,8 @@
                     <tr><td>Prace badawczo-rozwojowe R&D (H_E)</td><td><b id="p2_rdte_hours">---</b> roboczogodzin</td></tr>
                     <tr><td>Robocizna produkcyjna montażu (H_ML)</td><td><b id="p2_labor_hours">---</b> roboczogodzin</td></tr>
                     <tr><td>Kontrola jakości (H_QC = 0.13 H_ML)</td><td><b id="p2_qc_hours">---</b> roboczogodzin</td></tr>
-                    <tr><td>Szacowany koszt jednostkowy (Flyaway Cost) dla serii N=250</td><td><b id="p2_unit_cost" style="color:#005691;">--- USD</b></td></tr>
-                    <tr><td>Sugerowana cena sprzedaży brutto (+12% marży)</td><td><b id="p2_selling_price" style="color:#16a34a;">--- PLN</b></td></tr>
+                    <tr><td>Minimalna cena jednostkowa wg wzoru 5.10 (C_P = 0, seria N_P = 250)</td><td><b id="p2_unit_cost" style="color:#005691;">--- USD</b></td></tr>
+                    <tr><td>Cena z zyskiem C_P = 12% (bez podatku)</td><td><b id="p2_selling_price" style="color:#16a34a;">--- PLN</b></td></tr>
                   </table>
                 </div>
               </div>
@@ -1340,10 +1340,10 @@
                     <div style="background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0; font-size:0.84rem;">
                       <strong>Wymagania konstrukcyjne rysunku 3-rzutowego:</strong>
                       <ul id="p3_blueprint_checks_list" style="margin:4px 0 0 16px; padding:0;">
-                        <li>Kąt widoczności pilota do przodu: <b>&ge; 15°</b> (spełniony)</li>
+                        <li>Widoczność pilota: do sprawdzenia na zwymiarowanym przekroju kabiny.</li>
                         <li id="p3_chk_prop_mach">Prędkość końcówki śmigła: <b>M_tip &le; 0.85</b> (bezpieczna)</li>
                         <li id="p3_chk_prop_clear">Prześwit śmigła nad gruntem: <b>&ge; 230 mm</b> (zapewniony)</li>
-                        <li>Kąt staczania podwozia: <b>&ge; 15°</b> za środkiem masy</li>
+                        <li>Stateczność na podwoziu: do sprawdzenia z rzeczywistą wysokością środka masy.</li>
                       </ul>
                     </div>
                     <div style="background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0; font-size:0.84rem;">
@@ -2210,7 +2210,7 @@
 
           <div class="input-group"><label for="wiz_wing_planform">Obrys skrzydła</label><select id="wiz_wing_planform"><option value="trapezoidal">Trapezowy</option><option value="rectangular">Prostokątny</option><option value="compound_trapezoid">Prostokątno-trapezowy</option><option value="elliptical">Eliptyczny</option><option value="swept_trapezoidal">Skośny trapezowy</option></select></div>
           <div class="input-row">
-            <div class="input-group"><label for="wiz_gear_attachment">Mocowanie podwozia głównego</label><select id="wiz_gear_attachment"><option value="fuselage">Do kadłuba</option><option value="wing">Do skrzydła</option></select></div><div class="input-group">
+            <div class="input-group"><label for="wiz_gear_attachment">Mocowanie podwozia głównego</label><select id="wiz_gear_attachment"><option value="fuselage">Do kadłuba</option><option value="wing">Do skrzydła</option></select></div><div class="input-group"><label for="wiz_gear_retraction">Podwozie</label><select id="wiz_gear_retraction" title="Automatycznie: stałe dla szybowców i motoszybowców oraz dla tłokowych GA i UAV o Vmax ≤ 270 km/h; chowane dla pozostałych."><option value="auto">Automatycznie wg klasy</option><option value="fixed">Stałe</option><option value="retractable">Chowane</option></select></div><div class="input-group">
               <label for="wiz_wing_config">Układ pionowy skrzydła:</label>
               <select id="wiz_wing_config">
                 <option value="low">Dolnopłat wolnonośny (łatwe chowanie podwozia, bezpieczeństwo)</option>
@@ -2336,18 +2336,19 @@
   <script>
     window.INITIAL_PORTAL_MODE = "{{ initial_portal_mode or '' }}";
   </script>
-  <script src="/static/js/studio-core.js?v=1"></script>
-  <script src="/static/js/aircraft-preview.js?v=3"></script>
+  <script src="/static/js/studio-core.js?v=2"></script>
+  <script src="/static/js/aircraft-preview.js?v=4"></script>
   <script src="/static/js/studio-visuals.js?v=2"></script>
   <script src="/static/js/didactic_data.js?v=12"></script>
   <script src="/static/js/charts.js?v=14"></script>
-  <script src="/static/js/app.js?v=19"></script>
-  <script src="/static/js/constraints-ui.js?v=3"></script>
+  <script src="/static/js/app.js?v=20"></script>
+  <script src="/static/js/constraints-ui.js?v=4"></script>
   <script src="/static/js/design-basis.js?v=3"></script>
   <script src="/static/js/studio.js?v=7"></script>
   <script src="/static/js/aircraft-project.js?v=1"></script>
   <script src="/static/js/aircraft-editor.js?v=1"></script>
-  <script src="/static/js/trends.js?v=5"></script>
+  <script src="/static/js/trend-inputs.js?v=1"></script>
+  <script src="/static/js/trends.js?v=6"></script>
   <script src="/static/js/workspace.js?v=4"></script>
   <script src="/static/js/calculation-tree.js?v=1"></script>
 </body>

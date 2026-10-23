@@ -139,9 +139,7 @@
     }
     function leading(y) {
       // The solver defines quarter-chord sweep; keep its planform convention.
-      return result.balance.x_le_wing_m + (['rectangular','compound_trapezoid','elliptical'].includes(w.wing_planform)
-        ? (w.wing_planform === 'elliptical' ? (w.cr-chord(y))*.25 : 0)
-        : y*Math.tan(w.sweep_deg*rad) + (w.cr-chord(y))*.25);
+      return result.balance.x_le_wing_m + y*Math.tan(w.sweep_deg*rad) + (w.cr-chord(y))*.25;
     }
     function device(source, fallbackIn, fallbackOut, ratio, enabled) {
       return {in:clamp(finite(source?.y_in_m, half*fallbackIn), 0, half),
@@ -153,7 +151,7 @@
     const aileron = device(controls.ailerons, .72, .97,
       clamp(finite(controls.ailerons?.ca_over_c, finite(p.aileron_chord_ratio,.22)), .05,.5), p.aileron_type !== 'none');
     const slatType = p.slat_type || 'none', hasSlats = slatType !== 'none';
-    const slat = {in:Math.max(fw*.6,half*.08), out:half*.94};
+    const slat = {in:finite(controls.slats?.y_in_m,Math.max(fw*.6,half*.08)), out:finite(controls.slats?.y_out_m,half*.94)};
     const slatName = {fixed_slot:'Slot stały', slats_auto:'Slot automatyczny', auto_slat:'Slot automatyczny', krueger:'Klapa Kruegera'}[slatType] || 'Przedskrzydło';
     const spanStations = [...new Set([0,half,flap.in,flap.out,aileron.in,aileron.out,
       ...(hasSlats ? [slat.in,slat.out] : []), finite(w.break_station_m,0),
@@ -187,15 +185,16 @@
     const tailChoice=p.tail_type||p.tail_config;
     const tTail=['t','t_tail'].includes(tailChoice) || (!tailChoice && concept && ['turboprop_regional','jet_business'].includes(kind));
     const tailZ=tTail?vt.h_v*.93:fw*.1, tailRoot=finite(ht.cr_h,ht.S_h/ht.b_h*1.25), tailTip=finite(ht.ct_h,tailRoot*.6);
-    const tailX=L-tailRoot*.9;
+    const tailAc=finite(ht.x_ac_m,L-tailRoot*.65), tailX=tailAc-.25*tailRoot;
     for (const sign of [-1,1]) {
-      solid([[tailX,0,tailZ],[tailX+.3*tailRoot,sign*ht.b_h*.47,tailZ],
-        [tailX+.42*tailRoot,sign*ht.b_h/2,tailZ],[tailX+.3*tailRoot+tailTip,sign*ht.b_h/2,tailZ],
+      solid([[tailX,0,tailZ],[tailAc-.25*tailTip,sign*ht.b_h/2,tailZ],
+        [tailAc+.75*tailTip,sign*ht.b_h/2,tailZ],
         [tailX+tailRoot,0,tailZ]],[0,0,tailRoot*.022],'tail','Usterzenie poziome');
     }
     const finRoot=finite(vt.cr_v,tailRoot), finTip=finite(vt.ct_v,finRoot*.5);
-    solid([[L-finRoot,0,fw*.06],[L-finTip*.9,0,vt.h_v*.95],[L-finTip*.7,0,vt.h_v],
-      [L+finTip*.04,0,vt.h_v],[L+finTip*.1,0,vt.h_v*.94],[L,0,fw*.06]], [0,fw*.025,0], 'tail','Usterzenie pionowe');
+    const finAc=finite(vt.x_ac_m,L-finRoot*.75);
+    solid([[finAc-.25*finRoot,0,fw*.06],[finAc-.25*finTip,0,vt.h_v],
+      [finAc+.75*finTip,0,vt.h_v],[finAc+.75*finRoot,0,fw*.06]], [0,fw*.025,0], 'tail','Usterzenie pionowe');
 
     if (p.engine_type && p.engine_type!=='none' && p.engine_location!=='none') {
       const jet=p.engine_type==='jet', loc=p.engine_location || 'nose';

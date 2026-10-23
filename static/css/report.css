@@ -62,6 +62,7 @@ tbody tr:last-child td { border-bottom: 1px solid #777; }
 figure { counter-increment: figure; margin: 5mm 0 6mm; break-inside: avoid; }
 figure svg { display: block; width: 100%; height: auto; max-height: 76mm; }
 figure.blueprint svg { max-height: 112mm; }
+figure .figure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
 figcaption { font-size: 10pt; line-height: 1.35; margin-top: 2mm; text-align: center; }
 figcaption::before { content: "Rys. " counter(figure) ". "; }
 figure .legend { display: flex; justify-content: center; gap: 4mm; flex-wrap: wrap; font: 8pt Arial, sans-serif; }

@@ -16,6 +16,24 @@
     points:[{x:dp.ws,y:jet?dp.tw:dp.pw,label:'Projekt'}]});
   chart('repPolar',{title:'Biegunowe aerodynamiczne',xLabel:'Cx [—]',yLabel:'Cz [—]',
     series:[['Gładka','cx_clean'],['Startowa','cx_to'],['Do lądowania','cx_lnd']].map(([name,key],i)=>({name,dash:i===1,data:a.polar_points.map(p=>[p[key],p.cz])}))});
+  const wingRows=res.bipol_projects.p3.wing_alpha_table||[];
+  chart('repWingAlpha',{title:'Płat: Cz(α) i Cm(α)',xLabel:'α [°]',yLabel:'Cz, Cm [—]',
+    series:[{name:'Cz',data:wingRows.map(r=>[r.alpha_deg,r.cz])},{name:'Cm',dash:true,data:wingRows.map(r=>[r.alpha_deg,r.cm_le])}]});
+  chart('repWingPolar',{title:'Płat: Cz(Cx)',xLabel:'Cx [—]',yLabel:'Cz [—]',series:[{name:'Płat',data:wingRows.map(r=>[r.cx,r.cz])}]});
+  const cc=res.bipol_projects.p4.cg_characteristics;
+  if (cc) {
+    const ac=cc.alpha_table, pos=ac.filter(r=>r.cz>0), sp=cc.speed_polars;
+    chart('repAcCzAlpha',{title:'Samolot: Cz(α)',xLabel:'α [°]',yLabel:'Cz [—]',series:[{name:'Cz',data:ac.map(r=>[r.alpha_deg,r.cz])}]});
+    chart('repAcCmAlpha',{title:'Samolot: Cm(α)',xLabel:'α [°]',yLabel:'Cm [—]',
+      series:[{name:'ŚC przedni',data:ac.map(r=>[r.alpha_deg,r.cm_fwd])},{name:'ŚC tylny',dash:true,data:ac.map(r=>[r.alpha_deg,r.cm_aft])}]});
+    chart('repKAlpha',{title:'K(α)',xLabel:'α [°]',yLabel:'K [—]',series:[{name:'K',data:pos.map(r=>[r.alpha_deg,r.k])}]});
+    chart('repKCz',{title:'K(Cz)',xLabel:'Cz [—]',yLabel:'K [—]',series:[{name:'K',data:pos.map(r=>[r.cz,r.k])}]});
+    chart('repEAlpha',{title:'E(α)',xLabel:'α [°]',yLabel:'E [—]',series:[{name:'E',data:pos.map(r=>[r.alpha_deg,r.e])}]});
+    chart('repECz',{title:'E(Cz)',xLabel:'Cz [—]',yLabel:'E [—]',series:[{name:'E',data:pos.map(r=>[r.cz,r.e])}]});
+    chart('repSpeedPolarCg',{title:'Biegunowa prędkości',xLabel:'V [km/h]',yLabel:'w [m/s]',
+      series:[['forward','ŚC przedni'],['aft','ŚC tylny']].map(([k,name],i)=>({name,dash:i===1,data:sp[k].points.filter(p=>p.v_kmh<=sp[k].v_opt_kmh*2.2).map(p=>[p.v_kmh,p.w_ms])})),
+      points:[['forward','przód'],['aft','tył']].map(([k,label])=>({x:sp[k].v_ek_kmh,y:sp[k].w_min_ms,label:'V_ek '+label}))});
+  }
   chart('repSchrenk',{title:'Rozkład Schrenka',xLabel:'y [m]',yLabel:'Cięciwa zastępcza [m]',
     series:[['Geometryczny','c_geom'],['Eliptyczny','c_ellip'],['Schrenka','c_schrenk']].map(([name,key],i)=>({name,dash:i===1,data:g.schrenk.map(p=>[p.y,p[key]])}))});
   chart('repClimb',{title:'Prędkość wznoszenia',xLabel:'V [km/h]',yLabel:'wy [m/s]',

@@ -7,8 +7,9 @@
     trend_weighting:'family', mission_phase_model:'galinski', fuel_reserve_factor:1.06, mission_ld_factor:0.94};
   let result, catalog, catalogPromise, page = 0, selected = new Set(), visible = [];
   let latestSuggestions = null;
+  let suggestionRequest = 0;
   const suggestionLabels = {ws:'Obciążenie powierzchni skrzydła', ar:'Wydłużenie skrzydła', me_m0:'Udział masy pustej',
-    pw:'Obciążenie napędu', tw:'Stosunek ciągu do ciężaru', v_h:'Objętość względna usterzenia poziomego',
+    pw:'Obciążenie napędu', tw:'Stosunek ciągu do ciężaru', vh:'Objętość względna usterzenia poziomego',
     v_v:'Objętość względna usterzenia pionowego', dihedral_deg:'Wznios skrzydła', b_ail_ratio:'Względna rozpiętość lotek',
     c_ail_ratio:'Względna cięciwa lotek', c_e_ratio:'Względna cięciwa steru wysokości', c_r_ratio:'Względna cięciwa steru kierunku'};
   const size = 20;
@@ -74,15 +75,19 @@
     const tbody = $('trendSuggestionsRows');
     const statusEl = $('trendSuggestionsStatus');
     if (!tbody) return;
+    const request = ++suggestionRequest;
+    latestSuggestions = null;
+    tbody.innerHTML = '<tr><td colspan="7">Pobieranie sugestii dla bieżącego projektu…</td></tr>';
     try {
       const url = `/api/trends/suggestions?aircraft_type=${encodeURIComponent(acType || 'piston_ga')}${m0 ? `&m0=${encodeURIComponent(m0)}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Nie udało się pobrać sugestii trendów.');
       const data = await res.json();
+      if (request !== suggestionRequest) return;
       latestSuggestions = data.suggestions || {};
 
       const rows = [];
-      const order = ['ws', 'ar', 'me_m0', 'pw', 'tw', 'v_h', 'v_v', 'dihedral_deg', 'b_ail_ratio', 'c_ail_ratio', 'c_e_ratio', 'c_r_ratio'];
+      const order = ['ws', 'ar', 'me_m0', 'pw', 'tw', 'vh', 'v_v', 'dihedral_deg', 'b_ail_ratio', 'c_ail_ratio', 'c_e_ratio', 'c_r_ratio'];
       for (const k of order) {
         const s = latestSuggestions[k];
         if (!s) continue;
@@ -96,68 +101,46 @@
           <td><code>${esc(s.equation)}</code></td>
           <td>${esc(fitInfo)}</td>
           <td>
-            <button type="button" class="btn btn-outline btn-sm apply-single-trend-btn" data-sugg-key="${esc(k)}" style="padding:3px 10px; font-size:0.78rem; font-weight:600;">
+            ${BipolTrendInputs.supports(k)?`<button type="button" class="btn btn-outline btn-sm apply-single-trend-btn" data-sugg-key="${esc(k)}" style="padding:3px 10px; font-size:0.78rem; font-weight:600;">
               + Zastosuj
-            </button>
+            </button>`:`<small>Do porównania</small>`}
           </td>
         </tr>`);
       }
       tbody.innerHTML = rows.join('') || '<tr><td colspan="7">Brak dostępnych sugestii dla tej klasy.</td></tr>';
       if (statusEl) statusEl.innerHTML = `<span style="color:#059669; font-weight:600;">✅ Wyznaczono ${Object.keys(latestSuggestions).length} sugestii empirycznych dla klasy: <em>${esc(data.class_name)}</em> (m₀ = ${fmt(m0 || 0, 1)} kg)</span>`;
     } catch (err) {
+      if (request !== suggestionRequest) return;
       if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:#dc2626;">Błąd: ${esc(err.message)}</td></tr>`;
     }
   }
 
-  function applySingleSuggestion(key) {
-    if (!latestSuggestions || !latestSuggestions[key]) return;
-    const s = latestSuggestions[key];
-    const val = s.suggested_value;
-    let appliedName = suggestionLabels[key] || s.name;
-
-    if (key === 'ar') {
-      const el = $('aspect_ratio');
-      if (el) { el.value = val; formBaseParams.aspect_ratio = val; }
-      if (window.userLockedParams) window.userLockedParams.add('aspect_ratio');
-      appliedName = 'Wydłużenie skrzydła AR';
-    } else if (key === 'dihedral_deg') {
-      const el = $('dihedral_deg');
-      if (el) { el.value = val; formBaseParams.dihedral_deg = val; }
-      appliedName = 'Wznios skrzydła Γ';
-    } else if (key === 'ws') {
-      // Jeśli jesteśmy w trybie wing_input_mode = loading lub span_aspect
-      appliedName = `Obciążenie powierzchni W/S (${val} kg/m²)`;
-    } else if (key === 'me_m0') {
-      appliedName = `Udział masy pustej me/m0 (${val})`;
-    } else if (key === 'pw' || key === 'tw') {
-      appliedName = `Obciążenie napędu (${val} ${s.unit})`;
+  function applySuggestionValues(key) {
+    const s=latestSuggestions?.[key];
+    if(!s) return false;
+    const patch=BipolTrendInputs.patch(key,s.suggested_value,collectFormData(),currentResults?.mass?.m0);
+    Object.assign(formBaseParams,patch);
+    for(const [field,value] of Object.entries(patch)) {
+      if($(field)) $(field).value=value;
     }
-
-    if ($('trendSuggestionsStatus')) {
-      $('trendSuggestionsStatus').innerHTML = `<span style="color:#2563eb; font-weight:700;">🎯 Zastosowano parametr: ${esc(appliedName)} = ${val} ${esc(s.unit)}. Przeliczanie projektu...</span>`;
-    }
-    if (typeof performCalculation === 'function') performCalculation();
+    window.BipolDesignBasis?.sync();
+    return true;
   }
-
-  function applyAllKeySuggestions() {
-    if (!latestSuggestions) return;
-    const applied = [];
-    if (latestSuggestions.ar) {
-      const el = $('aspect_ratio');
-      if (el) { el.value = latestSuggestions.ar.suggested_value; formBaseParams.aspect_ratio = el.value; }
-      if (window.userLockedParams) window.userLockedParams.add('aspect_ratio');
-      applied.push(`AR=${latestSuggestions.ar.suggested_value}`);
-    }
-    if (latestSuggestions.dihedral_deg) {
-      const el = $('dihedral_deg');
-      if (el) { el.value = latestSuggestions.dihedral_deg.suggested_value; formBaseParams.dihedral_deg = el.value; }
-      applied.push(`Γ=${latestSuggestions.dihedral_deg.suggested_value}°`);
-    }
-
-    if ($('trendSuggestionsStatus')) {
-      $('trendSuggestionsStatus').innerHTML = `<span style="color:#059669; font-weight:700;">🚀 Zastosowano parametry trendów: ${esc(applied.join(', '))}. Przeliczam projekt...</span>`;
-    }
-    if (typeof performCalculation === 'function') performCalculation();
+  async function applySingleSuggestion(key) {
+    try {
+      if(!applySuggestionValues(key)) return;
+      await performCalculation();
+      const note=key==='ws'?' Przyjęto powierzchnię S z aktualnej masy i m₀/S; nowy bilans może zmienić obciążenie.':
+        key==='me_m0'?' Przyjęto stały udział masy pustej. Możesz wrócić do korelacji klasy przyciskiem poniżej.':'';
+      $('trendSuggestionsStatus').textContent=`Przeniesiono: ${suggestionLabels[key]||key}.${note} Sprawdź wyniki i warunki wykonalności.`;
+    } catch(error) { $('trendSuggestionsStatus').textContent=error.message; }
+  }
+  async function applyAllKeySuggestions() {
+    try {
+      for(const key of ['ar','vh','dihedral_deg','b_ail_ratio','c_ail_ratio','c_e_ratio','c_r_ratio']) applySuggestionValues(key);
+      await performCalculation();
+      $('trendSuggestionsStatus').textContent='Przeniesiono dostępne proporcje geometryczne. Sprawdź wyniki wyważenia i osiągów.';
+    } catch(error) { $('trendSuggestionsStatus').textContent=error.message; }
   }
 
   async function loadCatalog() {
@@ -313,6 +296,11 @@
 
     // Obsługa panelu sugestii parametrów
     $('btnApplyAllTrendSuggestions')?.addEventListener('click', applyAllKeySuggestions);
+    $('trendResetMassModel')?.addEventListener('click',async()=>{
+      delete formBaseParams.empty_mass_fraction;
+      await performCalculation();
+      $('trendSuggestionsStatus').textContent='Przywrócono korelację masy pustej dla klasy samolotu.';
+    });
     $('trendSuggestionsRows')?.addEventListener('click', event => {
       const btn = event.target.closest('.apply-single-trend-btn');
       if (btn) applySingleSuggestion(btn.dataset.suggKey);

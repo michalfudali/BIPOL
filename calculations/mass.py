@@ -178,6 +178,8 @@ def calculate_mass_sizing(params: dict):
     
     # 4. Pętla iteracyjna dla m_0 (MTOW)
     def empty_share(mass):
+        if params.get('empty_mass_fraction') is not None:
+            return float(params['empty_mass_fraction'])
         return min(max(A_coeff * max(50.0, mass) ** C_coeff * struct_mod, 0.38), 0.74)
 
     useful_mass = m_payload + m_crew
@@ -275,6 +277,7 @@ def calculate_mass_sizing(params: dict):
         "unmanned": unmanned,
         "m_zfw": round(m_zfw, 1),
         "empty_fraction": round(empty_fraction, 4),
+        "empty_mass_model": 'fixed_fraction' if params.get('empty_mass_fraction') is not None else 'class_correlation',
         "fuel_fraction": round(fuel_fraction, 4),
         "payload_fraction": round(m_payload / m0, 4),
         "ld_cruise_used": round(ld_cr, 2),
@@ -288,14 +291,14 @@ def calculate_mass_sizing(params: dict):
             "note": "Metoda proporcji: bez zrzutu ładunku. Start/wznoszenie/zniżanie/lądowanie są przybliżeniami. Krążenie jest oddzielną fazą; współczynnik 1,06 dodaje rezerwę i paliwo nieużywalne.",
         },
         "fuel_fractions_detail": {
-            "warmup": round(ff_warmup, 4),
-            "takeoff": round(ff_takeoff, 4),
-            "climb": round(ff_climb, 4),
-            "cruise": round(ff_cruise, 4),
-            "descent": round(ff_descent, 4),
-            "loiter": round(ff_loiter, 4),
-            "landing": round(ff_landing, 4),
-            "total_mff": round(m_ff, 4)
+            "warmup": ff_warmup,
+            "takeoff": ff_takeoff,
+            "climb": ff_climb,
+            "cruise": ff_cruise,
+            "descent": ff_descent,
+            "loiter": ff_loiter,
+            "landing": ff_landing,
+            "total_mff": m_ff
         },
         "breakdown": mass_components,
         "iterations": history,

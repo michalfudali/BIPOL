@@ -11,7 +11,7 @@
     ['thrust', 'Ciąg napędu', 'kN', r => r.sizing.design_point.thrust_kn, 2],
     ['ld', 'Doskonałość maksymalna', '−', r => r.aerodynamics.k_max, 2],
     ['stall', 'VS0, poziom morza', 'km/h', r => r.performance.speeds.vs_lnd_kmh, 1],
-    ['vmax', 'Vmax TAS, poziom morza', 'km/h', r => r.params.engine_type === 'none' ? null : r.performance.speeds.v_max_sl_kmh, 1],
+    ['vmax', 'Vmax TAS, poziom morza', 'km/h', r => r.params.engine_type === 'none' || r.performance.level_flight_available_sl === false ? null : r.performance.speeds.v_max_sl_kmh, 1],
     ['climb', 'Wznoszenie, poziom morza', 'm/s', r => r.performance.climb.wy_max_ms, 2],
     ['ceiling', 'Pułap praktyczny', 'm', r => r.performance.ceiling.service_ceiling_m, 0],
     ['margin', 'Zapas stateczności, tylne ŚM', '% ŚDA', r => r.balance.stability.static_margin_aft_pct, 1],

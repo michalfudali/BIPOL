@@ -34,13 +34,14 @@ def drawing_sheet(result):
             x = xwing + y * sweep + .25 * (w['cr'] - chord)
             leading.append(top(x, sign * y)); trailing.append(top(x + chord, sign * y))
         path(leading + trailing[::-1], True)
-        tailx = length - ht['cr_h']
-        path([top(tailx, 0), top(tailx + .25 * ht['cr_h'], sign * ht['b_h'] / 2),
-              top(tailx + .25 * ht['cr_h'] + ht['ct_h'], sign * ht['b_h'] / 2), top(length, 0)], True)
+        tailac = ht['x_ac_m']
+        path([top(tailac-.25*ht['cr_h'], 0), top(tailac-.25*ht['ct_h'], sign*ht['b_h']/2),
+              top(tailac+.75*ht['ct_h'], sign*ht['b_h']/2), top(tailac+.75*ht['cr_h'], 0)], True)
     path([top(*v) for v in fuselage], True)
     path([side(*v) for v in fuselage], True)
-    path([side(length - vt['cr_v'], 0), side(length - vt['cr_v'] * .5, vt['h_v']),
-          side(length - vt['cr_v'] * .5 + vt['ct_v'], vt['h_v']), side(length, 0)], True)
+    tailac = vt['x_ac_m']
+    path([side(tailac-.25*vt['cr_v'], 0), side(tailac-.25*vt['ct_v'], vt['h_v']),
+          side(tailac+.75*vt['ct_v'], vt['h_v']), side(tailac+.75*vt['cr_v'], 0)], True)
     path([side(xwing, 0), side(xwing + w['cr'], 0)])
     zroot = diameter * (.3 if p.get('wing_config') in ('high', 'braced_high') else -.3)
     ztip = zroot + span / 2 * math.tan(math.radians(w['dihedral_deg']))

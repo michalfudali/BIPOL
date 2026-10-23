@@ -14,7 +14,8 @@ Wyznacza:
 """
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
-from calculations.paturski_ml import paturski_project_2_wing, paturski_project_3_aircraft_aero
+from calculations.paturski_ml import paturski_project_2_wing, paturski_project_3_aircraft_aero, default_retractable_gear
+from calculations.high_lift import high_lift
 from calculations.instructor import FLAP_TAKEOFF_DEFLECTION_DEG, FLAP_LANDING_DEFLECTION_DEG
 
 
@@ -55,16 +56,8 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
     slat_type = params.get("slat_type", "none")
     wing_config = params.get("wing_config", "low")
 
-    flap_deltas = {
-        "plain": {"delta_cz_to": 0.30, "delta_cz_lnd": 0.60, "delta_cx0_to": 0.010, "delta_cx0_lnd": 0.035, "e_to": 0.74, "e_lnd": 0.68},
-        "single_slotted": {"delta_cz_to": 0.40, "delta_cz_lnd": 0.85, "delta_cx0_to": 0.012, "delta_cx0_lnd": 0.045, "e_to": 0.76, "e_lnd": 0.70},
-        "fowler": {"delta_cz_to": 0.55, "delta_cz_lnd": 1.15, "delta_cx0_to": 0.015, "delta_cx0_lnd": 0.055, "e_to": 0.78, "e_lnd": 0.72},
-        "double_slotted": {"delta_cz_to": 0.50, "delta_cz_lnd": 1.05, "delta_cx0_to": 0.018, "delta_cx0_lnd": 0.065, "e_to": 0.75, "e_lnd": 0.68},
-        "junkers": {"delta_cz_to": 0.45, "delta_cz_lnd": 0.90, "delta_cx0_to": 0.020, "delta_cx0_lnd": 0.060, "e_to": 0.72, "e_lnd": 0.66},
-        "none": {"delta_cz_to": 0.00, "delta_cz_lnd": 0.00, "delta_cx0_to": 0.000, "delta_cx0_lnd": 0.000, "e_to": oswald_e, "e_lnd": oswald_e}
-    }
-    fd = flap_deltas.get(flap_type, flap_deltas["single_slotted"])
-    # The table's increments describe these discrete course configurations.
+    fd = high_lift(params, oswald_e, geometry=geom)
+    # Section increments are scaled by the wing area equipped with each device.
     # They are preliminary estimates, not measured polars or percentages.
     flap_configurations = {
         'clean': {'deflection_deg': 0.0, 'delta_cz': 0.0, 'delta_cx0': 0.0},
@@ -74,14 +67,7 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
                     'delta_cz': fd['delta_cz_lnd'], 'delta_cx0': fd['delta_cx0_lnd']},
     }
 
-    delta_cz_slat = 0.0
-    delta_cx_slat = 0.0
-    if slat_type in ("auto_slat", "slats_auto"):
-        delta_cz_slat = 0.35
-        delta_cx_slat = 0.008
-    elif slat_type == "fixed_slot":
-        delta_cz_slat = 0.30
-        delta_cx_slat = 0.012
+    delta_cz_slat, delta_cx_slat = fd['slat_lift'], fd['slat_drag']
 
     cz_max_to = round(cz_max_clean + flap_configurations['takeoff']['delta_cz'] + delta_cz_slat * 0.5, 2)
     cz_max_lnd = round(cz_max_clean + flap_configurations['landing']['delta_cz'] + delta_cz_slat, 2)
@@ -90,7 +76,7 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
     delta_cx0_lnd = flap_configurations['landing']['delta_cx0'] + delta_cx_slat
 
     ac_type = params.get("aircraft_type", "piston_ga")
-    is_retractable = bool(params.get("retractable_gear", True if ac_type not in ["piston_ga", "ultralight", "glider"] else False))
+    is_retractable = default_retractable_gear(params)
     delta_cx0_gear = 0.018 if (is_retractable and ac_type != "glider") else 0.000
 
     e_to = min(oswald_e, fd["e_to"])
@@ -234,6 +220,9 @@ def calculate_aerodynamics(geom: dict, params: dict, m0: float = None):
         "cz_max_to": cz_max_to,
         "cz_max_lnd": cz_max_lnd,
         "flap_configurations": flap_configurations,
+        "high_lift_model": dict(flap_area_fraction=fd['flap_area_fraction'],
+            slat_area_fraction=fd['slat_area_fraction'],
+            note='Przyrosty profilowe 20°/40° pomnożono przez udział powierzchni płata z mechanizacją (BIPOL_2, s. 4). Wartości wstępne; wymagają biegunowych wybranego profilu.'),
         "polar_points": polar_points,
         "control_surfaces": geom.get("control_surfaces", {}),
         "paturski_p2": p2,

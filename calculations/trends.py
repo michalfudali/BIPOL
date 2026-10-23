@@ -603,8 +603,8 @@ def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None):
     st_ws = compute_vector_stats([y for _, y in pts_ws])
     fit_ws = fit_regression(pts_ws, power=True)
     if fit_ws and fit_ws.get('A') and fit_ws.get('C'):
-        eq_ws = f"W/S = {fit_ws['A']:.4g} · m0^{fit_ws['C']:.4g}"
-        eq_ws_tex = f"W/S = {fit_ws['A']:.4g} \\cdot m_0^{{{fit_ws['C']:.4g}}}"
+        eq_ws = f"m₀/S = {fit_ws['A']:.4g} · m0^{fit_ws['C']:.4g}"
+        eq_ws_tex = f"m_0/S = {fit_ws['A']:.4g} \\cdot m_0^{{{fit_ws['C']:.4g}}}"
         r2_ws = round(fit_ws['r2'], 4) if fit_ws.get('r2') is not None else None
         model_ws = 'power'
         if m0 is not None:
@@ -616,13 +616,13 @@ def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None):
         model_ws = 'median'
         val_ws = round(st_ws['median'], 2) if st_ws else 80.0
         r2_ws = None
-        eq_ws = f"W/S = {val_ws}"
-        eq_ws_tex = f"W/S = {val_ws}"
+        eq_ws = f"m₀/S = {val_ws}"
+        eq_ws_tex = f"m_0/S = {val_ws}"
 
     suggestions['ws'] = {
         'key': 'ws',
         'name': 'Wing Loading',
-        'symbol': 'W/S',
+        'symbol': 'm₀/S',
         'unit': 'kg/m²',
         'suggested_value': val_ws,
         'model_type': model_ws,

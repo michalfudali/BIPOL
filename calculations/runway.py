@@ -3,7 +3,7 @@ import math
 from calculations.atmosphere import G0, RHO0
 
 
-def takeoff_distance(ws, cz_max, cx0, k, engine, loading, eta=.82, eta_to=.65):
+def takeoff_distance(ws, cz_max, cx0, k, engine, loading, eta=.82, eta_to=.65, mu_ground=0.03):
     """loading is P/W [W/N] for propellers or T/W [-] for jets.
 
     Constant mean acceleration, transition at n=1.15, ISA sea level.
@@ -21,7 +21,7 @@ def takeoff_distance(ws, cz_max, cx0, k, engine, loading, eta=.82, eta_to=.65):
     q = .5 * RHO0 * vrms**2
     phi = 1.6**2 / (1 + 1.6**2)
     thrust_roll = loading if engine == 'jet' else loading * eta_to / vrms
-    net = thrust_roll - q / ws * (cx0 + phi * k * .25**2) - .03 * (1 - q / ws * .25)
+    net = thrust_roll - q / ws * (cx0 + phi * k * .25**2) - mu_ground * (1 - q / ws * .25)
     q2 = .5 * RHO0 * v2**2
     thrust_climb = loading if engine == 'jet' else loading * eta / v2
     gradient = thrust_climb - q2 / ws * (cx0 + k * (ws / q2)**2)
@@ -51,11 +51,11 @@ def takeoff_distance(ws, cz_max, cx0, k, engine, loading, eta=.82, eta_to=.65):
                 note='ISA, poziom morza, przeszkoda 15 m; odcinek naziemny i powietrzny, bez współczynników operacyjnych.')
 
 
-def required_takeoff_loading(ws, cz_max, cx0, k, engine, distance, eta=.82, eta_to=.65):
+def required_takeoff_loading(ws, cz_max, cx0, k, engine, distance, eta=.82, eta_to=.65, mu_ground=0.03):
     """Solve the same complete-distance model for the matching chart."""
     low, high = 0., 2. if engine == 'jet' else 200.
     def adequate(value):
-        result = takeoff_distance(ws, cz_max, cx0, k, engine, value, eta, eta_to)
+        result = takeoff_distance(ws, cz_max, cx0, k, engine, value, eta, eta_to, mu_ground=mu_ground)
         return result['available'] and result['distance_to_15m'] <= distance
     if not adequate(high):
         return None

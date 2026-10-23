@@ -28,6 +28,9 @@ NUMERIC_LIMITS = {
     "fuel_reserve_factor": (1, 1.5), "mission_ld_factor": (0.5, 1),
     "wing_area_m2": (0, 1000), "engine_power_kw": (0, 100000),
     "break_span_ratio": (0.1, 0.9), "m_payload": (0, 500000),
+    "empty_mass_fraction": (0.15, 0.95), "n_engines": (0, 8),
+    "elevator_chord_ratio": (0.05, 1), "rudder_chord_ratio": (0.05, 1),
+    "ce_ch": (0.05, 1), "cr_cv": (0.05, 1),
 }
 
 DEFAULTS = {
@@ -92,13 +95,29 @@ def validate_parameters(data):
             raise ValueError(f"Pole {key}: podaj liczbę.") from None
         if isinstance(value, bool) or not math.isfinite(number) or not lower <= number <= upper:
             raise ValueError(f"Pole {key}: wymagana skończona liczba od {lower} do {upper}.")
-        if key in ("n_pax", "n_crew") and not number.is_integer():
+        if key in ("n_pax", "n_crew", "n_engines") and not number.is_integer():
             raise ValueError(f"Pole {key}: liczba osób musi być całkowita.")
         p[key] = number
     if p["aircraft_type"] not in ("piston_ga", "turboprop_regional", "jet_business", "jet_transport", "uav", "motoglider", "glider"):
         raise ValueError("Nieznana klasa konstrukcyjna samolotu.")
     if p["engine_type"] not in ("prop", "jet", "none"):
         raise ValueError("Nieznany rodzaj napędu.")
+    if p['engine_type'] == 'none':
+        p['n_engines'] = 0
+    else:
+        p.setdefault('n_engines', 2 if p.get('engine_location') == 'wing' or p['engine_type'] == 'jet' else 1)
+        if p['n_engines'] < 1:
+            raise ValueError('Samolot z napędem wymaga co najmniej jednego silnika.')
+        p.setdefault('sfc', .62 if p['engine_type'] == 'jet' else 265.)
+        # One unit convention in forms, mass sizing and performance. Never
+        # silently substitute another engine's consumption for a submitted value.
+        low, high = (.15, 4.) if p['engine_type'] == 'jet' else (80., 1000.)
+        if not low <= p['sfc'] <= high:
+            unit = '1/h' if p['engine_type'] == 'jet' else 'g/(kW·h)'
+            raise ValueError(f'SFC: dla tego napędu podaj wartość {low:g}–{high:g} {unit}.')
+    for key in ('turbocharged', 'retractable_gear'):
+        if key in p and not isinstance(p[key], bool):
+            raise ValueError(f'Pole {key}: wymagana wartość logiczna.')
     for key in ('trend_count', 'trend_engine_count', 'trend_year_min', 'trend_year_max'):
         if key in p and not float(p[key]).is_integer():
             raise ValueError(f'Pole {key}: wymagana liczba całkowita.')
@@ -107,14 +126,17 @@ def validate_parameters(data):
                          'payload_input_mode': ('seats', 'total'),
                          'power_input_mode': ('sized', 'fixed'),
                          'gear_attachment': ('fuselage', 'wing'),
+                         'gear_retraction': ('auto', 'fixed', 'retractable'),
                          'trend_weighting': ('family', 'variant'),
                          'mission_phase_model': ('standard', 'galinski'),
-                         'flap_type': ('plain', 'split', 'junkers', 'single_slotted', 'fowler', 'double_slotted', 'flaperon'),
+                         'flap_type': ('none', 'plain', 'split', 'junkers', 'single_slotted', 'fowler', 'double_slotted', 'flaperon'),
                          'aileron_type': ('differential', 'frise', 'slotted', 'plain', 'flaperon'),
                          'slat_type': ('none', 'fixed_slot', 'slats_auto', 'krueger'),
                           'wing_planform': ('trapezoidal', 'rectangular', 'compound_trapezoid', 'elliptical', 'swept_trapezoidal')}.items():
         if key in p and p[key] not in allowed:
             raise ValueError(f'Nieznana opcja: {key}.')
+    if p.get('gear_retraction', 'auto') != 'auto':
+        p['retractable_gear'] = p['gear_retraction'] == 'retractable'
     if p.get("flap_type") == "flaperon" and "aileron_type" not in data:
         p["aileron_type"] = "flaperon"
     if p.get('trend_year_min') and p.get('trend_year_max') and p['trend_year_min'] > p['trend_year_max']:

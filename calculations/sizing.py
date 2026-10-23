@@ -4,6 +4,7 @@ Wykres doboru wg BIPOL_2.pdf (C. Galiński, „Studium wykonalności”), wzory 
 start na 15 m, lądowanie, wznoszenie, prędkość minimalna, przelot i największy zasięg.
 """
 import math
+from calculations.flight_model import propulsion_lapse, mission_masses
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 
 SIGMA_AIRFIELD = 1.0  # BIPOL_2: lotnisko na poziomie morza (σ = 1)
@@ -103,6 +104,10 @@ def calculate_matching_chart(params: dict, m0: float = None, mass: dict = None):
         if fractions.get("total_mff") and fractions.get("landing"):
             m_landing = m0 * fractions["total_mff"] / fractions["landing"]
         m_mid_cruise = m0 - 0.5 * float(mass.get("m_fuel", 0.0))
+        if 'warmup' in fractions:
+            phases = mission_masses(mass)
+            m_landing = phases['landing_start']
+            m_mid_cruise = phases['cruise_mean']
     to_takeoff = (lambda ws, m: ws * m0 / m) if m0 else (lambda ws, m: ws)
 
     # 1. Prędkość minimalna (wzór 10): W/S ≤ q·Cz,max/1,1 — linia pionowa
@@ -156,10 +161,10 @@ def calculate_matching_chart(params: dict, m0: float = None, mass: dict = None):
         tw_cl = climb_tw(ws, q_climb, cx0, k_ind, gradient)
         tw_cr_alt = climb_tw(ws, q_cr, cx0, k_ind, 0.0)  # wzór (61) BIPOL_1_wzory: T = D przy Vprzel
         if engine_type == "jet":
-            return tw_to, tw_cl, tw_cr_alt / sigma_cr ** 0.80
+            return tw_to, tw_cl, tw_cr_alt / max(1e-6, propulsion_lapse(params, h_cr, v_cr_ms))
         return (None if tw_to is None else tw_to * takeoff_mean_speed(ws, cz_max_to) / eta_to,
                 tw_cl * v_climb_ms / eta_p,
-                tw_cr_alt * v_cr_ms / (eta_p * sigma_cr ** 0.85))
+                tw_cr_alt * v_cr_ms / (eta_p * max(1e-6, propulsion_lapse(params, h_cr, v_cr_ms))))
 
     curve_takeoff, curve_climb, curve_cruise = [], [], []
     for ws in ws_values:

@@ -24,6 +24,13 @@ test('a sailplane never exposes its model placeholder Vmax as powered level-flig
   assert.equal(core.snapshot(input).metrics.vmax,null);
 });
 
+test('unreachable level-flight speed remains missing in comparisons and CSV', () => {
+  const input=result();input.performance.level_flight_available_sl=false;
+  input.performance.speeds.v_max_sl_kmh=0;
+  assert.equal(core.snapshot(input).metrics.vmax,null);
+  assert.equal(core.resultRows(input).find(row=>row[1].startsWith('Vmax'))[2],null);
+});
+
 test('CSV handles semicolons, quotes, UTF-8, missing data and spreadsheet formulas', () => {
   const text=core.csv([['A;B','"cytat"','zażółć',null],['=1+1',' \t@bad','-tekst',-2.5]]);
   assert.ok(text.startsWith('\uFEFF'));

@@ -36,10 +36,9 @@ def report_sketch(result, view='three'):
             leading.append(top(x, sign * y))
             trailing.append(top(x + chord, sign * y))
         path(leading + trailing[::-1])
-        tailx = length - ht['cr_h']
-        path([top(tailx, 0), top(tailx + .25 * ht['cr_h'], sign * ht['b_h'] / 2),
-              top(tailx + .25 * ht['cr_h'] + ht['ct_h'], sign * ht['b_h'] / 2),
-              top(length, 0)])
+        tailac = ht['x_ac_m']
+        path([top(tailac-.25*ht['cr_h'], 0), top(tailac-.25*ht['ct_h'], sign*ht['b_h']/2),
+              top(tailac+.75*ht['ct_h'], sign*ht['b_h']/2), top(tailac+.75*ht['cr_h'], 0)])
     stations = [(0, 0), (.12, .33), (.3, .5), (.5, .46), (.75, .22), (1, .02)]
     path([top(x * length, sign * width * diameter) for sign in (-1, 1)
           for x, width in (stations if sign == -1 else stations[::-1])], '#fff')
@@ -56,8 +55,9 @@ def report_sketch(result, view='three'):
     side = lambda x, z: (28 + x * s, 430 - z * s)
     path([side(x * length, sign * width * diameter) for sign in (-1, 1)
           for x, width in (stations if sign == -1 else stations[::-1])], '#fff')
-    path([side(length - vt['cr_v'], .1 * diameter), side(length - vt['cr_v'] * .5, vt['h_v']),
-          side(length - vt['cr_v'] * .5 + vt['ct_v'], vt['h_v']), side(length, 0)])
+    tailac = vt['x_ac_m']
+    path([side(tailac-.25*vt['cr_v'], .1*diameter), side(tailac-.25*vt['ct_v'], vt['h_v']),
+          side(tailac+.75*vt['ct_v'], vt['h_v']), side(tailac+.75*vt['cr_v'], 0)])
     path([side(xwing, 0), side(xwing + w['cr'], 0)], 'none', False)
     label(167, 485, f'Rzut z boku · L = {round(length * 1000)} mm')
 

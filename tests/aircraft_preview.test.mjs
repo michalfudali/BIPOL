@@ -96,7 +96,7 @@ test('all supported wing planforms render valid solids with their calculated tip
     assert.ok(!/NaN|Infinity/.test(svg));
     if (planform==='elliptical') {
       const tip=points(model,'wing').filter(p=>Math.abs(p[1])===6);
-      assert.ok(tip.length); assert.ok(tip.every(p=>Math.abs(p[0]-(2.5+1.8*.25))<1e-8));
+      assert.ok(tip.length); assert.ok(tip.every(p=>Math.abs(p[0]-(2.5+6*Math.tan(4*Math.PI/180)+1.8*.25))<1e-8));
     }
   }
 });

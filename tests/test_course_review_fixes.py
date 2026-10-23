@@ -1,0 +1,188 @@
+"""Regressions for the 2026-10-23 subject-matter review: certification envelopes,
+sailplane drag, course characteristics (P3/P4), service ceiling, costs and P2/P4/P5 consistency."""
+import math
+
+import pytest
+
+from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations.atmosphere import G0, isa_atmosphere
+from calculations.costs import calculate_costs
+from calculations.envelope import cs23_speed_factors
+from calculations.instructor import POLAR_CONSISTENCY_TOLERANCE
+from calculations.paturski_ml import default_retractable_gear
+from calculations.validation import validate_parameters
+
+
+@pytest.fixture(scope='module')
+def results():
+    return {name: run_bipol_project(params) for name, params in AIRCRAFT_PRESETS.items()}
+
+
+def test_sailplane_envelope_uses_cs22_factors_gusts_and_geometric_chord(results):
+    r = results['glider_pw5']
+    env, wing = r['envelope'], r['geometry']['wing']
+    lim, spd, gf = env['limits'], env['speeds'], env['gust_factors']
+    assert lim['basis'] == 'CS-22'
+    assert (lim['n_max'], lim['n_at_vd_pos'], lim['n_at_vd_neg'], lim['n_min']) == (5.3, 4.0, -1.5, -2.65)
+    assert spd['v_c_kmh'] is None and spd['v_b_kmh'] == spd['v_a_kmh']
+    assert spd['v_a_kmh'] == pytest.approx(spd['v_s_kmh'] * math.sqrt(5.3), abs=.2)
+    # CS 22.335(d)(1): VD ≥ 18·∛((W/S [daN/m²])/Cd,min) km/h
+    ws_dan = r['mass']['m0'] * G0 / 10 / wing['S']
+    assert spd['v_d_kmh'] >= 18 * (ws_dan / r['aerodynamics']['cx0_clean']) ** (1 / 3) - .2
+    assert [(g['speed'], g['u_ms']) for g in gf['gusts']] == [('VB', 15.0), ('VD', 7.5)]
+    assert gf['chord_m'] == pytest.approx(wing['S'] / wing['b'], abs=.002)
+    assert env['flap']['n_flap'] == 4.0 and env['flap']['v_f_kmh'] >= 1.4 * spd['v_s_kmh'] - .2
+    assert [p['point'][0] for p in env['key_points']] == ['S', 'A', 'B', 'D', 'E', 'G']
+
+
+@pytest.mark.parametrize('category, ws, vc0, vd0', [
+    ('normal', 20, 33.0, 1.40), ('utility', 20, 33.0, 1.50), ('aerobatic', 20, 36.0, 1.55),
+    ('normal', 100, 28.6, 1.35), ('aerobatic', 100, 28.6, 1.35), ('normal', 60, 30.8, 1.375)])
+def test_cs23_speed_factors_decrease_linearly_above_20_psf(category, ws, vc0, vd0):
+    assert cs23_speed_factors(category, ws) == pytest.approx((vc0, vd0), abs=1e-9)
+
+
+def test_transport_dive_speed_follows_cs25_and_light_jet_uses_reduced_cs23_factor(results):
+    env = results['regional_turboprop']['envelope']
+    assert env['limits']['basis'] == 'CS-25'
+    assert env['speeds']['v_d_kmh'] == pytest.approx(env['speeds']['v_c_kmh'] / .8, abs=.2)
+    vlj = results['vlj_jet']['envelope']
+    assert vlj['limits']['basis'] == 'CS-23' and '32.2·√(W/S)' in vlj['limits']['speed_rule']
+
+
+@pytest.mark.parametrize('name, k_min', [('glider_pw5', 23), ('motoglider_aos', 21)])
+def test_sailplane_drag_is_not_calibrated_to_powered_ga_statistics(results, name, k_min):
+    r = results[name]
+    p3 = r['aerodynamics']['paturski_p3']
+    rows = {row['lp']: row for row in p3['table_3_1_parasite']}
+    assert rows[2]['cx_s_m2'] == 0  # canopy lies inside the fuselage frontal area
+    assert rows[1]['cx_j'] <= .15
+    assert p3['k_interf'] == (.02 if name == 'glider_pw5' else .04)
+    assert p3['statistical_benchmarks_abc']['summary']['matched_a_lp'] is None
+    assert r['aerodynamics']['k_max'] >= k_min
+    assert r['geometry']['fuselage']['diameter'] <= 1.10
+    assert r['aerodynamics']['cx0_clean'] < .02
+
+
+def test_glider_has_no_engine_items_and_a_partly_recessed_single_wheel(results):
+    rows = {row['lp']: row for row in results['glider_pw5']['aerodynamics']['paturski_p3']['table_3_1_parasite']}
+    assert rows[6]['cx_s_m2'] == 0
+    assert 0 < rows[4]['cx_s_m2'] < .01
+
+
+def test_uav_fuselage_scales_with_mass_and_has_no_canopy(results):
+    small, large = results['uav_tactical'], results['uav_male']
+    assert small['geometry']['fuselage']['diameter'] < large['geometry']['fuselage']['diameter'] < 1.0
+    for r in (small, large):
+        rows = {row['lp']: row for row in r['aerodynamics']['paturski_p3']['table_3_1_parasite']}
+        assert rows[2]['cx_s_m2'] == 0
+
+
+@pytest.mark.parametrize('params, expected', [
+    ({'aircraft_type': 'glider'}, False), ({'aircraft_type': 'motoglider', 'engine_type': 'prop'}, False),
+    ({'aircraft_type': 'piston_ga', 'engine_type': 'prop', 'cruise_speed_kmh': 180}, False),
+    ({'aircraft_type': 'piston_ga', 'engine_type': 'prop', 'cruise_speed_kmh': 300}, True),
+    ({'aircraft_type': 'turboprop_regional', 'engine_type': 'prop', 'cruise_speed_kmh': 180}, True),
+    ({'aircraft_type': 'uav', 'engine_type': 'jet', 'cruise_speed_kmh': 180}, True),
+    ({'aircraft_type': 'turboprop_regional', 'retractable_gear': False}, False)])
+def test_one_landing_gear_rule_is_shared_by_all_drag_models(params, expected):
+    assert default_retractable_gear(params) is expected
+
+
+def test_motoglider_landing_polar_does_not_add_retracted_gear_drag_twice(results):
+    a = results['motoglider_aos']['aerodynamics']
+    landing_flap = a['flap_configurations']['landing']['delta_cx0']
+    assert a['cx0_lnd'] == pytest.approx(a['cx0_clean'] + landing_flap, abs=2e-4)
+
+
+@pytest.mark.parametrize('mode, expected', [('fixed', False), ('retractable', True)])
+def test_gear_selector_overrides_the_class_rule(mode, expected):
+    p = validate_parameters({**AIRCRAFT_PRESETS['ga_trainer'], 'gear_retraction': mode})
+    assert p['retractable_gear'] is expected
+    assert 'retractable_gear' not in validate_parameters({**AIRCRAFT_PRESETS['ga_trainer'], 'gear_retraction': 'auto'})
+
+
+def test_wing_characteristics_give_cz_cm_and_cx_against_alpha(results):
+    r = results['ga_trainer']
+    p2 = r['aerodynamics']['paturski_p2']
+    rows = r['bipol_projects']['p3']['wing_alpha_table']
+    assert [row['alpha_deg'] for row in rows] == sorted(row['alpha_deg'] for row in rows)
+    for row in rows:
+        assert row['cm_le'] == pytest.approx(p2['cm_sa_profile'] - p2['x_sa_bar'] * row['cz'], abs=1e-4)
+    assert r['bipol_projects']['p3']['isolated_wing_aero']['cm_0_wing'] == p2['cm_sa_profile']
+
+
+def test_aircraft_characteristics_cover_both_extreme_cg_positions(results):
+    r = results['ga_trainer']
+    cc = r['bipol_projects']['p4']['cg_characteristics']
+    cm = cc['cm_model']
+    assert cm['x_fwd_pct'] == r['balance']['cg_range']['forward_pct']
+    assert cm['x_aft_pct'] == r['balance']['cg_range']['aft_pct']
+    assert cm['dcm_dcz_fwd'] < cm['dcm_dcz_aft'] < 0  # forward CG is more stable
+    a, b = cc['alpha_table'][3], cc['alpha_table'][-1]
+    slope_fwd = (b['cm_fwd'] - a['cm_fwd']) / (b['cz'] - a['cz'])
+    assert slope_fwd == pytest.approx(cm['dcm_dcz_fwd'], abs=2e-3)
+    assert all(row['e'] == pytest.approx(row['cz'] ** 3 / row['cx'] ** 2, rel=.02) for row in cc['alpha_table'] if row['cz'] > .2)
+    fwd, aft = cc['speed_polars']['forward'], cc['speed_polars']['aft']
+    assert fwd['w_min_ms'] > aft['w_min_ms'] and fwd['k_max'] < aft['k_max']  # trim drag
+    points = r['bipol_projects']['p4']['glide_polar']['points']
+    assert any(p['w_sink_fwd_ms'] is not None and p['w_sink_fwd_ms'] > p['w_sink_aft_ms'] for p in points)
+
+
+def test_speed_polar_obeys_glide_equilibrium(results):
+    cc = results['glider_pw5']['bipol_projects']['p4']['cg_characteristics']
+    S = results['glider_pw5']['geometry']['wing']['S']
+    for p in cc['speed_polars']['aft']['points']:
+        v = p['v_kmh'] / 3.6
+        lift = .5 * cc['rho'] * v ** 2 * S * math.hypot(p['cz'], p['cx'])
+        assert lift == pytest.approx(cc['mass_kg'] * G0, rel=.01)
+        assert p['w_ms'] == pytest.approx(v * p['cx'] / math.hypot(p['cz'], p['cx']), rel=.01)
+
+
+def test_service_ceiling_is_defined_by_half_metre_per_second_for_jets_too(results):
+    ceilings = results['vlj_jet']['performance']['paturski_p6']['table_6_2_climb_and_ceilings']['ceilings']
+    assert ceilings['w_crit_ceiling_ms'] == .5
+
+
+def test_costs_reproduce_1986_coefficients_and_extrapolate_linearly():
+    params = {'aircraft_type': 'piston_ga', 'engine_type': 'prop', 'n_engines': 1}
+    w_lb, v_kt = 1000 * 2.20462, 300 * .539957
+    c1986 = calculate_costs({**params, 'cost_year': 1986}, 1000, 300, power_kw=150)
+    h_e = 4.86 * w_lb ** .777 * v_kt ** .894 * 4 ** .163
+    assert c1986['rdte']['hours']['E'] == pytest.approx(h_e, rel=1e-3)
+    assert c1986['rates_usd_h'] == {'E': 59.1, 'T': 61.7, 'ML': 55.4, 'QC': 50.1}
+    assert c1986['production']['items_usd']['C_D'] == 0 and c1986['production']['items_usd']['C_FT'] == 0
+    c1970 = calculate_costs({**params, 'cost_year': 1970}, 1000, 300, power_kw=150)
+    c2002 = calculate_costs({**params, 'cost_year': 2002}, 1000, 300, power_kw=150)
+    assert c2002['rates_usd_h']['E'] == pytest.approx(2 * 59.1 - 16.0)
+    assert c2002['rdte']['hours']['E'] == pytest.approx(2 * c1986['rdte']['hours']['E'] - c1970['rdte']['hours']['E'], abs=2)
+    # Formula 5.10 with C_P = 0
+    expected = c2002['production']['total_usd'] / 250 + c2002['rdte']['total_usd'] / 250
+    assert c2002['unit_cost_usd'] == pytest.approx(expected, abs=1)
+
+
+def test_turbofan_price_uses_formula_15_and_glider_cost_has_a_speed(results):
+    c = results['vlj_jet']['bipol_projects']['p2']['cost_analysis']
+    assert c['engine_basis'].startswith('wzór (15)')
+    glider = results['glider_pw5']['bipol_projects']['p2']['cost_analysis']
+    assert glider['engine_price_usd'] == 0 and glider['vmax_knots'] > 100
+
+
+def test_p2_and_p4_polars_are_checked_for_consistency(results):
+    for name, r in results.items():
+        check = [c for c in r['instructor_review']['checks'] if c['key'] == 'polar_consistency']
+        k_p2 = r['mass']['mission_assumptions'].get('k_max_preliminary')
+        if not k_p2:
+            continue
+        assert check[0]['passed'] == (abs(k_p2 - r['aerodynamics']['k_max']) <= POLAR_CONSISTENCY_TOLERANCE * r['aerodynamics']['k_max'])
+        assert check[0]['passed'], name
+
+
+def test_p5_explains_why_range_or_cruise_requirements_fail(results):
+    for name, r in results.items():
+        p5 = r['bipol_projects']['p5']
+        failed = [row for row in p5['critical_evaluation_table_5_1'] if row['comment'] == 'Niespełnione wymaganie projektu']
+        if any(row['param'].startswith(('Zasięg', 'Prędkość przelotowa')) for row in failed):
+            assert p5['performance_findings'], name
+    finding = results['regional_turboprop']['bipol_projects']['p5']['performance_findings'][0]
+    assert '0,94·Kmax' in finding

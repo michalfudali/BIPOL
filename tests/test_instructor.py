@@ -28,8 +28,9 @@ def test_flap_angles_are_fixed_course_assumptions_and_increments_are_not_percent
     assert (p['flap_takeoff_deg'], p['flap_landing_deg']) == (20, 40)
     assert a['flap_configurations']['takeoff']['deflection_deg'] == 20
     assert a['flap_configurations']['landing']['deflection_deg'] == 40
-    assert a['cz_max_to'] == pytest.approx(a['cz_max_clean'] + .30, abs=.005)
-    assert a['cz_max_lnd'] == pytest.approx(a['cz_max_clean'] + .60, abs=.005)
+    coverage = r['geometry']['control_surfaces']['flaps']['s_flapped_over_s']
+    assert a['cz_max_to'] == pytest.approx(a['cz_max_clean'] + .30 * coverage, abs=.005)
+    assert a['cz_max_lnd'] == pytest.approx(a['cz_max_clean'] + .60 * coverage, abs=.005)
     for key in ('flap_takeoff_deg','flap_landing_deg'):
         assert r['constraints']['parameter_states'][key]['state']=='derived'
     with app.test_client() as client:

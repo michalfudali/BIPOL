@@ -807,7 +807,7 @@ function updateTrailingEdgeLayoutWidget(res) {
 
   const rollText = document.getElementById('cs_roll_text');
   if (rollText) {
-    rollText.innerHTML = `Skuteczność poprzeczna: <b>pb/(2V) = ${a.roll_helix_pb_2v}</b> [${a.roll_authority_ok ? '<span style="color:#059669;">✓ Zgodne CS-23/22</span>' : '<span style="color:#d97706;">⚠️ Poniżej zalecenia</span>'}] &bull; <b>${cs.stall_safety.verdict}</b>`;
+    rollText.innerHTML = `Skuteczność poprzeczna: <b>pb/(2V) = ${a.roll_helix_pb_2v}</b> [${a.roll_authority_ok ? '<span style="color:#059669;">Spełnione kryterium wstępne</span>' : '<span style="color:#d97706;">Poniżej kryterium wstępnego</span>'}] &bull; <b>${cs.stall_safety.verdict}</b>`;
   }
 }
 
@@ -1418,7 +1418,13 @@ function populateP4Tables(res) {
   const paHolistic = res.bipol_projects?.p4?.paturski_aero || res.paturski_ml?.p3_aircraft_aero || {};
   const abcHolistic = paHolistic.statistical_benchmarks_abc;
   const holSumEl = document.getElementById('holistic_paturski_abc_summary');
-  if (holSumEl && abcHolistic?.summary) {
+  if (holSumEl && abcHolistic?.summary && abcHolistic.summary.matched_a_lp == null) {
+    const s = abcHolistic.summary;
+    holSumEl.innerHTML = `
+      <div><strong>${s.matched_c_archetype}.</strong> ${s.verdict_text}
+        Obliczone w projekcie: <code>C_x,min = ${s.project_cx_min}</code>, <code>(C_x,szk)_min = ${s.project_cx_szk_min}</code>.</div>
+    `;
+  } else if (holSumEl && abcHolistic?.summary) {
     const s = abcHolistic.summary;
     holSumEl.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:0.5rem; align-items:center;">
@@ -1528,15 +1534,17 @@ function populateP6Tables(res) {
     const nMax = Number(env.limits?.n_max ?? 3.8);
     const nMin = Number(env.limits?.n_min ?? -1.5);
     const vA = Number(env.speeds?.v_a_kmh ?? 0);
-    const vC = Number(env.speeds?.v_c_kmh ?? 0);
+    const vC = env.speeds?.v_c_kmh;  // CS-22 nie definiuje VC
     const vD = Number(env.speeds?.v_d_kmh ?? 0);
+    const nVd = Number(env.limits?.n_at_vd_pos ?? nMax);
+    const gustText = (env.gust_factors?.gusts || []).map(g => `±${Number(g.u_ms).toFixed(2)} m/s przy ${g.speed}`).join(', ');
     p6Env.innerHTML = `
       <tr><td>Maksymalne przeciążenie dodatnie</td><td><b>n_pos,max</b></td><td class="num">&mdash;</td><td class="num"><b>+${nMax.toFixed(2)}</b></td><td>Współczynnik obciążenia manewrowego wg przepisów CS</td></tr>
       <tr><td>Maksymalne przeciążenie ujemne</td><td><b>n_neg,max</b></td><td class="num">&mdash;</td><td class="num"><b>${nMin.toFixed(2)}</b></td><td>Dopuszczalne przeciążenie w locie odwróconym / nurkowaniu</td></tr>
       <tr><td>Prędkość manewrowa</td><td><b>V_A</b></td><td class="num"><b>${vA.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Pełne wychylenie sterów nie przekroczy dopuszczalnego n</td></tr>
-      <tr><td>Obliczeniowa prędkość przelotowa</td><td><b>V_C</b></td><td class="num"><b>${vC.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Bazowa prędkość do analizy podmuchów pionowych</td></tr>
-      <tr><td>Obliczeniowa prędkość nurkowania</td><td><b>V_D</b></td><td class="num"><b>${vD.toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Graniczna prędkość flatterowa płatowca (V_D &ge; 1.25 V_C)</td></tr>
-      <tr><td>Linia podmuchu ostrego (&plusmn;15.24 m/s)</td><td><b>U_de = 15 m/s</b></td><td class="num"><b>przy V_C</b></td><td class="num">&plusmn;n_podmuch</td><td>Weryfikacja wytrzymałości pasów dźwigara na podmuchy</td></tr>
+      ${vC == null ? '' : `<tr><td>Obliczeniowa prędkość przelotowa</td><td><b>V_C</b></td><td class="num"><b>${Number(vC).toFixed(1)}</b></td><td class="num">+${nMax.toFixed(2)}</td><td>Bazowa prędkość do analizy podmuchów pionowych</td></tr>`}
+      <tr><td>Obliczeniowa prędkość nurkowania</td><td><b>V_D</b></td><td class="num"><b>${vD.toFixed(1)}</b></td><td class="num">+${nVd.toFixed(2)}</td><td>${escapeHtml(env.limits?.speed_rule || '')}</td></tr>
+      <tr><td>Linie podmuchów</td><td><b>U_de</b></td><td class="num" colspan="2">${escapeHtml(gustText)}</td><td>${escapeHtml(env.gust_factors?.gust_basis || '')}</td></tr>
     `;
   }
 
@@ -3333,10 +3341,10 @@ function hydrateSemesterProjectsData(res) {
       afTbody.innerHTML = afSel.candidates.map(c => `
         <tr style="${c.recommended ? 'background:#ecfdf5;' : ''}">
           <td><b>${escapeHtml(c.name)}</b></td>
-          <td>${c.cx_min}</td>
-          <td>${c.cx_cz_proj}</td>
-          <td>${c.cz_max}</td>
-          <td>${c.k_max}</td>
+          <td>${c.cx_min ?? "—"}</td>
+          <td>${c.cx_cz_proj ?? "—"}</td>
+          <td>${c.cz_max ?? "—"}</td>
+          <td>${c.k_max ?? "—"}</td>
           <td>${escapeHtml(c.stall)}</td>
           <td><span class="badge ${c.recommended ? 'badge-success' : 'badge-info'}">${c.recommended ? '✓ Wybrany' : 'Alternatywa'}</span></td>
         </tr>
@@ -3381,17 +3389,14 @@ function hydrateSemesterProjectsData(res) {
     const bchk = p3.blueprint_checks || {};
     const chkMachEl = document.getElementById('p3_chk_prop_mach');
     const chkClearEl = document.getElementById('p3_chk_prop_clear');
-    if (bchk.engine_type === 'jet' || isJet) {
-      if (chkMachEl) chkMachEl.innerHTML = `<li>Przekrój wlotowy sprężarki / wentylatora (<b>M_fan ≈ ${bchk.fan_intake_mach ?? 0.55} &lt; 0.65</b>)</li>`;
-      if (chkClearEl) chkClearEl.innerHTML = `<li>Prześwit gondoli silnikowych od ziemi (<b>Δh_nac = ${bchk.nacelle_ground_clearance_m ?? 0.45} m ≥ 0.40 m</b> — ochrona przed FOD)</li>`;
-    } else {
-      if (chkMachEl) chkMachEl.innerHTML = `<li>Średnica śmigła z warunku prędkości obwodowej końcówek (<b>M_tip = ${bchk.propeller_tip_mach ?? 0.82} ≤ 0.85</b>)</li>`;
-      if (chkClearEl) chkClearEl.innerHTML = `<li>Prześwit śmigła od ziemi (<b>Δh_prop = ${bchk.prop_ground_clearance_m ?? 0.25} m ≥ 0.23 m</b> wg CS-23.925)</li>`;
-    }
+    if (chkMachEl) chkMachEl.textContent = bchk.engine_type==='prop'
+      ? `Liczba Macha końcówki śmigła: ${bchk.propeller_tip_mach}; ${bchk.propeller_tip_mach<=.85?'spełnia roboczy limit 0,85':'przekracza roboczy limit 0,85 — zmień średnicę lub obroty'}.`
+      : bchk.engine_type==='jet'?'Wlot silnika: brak geometrii i danych silnika do oceny.':'Śmigło i silnik: nie dotyczy.';
+    if (chkClearEl) chkClearEl.textContent = 'Prześwit: wymaga wymiarów zabudowy i podwozia; nie został zweryfikowany.';
     const afDescEl = document.getElementById('p3_airfoil_desc');
     const selAfName = bp.p2?.airfoil_selection?.selected_airfoil || 'NACA 2412 / Wortmann FX';
     if (afDescEl) {
-      afDescEl.innerHTML = `Zgodnie z instrukcją BIPOL (Rozdz. 3.1), poniżej zamieszczono rzędne profilu <b>${escapeHtml(selAfName)}</b> przeskalowane do cięciwy odniesienia <b>c = 200 mm</b> do wklejenia na arkusz rysunkowy:`;
+      afDescEl.textContent = p3.airfoil_coordinates_note;
     }
 
     const coordsTbody = document.getElementById('p3_airfoil_coords_tbody');
@@ -3501,7 +3506,9 @@ function hydrateSemesterProjectsData(res) {
           Tabela A (Lp. ${sb.matched_a_lp}): <code>C_x,min = ${sb.matched_a_range}</code> vs. <strong>projekt: <code>C_x,min = ${sb.project_cx_min}</code></strong> &bull;
           Tabela B (Lp. ${sb.matched_b_lp}): <code>C_x,szk,min = ${sb.matched_b_cx_szk_min}</code> vs. <strong>projekt: <code>${sb.project_cx_szk_min}</code></strong> &bull;
           Wzorzec Tabeli C: <em>${sb.matched_c_archetype}</em>.
-        </div>` : ''}
+        </div>` : (sb.verdict_text ? `<div style="margin-top:0.4rem; padding-top:0.4rem; border-top:1px dashed #cbd5e1; color:#0f172a;">
+          <strong>📊 Tabele A, B, C:</strong> ${sb.matched_c_archetype}. ${sb.verdict_text}
+        </div>` : '')}
       `;
     }
 
@@ -3768,7 +3775,7 @@ function hydrateSemesterProjectsData(res) {
         ${indStr} &bull;
         Pułap praktyczny (w_max = 0.5 m/s): <b>h_p = ${cs.hp_service_m ?? '—'} m</b> &bull;
         Pułap teoretyczny (w_max = 0): <b>h_t = ${cs.ht_theoretical_m ?? '—'} m</b> &bull;
-        Czas wznoszenia na pułap praktyczny (wzór 6.12): <b>t_hp = ${cs.thp_min ?? '—'} min (${cs.thp_s ?? '—'} s)</b>.
+        Czas wznoszenia na pułap praktyczny (całkowanie dh/wy,max przy stałej masie): <b>t_hp = ${cs.thp_min ?? '—'} min (${cs.thp_s ?? '—'} s)</b>.
       `;
     }
 
@@ -3794,8 +3801,8 @@ function hydrateSemesterProjectsData(res) {
       rngTbody.innerHTML = p5.range_endurance_comparison.map(m => `
         <tr>
           <td>${escapeHtml(m.method)}</td>
-          <td><b>${m.range_km} km</b></td>
-          <td><b>${m.endurance_h} h</b></td>
+          <td><b>${m.range_km == null ? '—' : `${m.range_km} km`}</b></td>
+          <td><b>${m.endurance_h == null ? '—' : `${m.endurance_h} h`}</b></td>
         </tr>
       `).join('');
     }
@@ -3846,8 +3853,8 @@ function hydrateSemesterProjectsData(res) {
       critTbody.innerHTML = p5.critical_evaluation_table_5_1.map(c => `
         <tr>
           <td><b>${escapeHtml(c.param)}</b></td>
-          <td>${c.project_assumed}</td>
-          <td><b>${c.actual_calc}</b></td>
+          <td>${c.project_assumed ?? '—'}</td>
+          <td><b>${c.actual_calc ?? '—'}</b></td>
           <td>${escapeHtml(c.comment)}</td>
         </tr>
       `).join('');

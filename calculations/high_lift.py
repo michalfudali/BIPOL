@@ -1,0 +1,36 @@
+"""Preliminary section increments at 20°/40°, scaled to the equipped wing area.
+
+BIPOL_2 p. 4: a section lift increment applies only to the equipped wing area.
+The table remains an estimate, not measured data for the selected airfoil.
+"""
+FLAPS = {
+    'none': (0., 0., 0., 0., None, None),
+    'plain': (.30, .60, .010, .035, .74, .68),
+    'split': (.30, .65, .018, .060, .74, .68),
+    'single_slotted': (.40, .85, .012, .045, .76, .70),
+    'flaperon': (.30, .60, .010, .035, .74, .68),
+    'fowler': (.55, 1.15, .015, .055, .78, .72),
+    'double_slotted': (.50, 1.05, .018, .065, .75, .68),
+    'junkers': (.45, .90, .020, .060, .72, .66),
+}
+
+
+def high_lift(params, clean_e=.8, geometry=None):
+    lift_to, lift_lnd, drag_to, drag_lnd, e_to, e_lnd = FLAPS[params.get('flap_type', 'single_slotted')]
+    slat_lift, slat_drag = {'none': (0, 0), 'slats_auto': (.35, .008),
+        'fixed_slot': (.30, .012), 'krueger': (.25, .010)}[params.get('slat_type', 'none')]
+    # Unit coverage is used only to seed the coupled geometry/sizing iteration.
+    flap_area = slat_area = 1.0
+    if geometry is not None:
+        devices = geometry['control_surfaces']
+        flap_area = devices['flaps']['s_flapped_over_s']
+        slat_area = devices['slats']['s_equipped_over_s']
+    lift_to, lift_lnd = lift_to * flap_area, lift_lnd * flap_area
+    drag_to, drag_lnd = drag_to * flap_area, drag_lnd * flap_area
+    slat_lift, slat_drag = slat_lift * slat_area, slat_drag * slat_area
+    cl = float(params.get('cz_max_clean', 1.45))
+    return dict(delta_cz_to=lift_to, delta_cz_lnd=lift_lnd, delta_cx0_to=drag_to,
+        delta_cx0_lnd=drag_lnd, e_to=e_to or clean_e, e_lnd=e_lnd or clean_e,
+        slat_lift=slat_lift, slat_drag=slat_drag,
+        flap_area_fraction=flap_area, slat_area_fraction=slat_area,
+        cz_max_to=round(cl+lift_to+.5*slat_lift, 2), cz_max_lnd=round(cl+lift_lnd+slat_lift, 2))

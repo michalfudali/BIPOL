@@ -4,6 +4,7 @@ Wyznaczanie położenia środka masy w różnych konfiguracjach załadowania,
 przeliczenie na % ŚDA (MAC), wyznaczenie punktu neutralnego oraz zapasu stateczności.
 """
 import math
+from calculations.flight_model import mission_masses
 
 def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, params: dict):
     """
@@ -73,7 +74,8 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
 
     unmanned = bool(m_sizing.get("unmanned", False)) or params.get("aircraft_type") == "uav"
     n_crew = int(m_sizing.get("n_crew") or 0)
-    m_fuel_res = 0.15 * m_fuel  # paliwo przy lądowaniu (rezerwa)
+    phases = mission_masses(m_sizing)
+    m_fuel_res = max(0.0, phases['landing_start'] - (m_sizing['m0'] - m_fuel))
 
     def layout(x_lemac):
         """Ramiona mas, stany załadowania i zakres ŚC w locie dla danego położenia ŚDA."""
@@ -114,9 +116,10 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
             x_arms["payload_bay"] = round(x_lemac + 0.20 * mac, 2)
             mom_payload = (m_payload * 0.60) * x_arms["payload_sensor"] + (m_payload * 0.40) * x_arms["payload_bay"]
         else:
-            m_pax = m_payload * 0.80
-            m_bag = m_payload * 0.20
-            mom_payload = (m_pax * 0.45) * x_arms["pax_front"] + (m_pax * 0.55) * x_arms["pax_rear"] + m_bag * x_arms["baggage"]
+            m_pax = int(params.get('n_pax', 0)) * (float(params.get('m_pax', 115)) + float(params.get('m_bag', 0)))
+            cargo = float(params.get('m_cargo', 0))
+            mom_payload = m_pax * (.45 * x_arms['pax_front'] + .55 * x_arms['pax_rear']) + cargo * x_arms['baggage']
+        x_arms['payload_equivalent'] = mom_payload / m_payload if m_payload else x_arms['pax_front']
 
         # Funkcja pomocnicza: przeliczenie na % ŚDA (MAC)
         def to_percent_mac(x):
@@ -212,6 +215,15 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
             x_lemac = low if miss(low) < 0 else high
         x_arms, loading_states, pilot_variants, cg_forward_limit, cg_aft_limit = layout(x_lemac)
     x_le_wing = x_lemac - x_le_mac_offset
+
+    # Aktualizacja rzeczywistego ramienia usterzenia i punktu neutralnego po ustaleniu x_lemac
+    x_ac_h = geom["horizontal_tail"].get("x_ac_m")
+    if x_ac_h is not None and mac > 0 and S > 0:
+        l_h_actual = max(0.1, x_ac_h - (x_lemac + 0.25 * mac))
+        s_h = float(geom["horizontal_tail"].get("S_h", 0.0))
+        vh = (s_h * l_h_actual) / (S * mac)
+        delta_xn_tail_pct = (eta_h_eff * vh * (a_h / a_w) * (1.0 - de_da)) * 100.0
+        neutral_point_pct = round(x_ac_wbn_pct + delta_xn_tail_pct, 1)
 
     cg_span = round(cg_aft_limit - cg_forward_limit, 1)
     forward_ok, aft_ok = criterion(cg_forward_limit, cg_aft_limit)

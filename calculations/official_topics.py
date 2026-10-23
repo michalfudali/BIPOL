@@ -327,12 +327,12 @@ def topic_parameters(topic):
         p.update(aspect_ratio=24.0 if d['span_limit'] > 20 else 18.0,
                  flap_type='flaperon', aileron_type='flaperon', slat_type='none',
                  v_stall_kmh=72.0, takeoff_run_m=220.0)
-    elif 'stol' in title or 'rolnicz' in title:
-        p.update(flap_type='junkers', slat_type='fixed_slot', v_stall_kmh=75.0, takeoff_run_m=180.0)
     elif d['aircraft_type'] in ('jet_transport','turboprop_regional'):
         p.update(flap_type='fowler', slat_type='slats_auto',
                  v_stall_kmh=185.0 if d['aircraft_type'] == 'jet_transport' else 140.0,
                  takeoff_run_m=1400.0 if d['aircraft_type'] == 'jet_transport' else 750.0)
+    elif 'stol' in title or 'rolnicz' in title:
+        p.update(flap_type='junkers', slat_type='fixed_slot', v_stall_kmh=75.0, takeoff_run_m=180.0)
     else:
         p.update(flap_type='single_slotted', aileron_type='differential', slat_type='none',
                  v_stall_kmh=90.0, takeoff_run_m=280.0)

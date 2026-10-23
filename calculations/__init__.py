@@ -2,6 +2,7 @@
 Główny moduł integrujący obliczenia wstępnego projektowania samolotu BIPOL I
 """
 from calculations.atmosphere import G0
+from calculations.high_lift import high_lift
 from calculations.mass import calculate_mass_sizing
 from calculations.sizing import calculate_matching_chart
 from calculations.geometry import calculate_geometry
@@ -31,6 +32,12 @@ def run_bipol_project(params: dict):
     if params.get("engine_type") == "jet" and params.get("engine_location") in ("nose", "retractable", "none"):
         params["engine_location"] = "wing" if params.get("aircraft_type") == "jet_transport" else "rear"
 
+    lift = high_lift(params)
+    for key in ('cz_max_to', 'cz_max_lnd'):
+        params[key] = lift[key]
+        param_states[key] = dict(state='derived', value=lift[key],
+            formula='Model mechanizacji 20°/40°', sources=['cz_max_clean','flap_type','slat_type'])
+
     # Etap P1 i P2: Bilans masowy (szacowanie MTOW)
     mass_res = calculate_mass_sizing(params)
     m0 = mass_res["m0"]
@@ -43,17 +50,51 @@ def run_bipol_project(params: dict):
     
     # Etap P3: Wymiarowanie zespołów (skrzydło, kadłub, usterzenia, Schrenk)
     geom_res = calculate_geometry(m0, ws, params)
+    # Wing area and high-lift coverage depend on each other. Close this loop
+    # before propulsion, stall checks and reports consume the coefficients.
+    for _ in range(20):
+        lift = high_lift(params, geometry=geom_res)
+        if all(params[key] == lift[key] for key in ('cz_max_to', 'cz_max_lnd')):
+            break
+        for key in ('cz_max_to', 'cz_max_lnd'):
+            params[key] = lift[key]
+            param_states[key].update(value=lift[key],
+                formula='Przyrost profilowy × udział powierzchni z mechanizacją',
+                sources=['cz_max_clean', 'flap_type', 'slat_type', 'flap_span_ratio', 'wing_planform'])
+        sizing_res = calculate_matching_chart(params, m0=m0, mass=mass_res)
+        ws = sizing_res['design_point']['ws']
+        geom_res = calculate_geometry(m0, ws, params)
+    else:
+        raise ValueError('Nie uzyskano spójnej powierzchni skrzydła i mechanizacji; zmień geometrię lub założenia.')
     validate_topic_geometry(params, geom_res)
 
 
     # Etap P4: Charakterystyki aerodynamiczne (biegunowe, doskonałość)
     aero_res = calculate_aerodynamics(geom_res, params, m0=m0)
+
+    # Close the geometric loop: the tail arms must be measured from the wing
+    # quarter-MAC found by balancing, not from an unrelated fraction of length.
+    for _ in range(20):
+        balance_res = calculate_balance_and_stability(mass_res, geom_res, aero_res, params)
+        wing_ac = balance_res['x_lemac_m'] + .25 * geom_res['wing']['mac']
+        arms = {key: geom_res[name]['x_ac_m'] - wing_ac for key, name in
+                (('_tail_arm_h', 'horizontal_tail'), ('_tail_arm_v', 'vertical_tail'))}
+        if min(arms.values()) <= 0:
+            raise ValueError('Usterzenie musi leżeć za środkiem aerodynamicznym skrzydła w tym układzie.')
+        error = max(abs(arms['_tail_arm_h'] - geom_res['horizontal_tail']['l_h']),
+                    abs(arms['_tail_arm_v'] - geom_res['vertical_tail']['l_v']))
+        if error <= .015:
+            break
+        geom_res = calculate_geometry(m0, ws, {**params, **arms})
+        aero_res = calculate_aerodynamics(geom_res, params, m0=m0)
+    else:
+        raise ValueError('Nie uzyskano spójnego położenia skrzydła i ramion usterzenia; zmień układ lub założenia geometrii.')
     
     refine_takeoff_sizing(sizing_res, geom_res, aero_res, params, m0)
     finalize_parameter_states(params, param_states, mass_res, sizing_res, geom_res)
 
     # Etap P5: Osiągi samolotu (prędkości, wznoszenie, pułap, start, lądowanie)
-    perf_res = calculate_performance(m0, geom_res, aero_res, sizing_res, params)
+    perf_res = calculate_performance(m0, geom_res, aero_res, sizing_res, params, mass_result=mass_res)
     perf_res["glide"] = calculate_glide_polar(m0, geom_res, aero_res, params["cruise_altitude_m"], params=params)
     
     # Etap P6: Obwiednia obciążeń dopuszczalnych V-n
@@ -86,6 +127,23 @@ def run_bipol_project(params: dict):
         "note": "Bezpieczeństwo przy odejściu na drugi krąg i przewyższenie przeszkód"
     })
     
+    if params['engine_type'] != 'none':
+        cruise = perf_res['cruise_check']
+        checks.append(dict(parameter='Lot poziomy przy wymaganej prędkości i wysokości',
+            required=f"{params['cruise_speed_kmh']:g} km/h TAS na {params['cruise_altitude_m']:g} m",
+            actual=f"Cz={cruise['cl']:.3f}; nadmiar mocy {cruise['available_w']-cruise['required_w']:.0f} W",
+            passed=cruise['cl'] <= cruise['cl_max'] and cruise['climb_ms'] >= 0,
+            note='Sprawdzenie przy MTOW: poniżej Czmax oraz moc dostępna co najmniej równa wymaganej.'))
+        mission_range = perf_res['paturski_p6']['range_endurance_6_5']['range_at_requested_speed_km']
+        checks.append(dict(parameter='Zasięg przy wymaganej prędkości i wysokości',
+            required=f"≥ {params['range_km']:g} km", actual=f'{mission_range:g} km' if mission_range is not None else 'Lot nieosiągalny',
+            passed=mission_range is not None and mission_range >= params['range_km'],
+            note='Biegunowa P4 i paliwo fazy przelotu z bilansu P2; rezerwy nie są spalane po raz drugi.'))
+    if perf_res['speeds']['mach_cruise'] > .75:
+        checks.append(dict(parameter='Zakres modelu aerodynamicznego przy dużej prędkości',
+            required='Dane oporu falowego i profilu', actual=f"M={perf_res['speeds']['mach_cruise']:.3f}",
+            passed=False, severity='warning', note='Biegunowa paraboliczna nie zawiera wzrostu oporu falowego; wynik wymaga weryfikacji.'))
+
     # Full distances are not interchangeable with ground roll.
     if params['engine_type'] != 'none':
         req_to = params.get('takeoff_distance_m', 0)

@@ -26,168 +26,50 @@ WING_PLANFORMS = {
         'id': 'trapezoidal',
         'name_pl': 'Trapezowy (zbieżny klasyczny)',
         'description': 'Optymalny kompromis aerodynamiczno-wytrzymałościowy. Zbieżność redukuje masę dźwigarów i moment gnący w nasadzie.',
-        'stall_behavior': 'Początek przeciążenia w części środkowej skrzydła (η ~ 0.4–0.6), lotki przy końcówkach zachowują sterowność.'
+        'stall_behavior': 'Sam obrys nie przesądza o przeciągnięciu. Sprawdź profile, zwichrzenie, mechanizację i rozkład lokalnego Cz.'
     },
     'rectangular': {
         'id': 'rectangular',
         'name_pl': 'Prostokątny (stała cięciwa)',
         'description': 'Maksymalna prostota technologiczna (jednakowe żebra i poszycie wzdłuż całej rozpiętości). Wyższy opór indukowany niż w skrzydle trapezowym.',
-        'stall_behavior': 'Najbezpieczniejszy charakter przeciągnięcia: oderwanie strug rozpoczyna się przy kadłubie (η = 0.0), lotki zachowują pełną skuteczność.'
+        'stall_behavior': 'Sam obrys nie przesądza o przeciągnięciu. Sprawdź profile, zwichrzenie, mechanizację i rozkład lokalnego Cz.'
     },
     'compound_trapezoid': {
         'id': 'compound_trapezoid',
         'name_pl': 'Prostokątno-trapezowy',
         'description': 'Centropłat prostokątny ułatwia montaż klap, podwozia i zbiorników; końcówki trapezowe redukują indukowany opór (układ Piper Cherokee/Archer, Cessna 172, Wilga).',
-        'stall_behavior': 'Przeciążenie inicjowane w części przykadłubowej, łagodny spadek siły nośnej bez tendencji do gwałtownego zwalenia na skrzydło.'
+        'stall_behavior': 'Sam obrys nie przesądza o przeciągnięciu. Sprawdź profile, zwichrzenie, mechanizację i rozkład lokalnego Cz.'
     },
     'elliptical': {
         'id': 'elliptical',
         'name_pl': 'Eliptyczny (minimalny opór indukowany)',
         'description': 'Teoretycznie optymalny rozkład siły nośnej wg Prandtla (współczynnik e = 1.0). Bardzo wysoki koszt produkcji i trudna technologia wykonania żeber (układ Supermarine Spitfire).',
-        'stall_behavior': 'Równomierny rozkład obciążenia (cz1 = 1.0) powoduje jednoczesne przeciągnięcie na całej rozpiętości – nagła utrata skuteczności lotek.'
+        'stall_behavior': 'Sam obrys nie przesądza o przeciągnięciu. Sprawdź profile, zwichrzenie, mechanizację i rozkład lokalnego Cz.'
     },
     'swept_trapezoidal': {
         'id': 'swept_trapezoidal',
         'name_pl': 'Skośny trapezowy',
         'description': 'Skos krawędzi natarcia przesuwa krytyczną liczbę Macha ku wyższym prędkościom. Stosowany w odrzutowcach dyspozycyjnych i komunikacyjnych.',
-        'stall_behavior': 'Tendencja do spływu warstwy przyściennej ku końcówkom i wczesnego przeciągnięcia końcówek skrzydła (wymaga zwichrzenia lub grzebieni aerodynamicznych).'
+        'stall_behavior': 'Sam obrys nie przesądza o przeciągnięciu. Sprawdź profile, zwichrzenie, mechanizację i rozkład lokalnego Cz.'
     }
 }
 
 
 def get_initial_constraint_suggestions(category: str, aircraft_type: str) -> list[dict]:
-    """Generates intelligent initial constraints and tactical-technical recommendations."""
-    suggestions = []
-    
-    # 1. Stall speed constraint (CS-23 / CS-22 / CS-VLA)
-    if aircraft_type in ('piston_ga', 'turboprop_regional'):
-        if category in ('cs_vla', 'cs_lsa', 'easa_optout_ul'):
-            suggestions.append({
-                'id': 'sugg_vs0_vla',
-                'param': 'v_stall_kmh',
-                'title': 'Limit prędkości przeciągnięcia CS-VLA / LSA (Vs0 ≤ 45 kt)',
-                'value': 83.0,
-                'unit': 'km/h',
-                'description': 'Przepis CS-VLA / CS-LSA wymaga, aby prędkość przeciągnięcia w konfiguracji do lądowania nie przekraczała 45 węzłów (83 km/h).',
-                'standard': 'EASA CS-VLA.49 / CS-LSA',
-                'icon': '🛑'
-            })
-        else:
-            suggestions.append({
-                'id': 'sugg_vs0_cs23',
-                'param': 'v_stall_kmh',
-                'title': 'Limit prędkości lądowania CS-23 (Vs0 ≤ 61 kt)',
-                'value': 113.0,
-                'unit': 'km/h',
-                'description': 'Dla jednosilnikowych samolotów CS-23 prędkość przeciągnięcia z klapami nie może przekraczać 61 węzłów (113 km/h).',
-                'standard': 'EASA CS-23.2110',
-                'icon': '🛑'
-            })
-    elif aircraft_type in ('glider', 'motoglider'):
-        suggestions.append({
-            'id': 'sugg_vs0_cs22',
-            'param': 'v_stall_kmh',
-            'title': 'Prędkość przeciągnięcia lądowania CS-22 (Vs ≤ 75 km/h)',
-            'value': 75.0,
-            'unit': 'km/h',
-            'description': 'Bezpieczne lądowanie w terenie przygodnym szybowca/motoszybowca wymaga niskiej prędkości przyziemienia.',
-            'standard': 'EASA CS-22.49',
-            'icon': '🛑'
-        })
-
-    # 2. Wingspan constraints (Hangar / FAI classes)
-    if aircraft_type in ('glider', 'motoglider'):
-        suggestions.append({
-            'id': 'sugg_span_fai15',
-            'param': 'wingspan_m',
-            'title': 'Rozpiętość klasy Standard / 15-metrowej FAI (b = 15.0 m)',
-            'value': 15.0,
-            'unit': 'm',
-            'description': 'Klasa wyczynowa FAI i klubowa (np. PW-5 Smyk, SZD-55 Promyk).',
-            'standard': 'FAI Sporting Code Section 3',
-            'icon': '📏'
-        })
-        suggestions.append({
-            'id': 'sugg_span_fai18',
-            'param': 'wingspan_m',
-            'title': 'Rozpiętość klasy 18-metrowej FAI / TMG (b = 18.0 m)',
-            'value': 18.0,
-            'unit': 'm',
-            'description': 'Optymalna doskonałość motoszybowców turystycznych (np. Pipistrel Sinus, Stemme S10).',
-            'standard': 'EASA CS-22 Subpart B',
-            'icon': '📏'
-        })
-    elif aircraft_type == 'piston_ga':
-        suggestions.append({
-            'id': 'sugg_span_hangar',
-            'param': 'wingspan_m',
-            'title': 'Limit hangarowy GA (b ≤ 11.5 m)',
-            'value': 10.8,
-            'unit': 'm',
-            'description': 'Typowa rozpiętość umożliwiająca bazowanie w standardowych boksach hangarowych aeroklubów (Cessna 172: 11.0 m, PA-28: 10.8 m).',
-            'standard': 'Praktyka eksploatacyjna GA',
-            'icon': '🏠'
-        })
-
-    # 3. Market powerplant constraints (Popular certified engines)
-    if aircraft_type in ('piston_ga', 'motoglider'):
-        suggestions.append({
-            'id': 'sugg_engine_rotax912',
-            'param': 'engine_power_kw',
-            'title': 'Silnik rynkowy: Rotax 912 ULS (73.5 kW / 100 KM)',
-            'value': 73.5,
-            'unit': 'kW',
-            'description': 'Najpopularniejszy 4-cylindrowy silnik tłokowy w klasie VLA/LSA i motoszybowców. Niskie zużycie paliwa (Mogas/Avgas).',
-            'standard': 'Certyfikat EASA.E.121',
-            'icon': '⚡'
-        })
-        suggestions.append({
-            'id': 'sugg_engine_lycoming320',
-            'param': 'engine_power_kw',
-            'title': 'Silnik rynkowy: Lycoming O-320 (112.0 kW / 150 KM)',
-            'value': 112.0,
-            'unit': 'kW',
-            'description': 'Klasyczny certyfikowany napęd samolotów 4-miejscowych (Cessna 172, Piper Cherokee).',
-            'standard': 'FAA TCDS E-274',
-            'icon': '⚡'
-        })
-    elif aircraft_type == 'turboprop_regional':
-        suggestions.append({
-            'id': 'sugg_engine_pt6',
-            'param': 'engine_power_kw',
-            'title': 'Silnik turbośmigłowy: P&WC PT6A-27 (507.0 kW / 680 KM)',
-            'value': 507.0,
-            'unit': 'kW',
-            'description': 'Standard rynkowy dla samolotów dyspozycyjnych i pasażerskich klasy Commuter.',
-            'standard': 'FAA TCDS E4EA',
-            'icon': '⚡'
-        })
-
-    # 4. Standard passenger & crew masses
-    suggestions.append({
-        'id': 'sugg_pax_cs23',
-        'param': 'm_pax',
-        'title': 'Masa pasażera z bagażem podręcznym (85 kg/os.)',
-        'value': 85.0,
-        'unit': 'kg',
-        'description': 'Zgodnie z przepisami CS-23: masa referencyjna 77 kg (osoba) + 8 kg bagaż podręczny.',
-        'standard': 'EASA CS-23.25 / AMC-1',
-        'icon': '👥'
-    })
-
-    # 5. Takeoff ground roll target
-    suggestions.append({
-        'id': 'sugg_sto_grass',
-        'param': 'takeoff_run_m',
-        'title': 'Rozbieg na trawiastym pasie aeroklubowym (Sto ≤ 280 m)',
-        'value': 280.0,
-        'unit': 'm',
-        'description': 'Umożliwia operowanie z większości polskich lotnisk trawiastych i lądowisk gminnych.',
-        'standard': 'Wytyczne ULC / BIPOL 1',
-        'icon': '🛫'
-    })
-
-    return suggestions
+    """Working design choices, without inventing universal certification limits."""
+    from calculations.presets import AIRCRAFT_PRESETS
+    name = {'piston_ga':'ga_trainer', 'glider':'glider_pw5', 'motoglider':'motoglider_aos',
+            'turboprop_regional':'regional_turboprop', 'jet_business':'vlj_jet',
+            'jet_transport':'vlj_jet', 'uav':'uav_male'}.get(aircraft_type, 'ga_trainer')
+    base = AIRCRAFT_PRESETS[name]
+    values = [('aspect_ratio','Wydłużenie skrzydła — wartość startowa',base['aspect_ratio'],'−'),
+              ('v_stall_kmh','VS0 — robocze wymaganie projektu',base['v_stall_kmh'],'km/h'),
+              ('m_pax','Pasażer z bagażem według wytycznych zajęć',115.,'kg')]
+    if base['engine_type'] != 'none':
+        values.append(('takeoff_distance_m','Długość startu do wysokości 15 m',base['takeoff_distance_m'],'m'))
+    return [dict(id='sugg_'+key,param=key,title=title,value=value,unit=unit,
+        description='Założenie robocze do sprawdzenia względem misji i wybranej kategorii. Nie stanowi uniwersalnego limitu zdatności.',
+        standard='Profil klasy / wytyczne BIPOL',icon='📐') for key,title,value,unit in values]
 
 
 def resolve_and_lock_parameters(params: dict, locked_keys: list = None) -> tuple[dict, dict, list]:

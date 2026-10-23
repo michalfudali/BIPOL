@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const extraKeys = ['gear_attachment','wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
+  const extraKeys = ['gear_attachment','gear_retraction','wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
     'takeoff_distance_m','landing_distance_m','wing_area_m2','m_payload','engine_power_kw','wing_planform','dihedral_deg','aileron_type'];
   const wingSources = {loading:['aspect_ratio'],span_aspect:['wingspan_m','aspect_ratio'],
     span_area:['wingspan_m','wing_area_m2'],area_aspect:['wing_area_m2','aspect_ratio']};
@@ -99,6 +99,7 @@
     if(!('engine_power_kw' in p))set('','engine_power_kw',0);
     for(const key of ['takeoff_distance_m','landing_distance_m'])set('',key,p[key]||0);
     set('','gear_attachment',p.gear_attachment||'fuselage');
+    set('','gear_retraction',p.gear_retraction||'auto');
     sync();propulsion();
   }
   function openWizard() {

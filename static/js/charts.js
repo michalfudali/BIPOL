@@ -528,9 +528,10 @@ function drawVnEnvelope(canvasId, env) {
   const spds = [
     { label: 'Vs', val: env.speeds.v_s_kmh },
     { label: 'VA', val: env.speeds.v_a_kmh },
+    { label: 'VB', val: env.speeds.v_b_kmh },
     { label: 'VC', val: env.speeds.v_c_kmh },
     { label: 'VD', val: env.speeds.v_d_kmh }
-  ];
+  ].filter(s => Number.isFinite(s.val));  // CS-22 nie ma VC; VB tylko gdy jest przypadek podmuchu
   spds.forEach(s => {
     const x = toX(s.val);
     ctx.strokeStyle = '#cbd5e1';

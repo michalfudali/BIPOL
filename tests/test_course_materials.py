@@ -29,7 +29,9 @@ def test_matching_chart_reproduces_lecture_example():
 
 def test_minimum_speed_line_keeps_the_cz_safety_factor():
     p = AIRCRAFT_PRESETS['ga_trainer']
-    s = run_bipol_project(p)['sizing']
+    r = run_bipol_project(p)
+    s = r['sizing']
+    p = r['params']  # The same high-lift configuration as the downstream stall check.
     assert s['ws_stall_max'] == pytest.approx(0.5 * RHO0 * (p['v_stall_kmh'] / 3.6) ** 2 * p['cz_max_lnd'] / 1.1, abs=0.1)
     assert s['takeoff_basis'] == '15m'
 

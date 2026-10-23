@@ -6,9 +6,11 @@ Autorzy metodyki: dr inż. Marcin Figat, dr inż. Tomasz Grabowski, prof. dr hab
 import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 from calculations.official_topics import ALL_TOPICS
-from calculations.paturski_ml import run_paturski_mechanika_lotu
+from calculations.paturski_ml import run_paturski_mechanika_lotu, aircraft_characteristics_for_cg
 from calculations.trends import analyze_trends
 from calculations.preliminary import preliminary_insights
+from calculations.mass import calculate_mass_sizing
+from calculations.costs import calculate_costs
 from calculations.polish_law import SUBCATEGORIES, K_CATEGORIES, resolve_category
 
 def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dict, aero_res: dict, perf_res: dict, env_res: dict, bal_res: dict, params: dict) -> dict:
@@ -56,7 +58,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # PROJEKT 1: PROJEKT KONCEPCYJNY (5 pkt)
     # =========================================================================
     # Temat projektu
-    topic_id = int(params.get("topic_id", 33))
+    topic_id = int(params.get("topic_id", 0))
     selected_topic = next((dict(t, id=t['num'], catalog_id=t['id']) for t in ALL_TOPICS if t['num'] == topic_id), None)
     if not selected_topic:
         selected_topic = {
@@ -70,7 +72,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     wetted_info = geom_res.get("wetted_area", {})
     swet_ratio = float(wetted_info.get("swet_over_s", 4.2 if ac_type == "piston_ga" else 5.2))
     s_wet = float(wetted_info.get("total_m2", round(swet_ratio * S, 2)))
-    k_max_p1 = round(0.5 * math.sqrt((math.pi * AR * float(params.get("oswald_e", 0.80))) / cx0), 2)
+    k_max_p1 = round(1 / (2 * math.sqrt(k_ind * cx0)), 2)
     # Wstępna moc / ciąg niezbędny dla założonej prędkości przelotowej na wysokości przelotu H_cr
     isa_cr_p1 = isa_atmosphere(h_cr)
     q_cr_p1 = max(10.0, 0.5 * isa_cr_p1["rho"] * (v_cr_ms ** 2))
@@ -126,7 +128,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
 
     p1_data = {
         "topic": selected_topic,
-        "concept_description": f"Projektowany samolot w układzie {wing_cfg_pl}, sklasyfikowany w {cat_pl}. {occupants_pl}, napęd {eng_pl} zabudowany {loc_pl}.",
+        "concept_description": f"Projektowany samolot w układzie {wing_cfg_pl}, sklasyfikowany w {cat_pl}. {occupants_pl}, {('napęd ' + eng_pl + ' zabudowany ' + loc_pl) if engine_type != 'none' else 'lot bez napędu'}.",
         "engine_type": engine_type,
         "swet_over_s": swet_ratio,
         "s_wet_m2": s_wet,
@@ -159,7 +161,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     mu_cr = 1.789e-5 * math.pow(isa_cr["T"] / 288.15, 1.5) * ((288.15 + 110.4) / (isa_cr["T"] + 110.4))
     re_proj = round((isa_cr["rho"] * v_cr_ms * mac) / max(1e-7, mu_cr))
     a_sound = math.sqrt(1.4 * 287.05 * isa_cr["T"])
-    m_max_mach = round(max(v_cr_ms / a_sound, (float(perf_res["speeds"]["v_max_sl_kmh"]) / 3.6) / a_sound), 3)
+    m_max_mach = round(max(v_cr_ms / a_sound, (float(perf_res["speeds"]["v_max_sl_kmh"]) / 3.6) / isa_atmosphere(0)["a"]), 3)
     
     if engine_type == "jet" or m_max_mach > 0.60:
         recommended_catalog = "Profile nadkrytyczne NASA SC(2) / NACA serii 64A–65 (wysokie Macha)"
@@ -189,68 +191,38 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         ]
         selected_airfoil_name = "NACA 23012"
     
+    for candidate in airfoil_candidates:
+        for key in ('cx_min', 'cx_cz_proj', 'cz_max', 'k_max'):
+            candidate[key] = None
+        candidate['stall'] = 'Wymaga biegunowej źródłowej dla właściwych Re i Macha.'
+
     # 2.3 Analiza wrażliwości MTOW
     # Pochodne cząstkowe m0 względem parametrów (Raymer / Roskam)
-    empty_frac = mass_res["empty_fraction"]
-    fuel_frac = mass_res["fuel_fraction"]
-    denom_sens = max(0.08, 1.0 - empty_frac - fuel_frac)
-    sens_d_payload = round(1.0 / denom_sens, 2)
-    sens_d_fuel = round(m0 / (denom_sens * max(0.1, 1.0 - fuel_frac)), 1)
-    
-    sensitivity_table = [
-        {"var": "Masa płatna m_payload", "delta": "+10%", "d_mtow_kg": round(0.10 * m_payload * sens_d_payload, 1), "pct_change": round((0.10 * m_payload * sens_d_payload / m0) * 100.0, 1)},
-        {"var": "Masa płatna m_payload", "delta": "-10%", "d_mtow_kg": round(-0.10 * m_payload * sens_d_payload, 1), "pct_change": round((-0.10 * m_payload * sens_d_payload / m0) * 100.0, 1)},
-        {"var": "Zasięg obliczeniowy R", "delta": "+10%", "d_mtow_kg": round(0.10 * m_fuel * 1.35, 1), "pct_change": round((0.10 * m_fuel * 1.35 / m0) * 100.0, 1)},
-        {"var": "Doskonałość przelotowa K", "delta": "+10%", "d_mtow_kg": round(-0.09 * m_fuel * 1.25, 1), "pct_change": round((-0.09 * m_fuel * 1.25 / m0) * 100.0, 1)},
-        {"var": "Jednostkowe zużycie paliwa SFC", "delta": "+10%", "d_mtow_kg": round(0.10 * m_fuel * 1.25, 1), "pct_change": round((0.10 * m_fuel * 1.25 / m0) * 100.0, 1)}
+    # Re-solve the actual nonlinear mass balance for each perturbation.
+    # A constant-fraction derivative is incorrect for me/m0 = A*m0**C.
+    sens_d_payload = calculate_mass_sizing(dict(params, m_cargo=params.get('m_cargo', 0)+1))['m0'] - m0
+    scenarios = [
+        ('Masa płatna m_payload', '+10%', {k: params.get(k, 0)*1.1 for k in ('m_pax','m_bag','m_cargo')}),
+        ('Masa płatna m_payload', '-10%', {k: params.get(k, 0)*.9 for k in ('m_pax','m_bag','m_cargo')}),
+        ('Zasięg obliczeniowy R', '+10%', {'range_km': params['range_km']*1.1}),
+        ('Doskonałość przelotowa K', '+10%', {'mission_ld_factor': params['mission_ld_factor']*1.1}),
+        ('Jednostkowe zużycie paliwa SFC', '+10%', {'sfc': params.get('sfc', 0)*1.1}),
     ]
-    
-    # 2.5 Analiza kosztów B+R i produkcji wg modelu Corke / DAPCA IV (BIPOL_2.pdf wzory 13-21, Tab. 5.9, wzór 5.10)
-    # Ws - masa struktury / masa pusta w [lb], Vmax - prędkość maksymalna w [knots]
-    w_s_lbs = m_empty * 2.20462
-    v_max_knots = float(perf_res["speeds"]["v_max_sl_kmh"]) * 0.539957
-    n_rdte = 4   # liczba prototypów do prób B+R (N_RDTE)
-    n_prod = 250 # seria produkcyjna wg wytycznych BIPOL (N_P = 250)
-    n_total = n_rdte + n_prod
-    
-    # Wzór (13): Roboczogodziny prac inżynierskich H_E = 4.860 * Ws^0.777 * Vmax^0.894 * N^0.163
-    he_hours = round(4.860 * math.pow(w_s_lbs, 0.777) * math.pow(v_max_knots, 0.894) * math.pow(n_total, 0.163))
-    # Wzór (14): Koszty wsparcia rozwoju konstrukcji C_D [USD 1986] = 45.42 * Ws^0.630 * Vmax^1.300
-    cd_base_1986 = 45.42 * math.pow(w_s_lbs, 0.630) * math.pow(v_max_knots, 1.300)
-    # Wzór (16): Robocizna produkcyjna H_ML = 7.370 * Ws^0.820 * Vmax^0.484 * N^0.641
-    hml_hours = round(7.370 * math.pow(w_s_lbs, 0.820) * math.pow(v_max_knots, 0.484) * math.pow(n_total, 0.641))
-    # Wzór (17): Koszt materiałów produkcyjnych C_MM [USD 1986] = 11.00 * Ws^0.921 * Vmax^0.621 * N^0.799
-    cmm_base_1986 = 11.00 * math.pow(w_s_lbs, 0.921) * math.pow(v_max_knots, 0.621) * math.pow(n_total, 0.799)
-    # Wzór (19): Oprzyrządowanie i narzędzia H_T = 5.99 * Ws^0.777 * Vmax^0.696 * N^0.263
-    ht_hours = round(5.990 * math.pow(w_s_lbs, 0.777) * math.pow(v_max_knots, 0.696) * math.pow(n_total, 0.263))
-    # Wzór (20): Kontrola jakości H_QC = 0.13 * H_ML
-    hqc_hours = round(0.13 * hml_hours)
-    # Wzór (21): Koszt prób w locie C_FT [USD 1986] = 1243.03 * Ws^0.325 * Vmax^0.822 * N_RDTE^1.210
-    cft_base_1986 = 1243.03 * math.pow(w_s_lbs, 0.325) * math.pow(v_max_knots, 0.822) * math.pow(n_rdte, 1.210)
-    
-    # Stawki godzinowe z Tab. 5.9 (baza 1986 USD) przeliczone wskaźnikiem CPI (wzór 5.10) i współczynnikiem klasy GA Raymera (k_GA = 0.28 dla lekkich samolotów GA)
-    cpi_factor = 3.12  # CPI_obecny / CPI_1986
-    ga_complexity_factor = 0.28 if ac_type in ("piston_ga", "glider", "uav") else (0.55 if ac_type == "turboprop_regional" else 1.0)
-    r_eng_1986 = 59.10
-    r_tool_1986 = 61.70
-    r_mfg_1986 = 55.40
-    r_qc_1986 = 50.10
-    
-    # Całkowite koszty programu (B+R + seria N_prod) w USD bieżących
-    cost_rdte_usd = round((he_hours * r_eng_1986 + cd_base_1986 + cft_base_1986) * cpi_factor * ga_complexity_factor)
-    cost_tooling_usd = round((ht_hours * r_tool_1986) * cpi_factor * ga_complexity_factor)
-    cost_labor_total_usd = round((hml_hours * r_mfg_1986 + hqc_hours * r_qc_1986) * cpi_factor * ga_complexity_factor)
-    cost_materials_usd = round(cmm_base_1986 * cpi_factor * max(0.45, ga_complexity_factor))
-    
-    # Silnik i awionika na 1 egzemplarz
-    engine_cost_single = 42000.0 if engine_type == "prop" else 165000.0
-    avionics_cost_single = 28000.0
-    
-    # Koszt jednostkowy seryjny (Flyaway Cost przy amortyzacji na N_P = 250 szt.)
-    cost_per_unit = round((cost_materials_usd + cost_labor_total_usd + cost_tooling_usd + cost_rdte_usd) / n_prod + engine_cost_single + avionics_cost_single)
-    # Cena katalogowa z 12% marżą producenta
-    price_with_profit = round(cost_per_unit * 1.12)
-    
+    sensitivity_table = []
+    for label, delta, change in scenarios:
+        try:
+            dm = calculate_mass_sizing({**params, **change})['m0'] - m0
+            sensitivity_table.append(dict(var=label, delta=delta, d_mtow_kg=round(dm,1), pct_change=round(100*dm/m0,1)))
+        except ValueError:
+            sensitivity_table.append(dict(var=label, delta=delta, d_mtow_kg=None, pct_change=None))
+
+    # 2.5 Analiza kosztów B+R i produkcji (BIPOL_2.pdf wzory 13-21, Tab. 5.9, wzór 5.10)
+    # Szybowiec nie ma Vmax lotu poziomego; przyjęto VNE = 0,9·VD (CS 22.1505).
+    dp = sizing_res["design_point"]
+    v_max_cost = float(perf_res["speeds"]["v_max_sl_kmh"]) or 0.9 * float(env_res["speeds"]["v_d_kmh"])
+    cost_analysis = calculate_costs(params, m_empty, v_max_cost,
+                                    thrust_kn=dp.get("thrust_kn"), power_kw=dp.get("power_kw"), mach_max=m_max_mach)
+
     p2_data = {
         "mission_profile": mission_profile,
         "airfoil_selection": {
@@ -274,48 +246,15 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "power_kw": sizing_res["design_point"].get("power_kw"),
             "s_wing_m2": S
         },
-        "cost_analysis": {
-            "series_count": n_prod,
-            "prototypes_rdte": n_rdte,
-            "ws_empty_lbs": round(w_s_lbs, 1),
-            "vmax_knots": round(v_max_knots, 1),
-            "rdte_hours": he_hours,
-            "manufacturing_hours_total": hml_hours,
-            "quality_control_hours": hqc_hours,
-            "tooling_hours": ht_hours,
-            "cd_support_usd": round(cd_base_1986 * cpi_factor * ga_complexity_factor),
-            "cft_flight_test_usd": round(cft_base_1986 * cpi_factor * ga_complexity_factor),
-            "cmm_materials_usd": cost_materials_usd,
-            "unit_cost_usd": cost_per_unit,
-            "selling_price_usd": price_with_profit,
-            "selling_price_pln": round(price_with_profit * 4.05)
-        },
+        "cost_analysis": cost_analysis,
         "points_max": {"obligatory": 13, "optional": 5, "total": 18}
     }
     
     # =========================================================================
     # PROJEKT 3: PROJEKT WSTĘPNY I ANALIZA MASOWA (27 pkt)
     # =========================================================================
-    # 3.1 Rysunek 200 mm cięciwy profilu (Współrzędne NACA 23012 do wykreślenia)
+    # 3.1 Profile drawing requires independently verified coordinates.
     c_draw_mm = 200.0
-    # Teoretyczne punkty x/c i y/c profilu NACA 23012
-    naca23012_coords_rel = [
-        (0.000, 0.000, 0.000), (0.0125, 0.0267, -0.0123), (0.025, 0.0361, -0.0171),
-        (0.050, 0.0491, -0.0226), (0.075, 0.0580, -0.0258), (0.100, 0.0643, -0.0278),
-        (0.150, 0.0725, -0.0295), (0.200, 0.0763, -0.0297), (0.250, 0.0772, -0.0287),
-        (0.300, 0.0759, -0.0268), (0.400, 0.0691, -0.0216), (0.500, 0.0590, -0.0162),
-        (0.600, 0.0468, -0.0112), (0.700, 0.0334, -0.0068), (0.800, 0.0199, -0.0033),
-        (0.900, 0.0076, -0.0010), (1.000, 0.0013, -0.0013)
-    ]
-    airfoil_200mm_table = [
-        {
-            "xc_pct": round(pt[0] * 100.0, 1),
-            "x_mm": round(pt[0] * c_draw_mm, 1),
-            "y_upper_mm": round(pt[1] * c_draw_mm, 2),
-            "y_lower_mm": round(pt[2] * c_draw_mm, 2),
-            "thick_mm": round((pt[1] - pt[2]) * c_draw_mm, 2)
-        } for pt in naca23012_coords_rel
-    ]
     
     # 3.2 Tabela masowa 3.1 i warianty wyważenia 3.2 z momentami bezwładności (BIPOL_3_2010.pdf)
     x_lemac = bal_res["x_lemac_m"]
@@ -353,10 +292,25 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         {"item": "15. Paliwo w zbiornikach skrzydłowych", "mass_kg": m_fuel, "x_m": arms["fuel"], "y_m": 1.2, "z_m": 0.15}
     ]
     
+    group_indices = [([0], 'wing'), ([1], 'fuselage'), ([2,3], 'tail'),
+                     ([4,5], 'gear'), ([6,7], 'propulsion'), ([8,9,10,11], 'systems')]
+    for indices, key in group_indices:
+        for index in indices:
+            table_3_1[index]['x_m'] = arms[key]
+        target = bd['m_' + key]
+        table_3_1[indices[-1]]['mass_kg'] += target - sum(table_3_1[i]['mass_kg'] for i in indices)
+    if not unmanned_ac:
+        table_3_1[13]['x_m'] = arms['payload_equivalent']
+    # Left and right components are represented by their common centroid.
+    # Spread for inertia is separate from centroid position (symmetry yCG=0).
+    for row in table_3_1:
+        row['y_rms_m'] = abs(row['y_m'])
+        row['y_m'] = 0.0
+
     # Obliczenie momentów bezwładności w środku ciężkości Jx, Jy, Jz i dewiacji Jxz (wzory 2.3 - 2.4 z BIPOL_3_2010.pdf)
     xcg_mtow = float(next(s for s in bal_res["loading_states"] if s["key"] == "mtow")["xcg_m"])
     ycg_mtow = 0.0
-    zcg_mtow = 0.0
+    zcg_mtow = sum(row["mass_kg"]*row["z_m"] for row in table_3_1) / sum(row["mass_kg"] for row in table_3_1)
     
     jx_cg = 0.0
     jy_cg = 0.0
@@ -365,7 +319,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     for p in table_3_1:
         mi = p["mass_kg"]
         dx = p["x_m"] - xcg_mtow
-        dy = p["y_m"] - ycg_mtow
+        dy = p["y_rms_m"]
         dz = p["z_m"] - zcg_mtow
         jx_cg += mi * (dy**2 + dz**2)
         jy_cg += mi * (dx**2 + dz**2)
@@ -380,25 +334,32 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # Przeliczenie twierdzeniem Steinera do punktu 1/4 SCA (wzór punktu 10 z BIPOL_3_2010.pdf)
     x_quarter_mac = round(x_lemac + 0.25 * mac, 3)
     dx_steiner = x_quarter_mac - xcg_mtow
-    jy_quarter_mac = round(jy_cg + m0 * (dx_steiner ** 2), 1)
+    jy_quarter_mac = round(jy_cg + m0 * (dx_steiner ** 2 + zcg_mtow ** 2), 1)
     jz_quarter_mac = round(jz_cg + m0 * (dx_steiner ** 2), 1)
     
     prop_sel = paturski_res["p5_propulsion_characteristics"].get("propeller_selection", {})
+    # Cz(α), Cm(α), Cx(Cz) płata (BIPOL I, opis Projektu 3): Tabela 2.2 Paturskiego,
+    # Cm względem noska ŚCA: Cm = Cm_SA − x̄_SA·Cz (środek aerodynamiczny profilu).
+    p2w = paturski_res["p2_wing_aero"]
+    wing_alpha_table = [{"alpha_deg": r["alpha_p_deg"], "cz": r["cz_inf"], "cx": r["cx_p_prime"],
+                         "cm_le": round(p2w["cm_sa_profile"] - p2w["x_sa_bar"] * r["cz_inf"], 4)}
+                        for r in paturski_res["p3_aircraft_aero"]["table_2_2_complete"]]
     p3_data = {
         "geometry_trends": trend_analysis.get("geometry_trends_analysis"),
         "blueprint_checks": {
             "engine_type": engine_type,
-            "pilot_vision_angle_deg": 16.5,
-            "propeller_tip_mach": prop_sel.get("ma_tip_kl", round((math.pi * 1.85 * (2400.0 / 60.0)) / a_sound, 2)) if engine_type == "prop" else 0.56,
+            "pilot_vision_angle_deg": None,
+            "propeller_tip_mach": prop_sel.get("ma_tip_kl", round((math.pi * 1.85 * (2400.0 / 60.0)) / a_sound, 2)) if engine_type == "prop" else None,
             "propeller_diameter_m": prop_sel.get("diameter_m", 1.85) if engine_type == "prop" else None,
             "propeller_cd": prop_sel.get("cd_dimensionless") if engine_type == "prop" else None,
-            "prop_ground_clearance_m": 0.32 if engine_type == "prop" else 0.48,
-            "fan_intake_mach": 0.56,
-            "nacelle_ground_clearance_m": 0.48,
-            "gear_turnover_angle_deg": 18.2,
-            "gear_cg_post_landing_mac_pct": 35.0
+            "prop_ground_clearance_m": None,
+            "fan_intake_mach": None,
+            "nacelle_ground_clearance_m": None,
+            "gear_turnover_angle_deg": None,
+            "gear_cg_post_landing_mac_pct": None
         },
-        "airfoil_200mm_table": airfoil_200mm_table,
+        "airfoil_200mm_table": [],
+        "airfoil_coordinates_note": "Brak zweryfikowanych rzędnych wybranego profilu. Wczytaj je z dokumentacji profilu; tabeli innego profilu nie używa się do rysunku.",
         "table_3_1_components": table_3_1,
         "table_3_2_loading_states": bal_res["loading_states"],
         "inertia_moments": {
@@ -406,6 +367,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "jy_cg_kgm2": jy_cg,
             "jz_cg_kgm2": jz_cg,
             "jxz_cg_kgm2": jxz_cg,
+            "method": "Przybliżenie skupionych mas zespołów, bez własnych momentów bezwładności. Nie jest modelem konstrukcyjnym.",
+            "zcg_m": zcg_mtow,
             "quarter_mac_x_m": x_quarter_mac,
             "jy_quarter_mac_kgm2": jy_quarter_mac,
             "jz_quarter_mac_kgm2": jz_quarter_mac
@@ -422,9 +385,10 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "delta_cx_tech": paturski_res["p2_wing_aero"]["delta_cx_tech"],
             "ca_paturski_m": paturski_res["p2_wing_aero"]["ca_paturski_m"],
             "xn_mac_m": paturski_res["p2_wing_aero"]["xn_mac_m"],
-            "cm_0_wing": -0.055,
+            "cm_0_wing": paturski_res["p2_wing_aero"]["cm_sa_profile"],
             "cx_0_wing": aero_res.get("component_drag_buildup", [{"cx0_i": round(cx0 * 0.44, 4)}])[0]["cx0_i"]
         },
+        "wing_alpha_table": wing_alpha_table,
         "schrenk_summary": {
             "points": geom_res["schrenk"],
             "max_cz1": geom_res.get("schrenk_Pinpoint", {}).get("max_cz1", 1.08),
@@ -448,45 +412,40 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         {"component": "Chłodnice, wloty i wyposażenie", "re": 0, "cf": 0.0, "ff": 1.0, "q": 1.0, "swet_m2": 0.0, "cx0_i": round(cx0 * 0.04, 4), "share_pct": 4.0}
     ])
     
-    # 4.2 Biegunowa prędkości w locie ślizgowym w(V) dla skrajnych położeń ŚM (BIPOL_4.pdf)
-    # w = V / K(Cz)
-    v_kmh_list = [round(x, 1) for x in range(int(perf_res["speeds"]["vs_clean_kmh"] * 0.95), int(perf_res["speeds"]["v_max_sl_kmh"] * 0.95), 10)]
-    glide_polar_data = []
-    w_min_val = 999.0
-    v_ekon = 0.0
-    k_max_glide = 0.0
-    v_opt = 0.0
-    
-    for v_k in v_kmh_list:
-        v_m = v_k / 3.6
-        q_v = 0.5 * RHO0 * (v_m ** 2)
-        cz_v = (m0 * G0) / (q_v * S)
-        if cz_v > cz_max_clean:
-            continue
-        cx_v = cx0 + k_ind * (cz_v ** 2)
-        glide_ratio_k = cz_v / max(0.001, cx_v)
-        w_sink = round(v_m / max(0.1, glide_ratio_k), 2)
-        
-        # Wpływ skrajnego przedniego wyważenia (dodatkowe opory trymowania +3.5%)
-        w_sink_fwd = round(w_sink * 1.035, 2)
-        
-        if w_sink < w_min_val:
-            w_min_val = w_sink
-            v_ekon = v_k
-        if glide_ratio_k > k_max_glide:
-            k_max_glide = glide_ratio_k
-            v_opt = v_k
-            
-        glide_polar_data.append({
-            "v_kmh": v_k,
-            "w_sink_aft_ms": w_sink,
-            "w_sink_fwd_ms": w_sink_fwd,
-            "k_glide": round(glide_ratio_k, 1)
-        })
-        
+    # 4.1a Cz(α), Cm(α), K(α), E(α) i biegunowe wyważone dla skrajnych położeń ŚC
+    # (BIPOL I, opis Projektu 4); metoda Tabeli 2.2 Paturskiego z obciążeniem usterzenia.
+    glide = perf_res['glide']
+    rho_glide = isa_atmosphere(glide.get('altitude_m', h_cr))['rho']
+    cz_cruise = 2.0 * m0 * G0 / (isa_cr['rho'] * S * (v_cr_ms ** 2))
+    cg_characteristics = aircraft_characteristics_for_cg(
+        paturski_res["p3_aircraft_aero"],
+        bal_res["cg_range"]["forward_pct"] / 100.0,
+        bal_res["cg_range"]["aft_pct"] / 100.0,
+        bal_res["neutral_point"]["x_n_mac_pct"] / 100.0,
+        min(cz_cruise, 0.9 * cz_max_clean), m0, S, rho_glide)
+
+    def sink_at(polar, v_kmh):
+        pts = sorted(polar["points"], key=lambda q: q["v_kmh"])
+        for lo, hi in zip(pts, pts[1:]):
+            if lo["v_kmh"] <= v_kmh <= hi["v_kmh"]:
+                t = (v_kmh - lo["v_kmh"]) / max(1e-9, hi["v_kmh"] - lo["v_kmh"])
+                return round(lo["w_ms"] + t * (hi["w_ms"] - lo["w_ms"]), 3)
+        return None
+
+    # 4.2 Biegunowa prędkości w locie ślizgowym w(V) dla skrajnych położeń ŚC (BIPOL_4.pdf)
+    polars_cg = cg_characteristics["speed_polars"]
+    glide_polar_data = [dict(v_kmh=r['v_kmh'], w_sink_ms=r['sink_ms'],
+                             w_sink_aft_ms=sink_at(polars_cg["aft"], r['v_kmh']),
+                             w_sink_fwd_ms=sink_at(polars_cg["forward"], r['v_kmh']),
+                             k_glide=r['ld']) for r in glide['points']]
+    w_min_val = glide['minimum_sink']['sink_ms']
+    v_ekon = glide['minimum_sink']['v_kmh']
+    k_max_glide = glide['best_glide']['ld']
+    v_opt = glide['best_glide']['v_kmh']
+
     # 4.3 Mechanizacja płata (CS-23.49: limit 61 kt = 113 km/h dotyczy samolotów jednosilnikowych i lekkich wielosilnikowych <= 2722 kg bez zdolności wznoszenia OEI)
     is_single_light_cs23 = (engine_type == "prop") and (ac_type in ["piston_ga", "uav"]) and (m0 <= 2722.0) and (params.get("engine_location", "nose") != "wing")
-    stall_limit_kmh = 113.0 if is_single_light_cs23 else round(float(params.get("v_stall_kmh", 140.0)), 1)
+    stall_limit_kmh = float(params["v_stall_kmh"])  # Check the project requirement; no universal CS-23 limit.
     high_lift_summary = {
         "clean": {"cz_max": cz_max_clean, "vs_kmh": perf_res["speeds"]["vs_clean_kmh"], "cx0": aero_res["cx0_clean"]},
         "takeoff": {"cz_max": aero_res["cz_max_to"], "vs_kmh": perf_res["speeds"]["vs_to_kmh"], "cx0": aero_res["cx0_to"], "delta_cz": round(aero_res["cz_max_to"] - cz_max_clean, 2)},
@@ -509,7 +468,9 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "k_max": round(k_max_glide, 1),
             "table_4_1_paturski": paturski_res["p4_gliding_flight"]["table_4_1_glide"],
             "comparison_paturski": paturski_res["p4_gliding_flight"]["glide_comparison"],
+            "cg_polars": polars_cg,
         },
+        "cg_characteristics": cg_characteristics,
         "high_lift": high_lift_summary,
         "paturski_aero": paturski_res["p3_aircraft_aero"],
         "paturski_propulsion": paturski_res["p5_propulsion_characteristics"],
@@ -540,92 +501,100 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "v_wy_kmh": r["v_w_kmh"]
         })
 
-    # Pułap praktyczny h_p (w_max = 0.5 m/s), teoretyczny h_t (w_max = 0) i czas wznoszenia t_hp wg wzoru (6.12)
+    # Ceilings use the propulsion-specific ROC threshold; time integrates dh/ROC.
     hp_service_m = ceilings_ml.get("h_p_practical_m", float(perf_res["ceiling"]["service_ceiling_m"]))
     ht_theoretical_m = ceilings_ml.get("h_t_theoretical_m", float(perf_res["ceiling"]["absolute_ceiling_m"]))
     thp_analytical_s = ceilings_ml.get("t_hp_climb_to_practical_ceiling_s", 0.0)
     thp_analytical_min = ceilings_ml.get("t_hp_climb_to_practical_ceiling_min", 0.0)
         
-    # 5.2 Zasięg i długotrwałość 3 metodami (BIPOL_5.pdf wzory 5.10 - 5.16 + Paturski wzory 6.29 - 6.38)
-    e_oswald = float(params.get("oswald_e", 0.80))
-    eta_prop = float(params.get("prop_efficiency", 0.82))
-    rho_cr = isa_cr["rho"]
-
-    # Masa na początku i końcu etapu przelotu (po odliczeniu paliwa na start/wznoszenie oraz rezerwy nawigacyjnej/krążenia)
-    m_start_cr = m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"]
-    m_end_cr = m_start_cr * fuel_detail["cruise"]
-
-    # Parametry biegunowej w przelocie: Cz_opt = sqrt(pi * AR * e * Cx0), 2*K_max = sqrt(pi * AR * e / Cx0)
-    cz_opt = math.sqrt(math.pi * AR * e_oswald * cx0)
-    two_k_max = math.sqrt((math.pi * AR * e_oswald) / max(1e-5, cx0))
-    q_cr_s = max(1.0, 0.5 * rho_cr * (v_cr_ms ** 2) * S)
-
-    cz_start = (m_start_cr * G0) / q_cr_s
-    cz_end = (m_end_cr * G0) / q_cr_s
-    atan_diff = math.atan(cz_start / cz_opt) - math.atan(cz_end / cz_opt)
-
-    if engine_type == "none" or params.get("aircraft_type") == "glider":
-        req_r_km = float(params.get("range_km", 450.0))
-        endurance_h_m1 = round(req_r_km / max(1.0, v_cr_kmh), 2)
-        range_km_m1 = round(req_r_km, 1)
-        endurance_h_m2 = endurance_h_m1
-        range_km_m2 = range_km_m1
-        endurance_h_m3 = endurance_h_m1
-        range_km_m3 = range_km_m1
-    elif engine_type == "jet":
-        tsfc_val = float(params.get("sfc", 0.62))
-        if not (0.15 <= tsfc_val <= 4.0):
-            tsfc_val = 0.62
-        c_si = tsfc_val / 3600.0  # 1/s
-        endurance_s_m3 = (1.0 / c_si) * two_k_max * atan_diff
-        endurance_h_m3 = round(endurance_s_m3 / 3600.0, 2)
-        range_km_m3 = round(endurance_h_m3 * v_cr_kmh, 1)
-        cz_avg = 0.5 * (cz_start + cz_end)
-        k_avg = cz_avg / (cx0 + k_ind * (cz_avg ** 2))
-        mass_ratio_ln = math.log(m_start_cr / max(1.0, m_end_cr))
-        endurance_h_m1 = round(((1.0 / c_si) * k_avg * mass_ratio_ln) / 3600.0, 2)
-        range_km_m1 = round(endurance_h_m1 * v_cr_kmh, 1)
-        range_km_m2 = round(range_km_m1 * 0.985, 1)
-        endurance_h_m2 = round((2.0 * (math.sqrt(m_start_cr) - math.sqrt(m_end_cr)) / math.sqrt(m_start_cr)) / max(0.005, mass_ratio_ln) * endurance_h_m1, 2)
-    else:
-        raw_qe_sfc = float(params.get("sfc", 265.0))
-        if 0.12 <= raw_qe_sfc <= 1.5:
-            qe_sfc = raw_qe_sfc * 1000.0
-        elif raw_qe_sfc >= 80.0:
-            qe_sfc = raw_qe_sfc
+    # Compare real integrations of the same polar and cruise fuel allocation.
+    # No synthetic percentage changes between methods or assumed glider range.
+    ranges = paturski_res['p6_performance_paturski']['range_endurance_6_5']
+    cruise_row = next((row for row in ranges['table_6_3']
+        if abs(row['v_kmh'] - v_cr_kmh) < .06), None)
+    range_km_m1 = endurance_h_m1 = range_km_m2 = endurance_h_m2 = None
+    range_km_m3 = ranges['range_at_requested_speed_km']
+    endurance_h_m3 = ranges['endurance_at_requested_speed_h']
+    if cruise_row:
+        range_km_m2, endurance_h_m2 = cruise_row['l_breguet_km'], cruise_row['t_breguet_h']
+        if engine_type == 'jet':
+            endurance_h_m1 = endurance_h_m2
+            range_km_m1 = round(v_cr_kmh * endurance_h_m1, 1)
         else:
-            qe_sfc = 265.0
-        sfc_si = (qe_sfc * 1e-3) / (1000.0 * 3600.0)  # kg/(W*s)
-        endurance_s_m3 = (eta_prop / (sfc_si * G0 * v_cr_ms)) * two_k_max * atan_diff
-        endurance_h_m3 = round(endurance_s_m3 / 3600.0, 2)
-        range_km_m3 = round(endurance_h_m3 * v_cr_kmh, 1)
-        cz_avg = 0.5 * (cz_start + cz_end)
-        k_avg = cz_avg / (cx0 + k_ind * (cz_avg ** 2))
-        mass_ratio_ln = math.log(m_start_cr / max(1.0, m_end_cr))
-        range_m_m1 = (eta_prop / (sfc_si * G0)) * k_avg * mass_ratio_ln
-        range_km_m1 = round(range_m_m1 / 1000.0, 1)
-        endurance_h_m1 = round(range_km_m1 / v_cr_kmh, 2)
-        range_km_m2 = round(range_km_m1 * 0.985, 1)
-        endurance_h_m2 = round((2.0 * (math.sqrt(m_start_cr) - math.sqrt(m_end_cr)) / math.sqrt(m_start_cr)) / max(0.005, mass_ratio_ln) * endurance_h_m1, 2)
-
+            range_km_m1 = range_km_m2
+            endurance_h_m1 = round(range_km_m1 / v_cr_kmh, 2)
     range_endurance_methods = [
-        {"method": "Metoda 1: Stała prędkość V i stałe Cz (wzór Bregueta 6.30 / 6.35)", "range_km": range_km_m1, "endurance_h": endurance_h_m1},
-        {"method": "Metoda 2: Stała wysokość H i stałe Cz (V = f(m), wzór 6.29 / 6.36)", "range_km": range_km_m2, "endurance_h": endurance_h_m2},
-        {"method": "Metoda 3: Stała wysokość H i stała prędkość V (całka arctan 6.31 / 6.37)", "range_km": range_km_m3, "endurance_h": endurance_h_m3}
+        dict(method='Stałe V i Cz, zmienna wysokość — idealny model Bregueta',
+             range_km=range_km_m1, endurance_h=endurance_h_m1),
+        dict(method='Stała wysokość i Cz, V zmienne z masą — idealny model Bregueta',
+             range_km=range_km_m2, endurance_h=endurance_h_m2),
+        dict(method='Stała wysokość i wymagana prędkość — całka arctan',
+             range_km=range_km_m3, endurance_h=endurance_h_m3),
     ]
-    
-    # 5.4 Krytyczna ocena osiągów (Tabela 5.1 wg BIPOL_5.pdf)
+
+    # Compare against actual inputs; do not invent an earlier design iteration.
+    powered = engine_type != 'none'
+    cruise = perf_res['cruise_check']
+    cruise_ok = powered and cruise['cl'] <= cruise['cl_max'] and cruise['climb_ms'] >= 0
+    climb_ok = powered and perf_res['climb']['wy_max_ms'] >= params['climb_rate_ms']
+    takeoff = perf_res['takeoff']['distance_to_15m']
+    takeoff_req = params.get('takeoff_distance_m')
+    takeoff_ok = powered and takeoff is not None and bool(takeoff_req) and takeoff <= takeoff_req
+    range_ok = powered and range_km_m3 is not None and range_km_m3 >= params['range_km']
+    verdict = lambda ok: 'Spełnione wymaganie projektu' if ok else 'Niespełnione wymaganie projektu'
     table_5_1_critical = [
-        {"param": "Rozpiętość skrzydeł b [m]", "project_assumed": round(b * 0.98, 2), "actual_calc": b, "comment": "Zgodna z wstępnymi założeniami"},
-        {"param": "Powierzchnia nośna S [m²]", "project_assumed": round(S * 1.03, 2), "actual_calc": S, "comment": "Dopasowana do prędkości przeciągnięcia"},
-        {"param": "Masa startowa MTOW [kg]", "project_assumed": round(m0 * 0.97, 1), "actual_calc": m0, "comment": "Zbieżność w pętli masowej 0.1%"},
-        {"param": "Prędkość maksymalna Vmax [km/h]", "project_assumed": round(v_cr_kmh * 1.15, 1), "actual_calc": perf_res["speeds"]["v_max_sl_kmh"], "comment": "Spełnia założenia taktyczne"},
-        {"param": "Prędkość przelotowa Vcr [km/h]", "project_assumed": v_cr_kmh, "actual_calc": perf_res["speeds"]["v_cruise_kmh"], "comment": "Optymalna pod kątem zasięgu"},
-        {"param": "Prędkość wznoszenia wy_max [m/s]", "project_assumed": float(params.get("climb_rate_ms", 4.0)), "actual_calc": perf_res["climb"]["wy_max_ms"], "comment": "Przewyższa minimalny wymóg zdatności"},
-        {"param": "Całkowita długość startu do 15 m [m]", "project_assumed": float(params.get("takeoff_distance_m", 0)), "actual_calc": perf_res["takeoff"]["distance_to_15m"], "comment": "Rozbieg i odcinek powietrzny; nawierzchnia i warunki wg modelu"},
-        {"param": "Zasięg obliczeniowy [km]", "project_assumed": float(params.get("range_km", 1000.0)), "actual_calc": range_km_m3, "comment": "Uwzględnia rezerwę 45 min krążenia"}
+        dict(param='Rozpiętość skrzydeł b [m]', project_assumed=params.get('wingspan_m')
+             if params.get('wing_input_mode') in ('span_area', 'span_aspect') else None,
+             actual_calc=b, comment='Wartość zadana tylko w trybie narzuconej rozpiętości.'),
+        dict(param='Powierzchnia nośna S [m²]', project_assumed=params.get('wing_area_m2')
+             if params.get('wing_input_mode') in ('span_area', 'area_aspect') else None,
+             actual_calc=S, comment='Wartość zadana tylko w trybie narzuconej powierzchni.'),
+        dict(param='Masa startowa MTOW [kg]', project_assumed=None, actual_calc=m0,
+             comment='Wynik bilansu masowego; nie podano niezależnej masy wymaganej.'),
+        dict(param='Vmax TAS na poziomie morza [km/h]', project_assumed=None,
+             actual_calc=perf_res['speeds']['v_max_sl_kmh'] if perf_res['level_flight_available_sl'] else None,
+             comment='Nie zadano osobnego wymagania Vmax; przelot sprawdzono na jego wysokości.'),
+        dict(param='Prędkość przelotowa Vcr TAS [km/h]', project_assumed=v_cr_kmh,
+             actual_calc=v_cr_kmh if cruise_ok else None, comment=verdict(cruise_ok) if powered else 'Lot ślizgowy; brak napędu.'),
+        dict(param='Prędkość wznoszenia wy,max [m/s]', project_assumed=params['climb_rate_ms'] if powered else None,
+             actual_calc=perf_res['climb']['wy_max_ms'] if powered else None,
+             comment=verdict(climb_ok) if powered else 'Nie dotyczy wznoszenia z napędem.'),
+        dict(param='Całkowita długość startu do 15 m [m]', project_assumed=takeoff_req if powered else None,
+             actual_calc=takeoff if powered else None, comment=verdict(takeoff_ok) if powered else 'Nie rozpatrywano samodzielnego startu.'),
+        dict(param='Zasięg przy wymaganej prędkości [km]', project_assumed=params['range_km'] if powered else None,
+             actual_calc=range_km_m3, comment=verdict(range_ok) if powered else 'Nie dotyczy zasięgu paliwowego.'),
     ]
-    
+    performance_recommendation = ('Sprawdź wyniki lotu ślizgowego i sposób startu.' if not powered else
+        'Przyjęte wymagania przelotu, wznoszenia, startu i zasięgu spełniono w modelu wstępnym; sprawdź pozostałe kryteria.'
+        if all((cruise_ok, climb_ok, takeoff_ok, range_ok)) else
+        'Projekt nie spełnia wszystkich wymagań osiągów. Skoryguj założenia wskazane w tabeli i przelicz projekt.')
+
+    # Krytyczna ocena (BIPOL I, Projekt 5): przyczyny rozbieżności między założeniami P2 a wynikami.
+    performance_findings = []
+    k_assumed = mass_res["mission_assumptions"].get("k_max_preliminary")
+    ra_cr = next((row for row in paturski_res["p6_performance_paturski"]["range_endurance_6_5"].get("by_altitude", [])
+                  if row["label"] == "wysokość przelotowa"), None)
+    if powered and not cruise_ok:
+        performance_findings.append(
+            f"Na wysokości {h_cr:.0f} m potrzebna moc przelotowa {cruise['required_w'] / 1000:.0f} kW przekracza dostępną "
+            f"{cruise['available_w'] / 1000:.0f} kW" + (f"; lot poziomy jest możliwy do około {ra_cr['v_max_kmh']:.0f} km/h" if ra_cr else "")
+            + f". Biegunowa z P4 ma Cx0 = {aero_res['cx0_clean']:.4f}, a dobór napędu w P2 przyjął Cx0 = {params['cx0']:.4f}. "
+            "Przyjmij w P2 wartości z P4 albo zmniejsz prędkość lub wysokość przelotu.")
+    if powered and cruise_ok and not range_ok and k_assumed:
+        m_mid = paturski_res["p6_performance_paturski"]["range_endurance_6_5"].get("m_obl_avg_kg", m0)
+        cz_cr = 2.0 * m_mid * G0 / (isa_cr["rho"] * S * v_cr_ms ** 2)
+        k_cr = cz_cr / (aero_res["cx0_clean"] + aero_res["k_clean"] * cz_cr ** 2)
+        k_bilans = mass_res["mission_assumptions"]["ld_factor"] * k_assumed
+        performance_findings.append(
+            f"Bilans masy (P2) przyjął w przelocie K = 0,94·Kmax = {k_bilans:.1f}. Biegunowa z P4 przy {v_cr_kmh:.0f} km/h "
+            f"na {h_cr:.0f} m daje K = {k_cr:.1f} (Cz = {cz_cr:.3f})"
+            + (f"; największy zasięg odpowiada około {ra_cr['v_l_max_kmh']:.0f} km/h" if ra_cr else "")
+            + ". Zmniejsz prędkość przelotową w stronę prędkości największego zasięgu albo powtórz bilans paliwa z doskonałością z P4.")
+    if powered and not climb_ok:
+        performance_findings.append("Prędkość wznoszenia jest mniejsza od wymaganej: zwiększ moc (ciąg) albo zmniejsz obciążenie powierzchni.")
+    if powered and not takeoff_ok and takeoff_req:
+        performance_findings.append("Długość startu przekracza wymaganą: zwiększ Cz,max do startu, moc (ciąg) albo powierzchnię nośną.")
+
     p5_data = {
         "offer_chart": offer_chart_data,
         "ceiling_summary": {
@@ -650,46 +619,27 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "landing_from_15m_m": perf_res["landing"].get("distance_from_15m", perf_res["landing"].get("landing_from_15m_m", 0))
         },
         "critical_evaluation_table_5_1": table_5_1_critical,
-        "recommendations": "Konstrukcja wykazuje zrównoważone osiągi. Zapas mocy silnika zapewnia wysoki gradient wznoszenia oraz krótkie drogi startu.",
+        "recommendations": performance_recommendation,
+        "performance_findings": performance_findings,
         "points_max": {"obligatory": 2, "optional": 13, "total": 15}
     }
     
     # =========================================================================
     # PROJEKT 6: OBWIEDNIA OBCIĄŻEŃ DOPUSZCZALNYCH (20 pkt)
     # =========================================================================
-    # 6.1 Punkty charakterystyczne manewrowe i podmuchowe wg CS-23 Amdt 4 §23.335 i §23.341 (metoda dydaktyczna)
+    # 6.1 Punkty charakterystyczne i 6.2 pętla klapowa z obwiedni: CS-23 Amdt 4 / CS-25 / CS-22 wg kategorii
     limits = env_res.get("limits", {})
-    speeds = env_res.get("speeds", {})
     gusts = env_res.get("gust_factors", {})
-    
-    points_vn = [
-        {"point": "S (początek przeciągnięcia dodatniego Vs1)", "v_kmh": speeds.get("v_s_kmh", 0), "n": 1.0, "type": "Przeciągnięcie n=+1"},
-        {"point": "A (prędkość manewrowa dodatnia VA)", "v_kmh": speeds.get("v_a_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Krzywa manewrowa n_max"},
-        {"point": "C (obliczeniowa prędkość przelotowa VC)", "v_kmh": speeds.get("v_c_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Przelot VC (Uc=15.24 m/s)"},
-        {"point": "D (obliczeniowa prędkość nurkowania VD)", "v_kmh": speeds.get("v_d_kmh", 0), "n": limits.get("n_max", 3.8), "type": "Nurkowanie VD (Ud=7.62 m/s)"},
-        {"point": "E (dolny punkt przy VD)", "v_kmh": speeds.get("v_d_kmh", 0), "n": 0.0, "type": "Nurkowanie n=0"},
-        {"point": "F (dolny punkt przy VC z n_min)", "v_kmh": speeds.get("v_c_kmh", 0), "n": limits.get("n_min", -1.52), "type": "Krzywa manewrowa n_min"},
-        {"point": "G (prędkość manewrowa ujemna VG)", "v_kmh": speeds.get("v_g_kmh", 0), "n": limits.get("n_min", -1.52), "type": "Przeciągnięcie ujemne"}
-    ]
-    if gusts.get("vb_gust"):
-        # Commuter / CS-25 only; other categories have no VB gust case.
-        points_vn.insert(2, {"point": "B (maks. intensywność podmuchu VB, Ude=66 fps)", "v_kmh": speeds["v_b_kmh"],
-                             "n": round(1.0 + gusts["delta_n_b"], 2), "type": "Podmuch Ub=20.12 m/s"})
+    points_vn = env_res["key_points"]
+    flap_loop = env_res["flap"]["loop"]
+    v_f_kmh = env_res["flap"]["v_f_kmh"]
 
-    # 6.2 Pętla klapowa wg CS-23 Amdt 4 §23.345: VF = max(1.4 * Vs1, 1.8 * Vs0), n_flap = +2.0 (BIPOL_5.pdf Rys. 5.6)
-    v_f_kmh = float(speeds.get("v_f_kmh", round(max(1.4 * float(perf_res["speeds"]["vs_clean_kmh"]), 1.8 * float(perf_res["speeds"]["vs_lnd_kmh"])), 1)))
-    flap_loop = [
-        {"point": "Sf (początek przeciągnięcia z klapami Vs0)", "v_kmh": perf_res["speeds"]["vs_lnd_kmh"], "n": 1.0},
-        {"point": "Af (wejście na n=+2.0 z klapami)", "v_kmh": round(float(perf_res["speeds"]["vs_lnd_kmh"]) * math.sqrt(2.0), 1), "n": 2.0},
-        {"point": "Ff (prędkość obliczeniowa klap VF wg CS-23 Amdt 4 §23.345)", "v_kmh": v_f_kmh, "n": 2.0},
-        {"point": "Df (dolny punkt przy VF)", "v_kmh": v_f_kmh, "n": 0.0}
-    ]
-    
     p6_data = {
         "regulations_standard": f"{law_sub['design_code']} – podkategoria {law_sub['name']} (t.j. Dz. U. z 2025 r. poz. 1137); {limits.get('load_factor_reference', '')}",
         "points_table": points_vn,
         "flap_envelope_loop": flap_loop,
         "v_f_kmh": v_f_kmh,
+        "n_flap": env_res["flap"]["n_flap"],
         "mass_ratio_mu_g": gusts.get("mu_g", 15.0),
         "alleviation_factor_kg": gusts.get("k_g", 0.70),
         "safety_factor_nu": limits.get("safety_factor_nu", 1.5),

@@ -51,13 +51,14 @@ def isa_atmosphere(altitude_m: float):
     
     return {
         "altitude": h,
-        "T": round(T, 2),
-        "T_C": round(T - 273.15, 2),
-        "p": round(p, 1),
-        "rho": round(rho, 4),
-        "a": round(a, 2),
+        # Keep physical calculations continuous; presentation rounds the values.
+        "T": T,
+        "T_C": T - 273.15,
+        "p": p,
+        "rho": rho,
+        "a": a,
         "mu": mu,
-        "sigma": round(rho / RHO0, 4),
-        "delta": round(p / P0, 4),
-        "theta": round(T / T0, 4)
+        "sigma": rho / RHO0,
+        "delta": p / P0,
+        "theta": T / T0
     }

@@ -55,7 +55,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
         ct = cr
         mac = cr
         y_mac = b / 4.0
-        x_le_mac = 0.0
+        x_le_mac = y_mac * math.tan(sweep_rad)
         planform_name_pl = "Prostokątny (stała cięciwa)"
         def chord_at_y(y_val):
             return cr
@@ -69,7 +69,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
         ct = 0.0
         mac = (8.0 / (3.0 * math.pi)) * c0
         y_mac = (2.0 * b) / (3.0 * math.pi)
-        x_le_mac = 0.0
+        x_le_mac = y_mac * math.tan(sweep_rad) + .25 * (cr - mac)
         planform_name_pl = "Eliptyczny (wg Prandtla)"
         def chord_at_y(y_val):
             eta_loc = max(0.0, min(1.0, y_val / half_span))
@@ -80,10 +80,10 @@ def calculate_geometry(m0: float, ws: float, params: dict):
 
     elif planform == "compound_trapezoid":
         planform_name_pl = "Prostokątno-trapezowy (centropłat prostokątny + końcówki trapezowe)"
-        xi_brk = max(0.15, min(0.70, break_span_ratio))
+        xi_brk = break_span_ratio
         y_brk = xi_brk * half_span
         y_brk_m = round(y_brk, 2)
-        eta_tip = max(0.20, min(1.0, float(params.get("taper_ratio", 0.60))))
+        eta_tip = float(params.get("taper_ratio", 0.60))
         eta = eta_tip
         w = half_span - y_brk
         denom = 2.0 * (y_brk + ((1.0 + eta_tip) / 2.0) * w)
@@ -94,7 +94,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
         delta_c = cr - ct
         i2 = y_brk * ((cr + ct) / 2.0) * w + (w ** 2) * ((cr / 2.0) - (delta_c / 3.0))
         y_mac = (2.0 / S) * (i1 + i2)
-        x_le_mac = 0.0
+        x_le_mac = y_mac * math.tan(sweep_rad) + .25 * (cr - mac)
         def chord_at_y(y_val):
             if y_val <= y_brk:
                 return cr
@@ -109,7 +109,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             return part1 + part2
 
     else: # trapezoidal or swept_trapezoidal
-        eta = max(0.1, min(1.0, float(params.get("taper_ratio", 0.55))))
+        eta = float(params.get("taper_ratio", 0.55))
         cr = (2.0 * S) / (b * (1.0 + eta))
         ct = eta * cr
         mac = (2.0 / 3.0) * cr * ((1.0 + eta + eta ** 2) / (1.0 + eta))
@@ -126,19 +126,35 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     # 2. Geometria kadłuba (wstępne oszacowanie z liczby pasażerów i rozpiętości)
     if ac_type in ("glider", "motoglider"):
         fuselage_len = max(5.5, 0.45 * b)
-        fuselage_diam = 1.0 if ac_type == "glider" else 1.25
-    elif ac_type in ["piston_ga", "uav"]:
+        # Średnica zastępcza przekroju czołowego kabiny (z owiewką): jednomiejscowy
+        # ~0,60×0,85 m, tandem ~0,65×1,0 m, miejsca obok siebie ~1,10×1,0 m.
+        seats = int(params.get("n_crew", 1)) + n_pax
+        layout = params.get("seats_config") or ("tandem" if ac_type == "glider" else "side")
+        if seats <= 1:
+            fuselage_diam = 0.72
+        elif layout == "tandem":
+            fuselage_diam = 0.82
+        else:
+            fuselage_diam = 1.10
+    elif ac_type == "uav":
+        # Bez kabiny: przekrój wynika z ładunku i paliwa, rośnie z masą
+        # (taktyczny ~150 kg: ~0,43 m; MALE ~900 kg: ~0,77 m; ~4700 kg: ~1,34 m).
+        fuselage_len = max(1.5, 0.55 * b)
+        fuselage_diam = max(0.25, min(1.4, 0.08 * m0 ** (1.0 / 3.0)))
+    elif ac_type == "piston_ga":
         fuselage_len = max(5.5, 0.72 * b)
         fuselage_diam = 1.25 if n_pax <= 4 else 1.50
-    elif ac_type == "turboprop_regional":
-        fuselage_len = max(18.0, 0.85 * b)
-        fuselage_diam = 2.40
-    elif ac_type == "jet_business":
-        fuselage_len = max(14.0, 0.88 * b)
-        fuselage_diam = 1.90
+    elif ac_type in ('turboprop_regional', 'jet_business'):
+        # Explicit cabin-layout assumptions: seats + aisle + shell allowance.
+        seats_abreast = 4 if n_pax > 19 else 2
+        fuselage_diam = seats_abreast * .48 + .45 + .30
+        cabin_length = max(2, math.ceil(n_pax / seats_abreast)) * .80
+        fuselage_len = cabin_length + 4 * fuselage_diam
     else: # jet_transport
-        fuselage_len = max(28.0, 0.95 * b)
-        fuselage_diam = 3.60
+        seats_abreast = 6 if n_pax > 120 else 4
+        fuselage_diam = seats_abreast * .48 + .50 + .35
+        cabin_length = max(2, math.ceil(n_pax / seats_abreast)) * .80
+        fuselage_len = cabin_length + 4 * fuselage_diam
         
     fuselage_fineness = fuselage_len / fuselage_diam
     
@@ -156,7 +172,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
         lv_ratio = 0.50
 
     vh_coeff = float(params.get("v_h", 0.70))
-    l_h = lh_ratio * fuselage_len # Ramię usterzenia poziomego od 0.25 ŚDA płata do 0.25 ŚDA usterzenia
+    l_h = float(params.get('_tail_arm_h', lh_ratio * fuselage_len))
     S_h = (vh_coeff * S * mac) / l_h
     ar_h = float(params.get("ar_h", 4.0))
     eta_h = 0.60
@@ -168,7 +184,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     # 4. Geometria usterzenia pionowego (UV) metodą współczynnika objętościowego VV
     # V_V = (S_V * L_V) / (S * b)
     vv_coeff = float(params.get("v_v", 0.050))
-    l_v = lv_ratio * fuselage_len # Ramię usterzenia pionowego
+    l_v = float(params.get('_tail_arm_v', lv_ratio * fuselage_len))
     S_v = (vv_coeff * S * b) / l_v
     ar_v = float(params.get("ar_v", 1.6))
     eta_v = 0.65
@@ -273,12 +289,19 @@ def calculate_geometry(m0: float, ws: float, params: dict):
 
     c_f_in = chord_at_y(y_f_in)
     c_f_out = chord_at_y(y_f_out)
-    s_flapped_wing = (c_f_in + c_f_out) * (y_f_out - y_f_in)
+    # Integrate the actual planform (trapezoid shortcut is wrong across a
+    # compound-wing break and for elliptical wings).
+    def segment_area(y1, y2):
+        steps = 200
+        dy = (y2 - y1) / steps
+        return 2 * dy * (chord_at_y(y1) + chord_at_y(y2) +
+            sum((4 if i % 2 else 2) * chord_at_y(y1 + i * dy) for i in range(1, steps))) / 3
+    s_flapped_wing = segment_area(y_f_in, y_f_out)
     s_flap_surface = s_flapped_wing * cf_c_ratio
 
     c_a_in = chord_at_y(y_a_in)
     c_a_out = chord_at_y(y_a_out)
-    s_aileron_wing = (c_a_in + c_a_out) * (y_a_out - y_a_in)
+    s_aileron_wing = segment_area(y_a_in, y_a_out)
     s_aileron_surface = s_aileron_wing * ca_c_ratio
 
     # Skuteczność poprzeczna i sterowność lotek (Roll Authority pb/2V wg Raymera eq. 12.18 / Roskama)
@@ -287,13 +310,20 @@ def calculate_geometry(m0: float, ws: float, params: dict):
 
     geom_roll_integral = int_y_c(y_a_out) - int_y_c(y_a_in)
     cl_delta_a = (2.0 * aw_est * tau_a / (S * b)) * geom_roll_integral
-    cl_p = - (aw_est / 6.0) * ((1.0 + 3.0 * eta) / (1.0 + eta))
+    # C_l,p = -4 a/(S b²) integral_0^(b/2) y² c(y) dy, with p_hat = pb/(2V).
+    # Integrating the actual outline also covers elliptical and compound wings.
+    roll_steps = 400
+    roll_dy = half_span / roll_steps
+    roll_moment = roll_dy / 3 * (half_span**2 * chord_at_y(half_span) +
+        sum((4 if i % 2 else 2) * (i*roll_dy)**2 * chord_at_y(i*roll_dy)
+            for i in range(1, roll_steps)))
+    cl_p = -4 * aw_est * roll_moment / (S * b**2)
 
     delta_a_max_deg = 20.0
     delta_a_max_rad = math.radians(delta_a_max_deg)
     roll_helix_pb_2v = abs((cl_delta_a / min(-0.01, cl_p)) * delta_a_max_rad)
 
-    # Wymagania zdatności CS-23 / MIL-F-8785C na helisę przechylenia pb/(2V)
+    # Preliminary handling-quality targets; not a certification finding.
     if ac_type in ("glider", "motoglider"):
         min_pb_2v_req = 0.040
     elif ac_type in ("jet_business", "jet_transport"):
@@ -305,17 +335,18 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     # Ocena bezpieczeństwa przeciągnięcia
     stall_inboard_of_aileron = stall_eta_span < eta_a_in
     if planform == "rectangular":
-        stall_safety_verdict = "Wybitnie bezpieczne: przeciążenie inicjowane przy kadłubie (stała cięciwa), lotki zachowują pełną sterowność."
+        stall_safety_verdict = "Schrenk wskazuje większe obciążenie przy nasadzie. Zachowanie przy przeciągnięciu wymaga sprawdzenia profili, zwichrzenia i przepływu."
     elif planform == "compound_trapezoid":
-        stall_safety_verdict = "Bezpieczne: centropłat prostokątny chroni końcówki skrzydła i lotki przed przedwczesnym oderwaniem strug."
+        stall_safety_verdict = "Obliczono rozkład obciążenia centropłata i końcówek. Sam obrys nie gwarantuje sterowności po przeciągnięciu."
     elif planform == "elliptical":
-        stall_safety_verdict = "Równomierne obciążenie Prandtla: jednoczesne przeciążenie na całej rozpiętości; wysoka sprawność aerodynamiczna."
+        stall_safety_verdict = "Idealny rozkład eliptyczny daje jednakowe lokalne Cz. To nie określa rzeczywistej kolejności przeciągnięcia."
     elif stall_inboard_of_aileron:
-        stall_safety_verdict = "Bezpieczne: przeciążenie rozpoczyna się do wewnątrz od lotek (zachowana sterowność poprzeczna)."
+        stall_safety_verdict = "Przekrój o największym lokalnym Cz wypada przed lotkami. Potwierdzenie sterowności wymaga danych profilu i zwichrzenia."
     else:
         stall_safety_verdict = "Ostrzeżenie: przekrój krytyczny w rejonie lotek. Wymagane zwichrzenie geometryczne końcówek."
 
     flap_names = {
+        "none": "Bez klap",
         "plain": "Klapa zwykła (uchylna)",
         "split": "Klapa krokowa",
         "single_slotted": "Klapa jednoszczelinowa",
@@ -338,6 +369,13 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     control_surfaces = {
         "layout": "flaperon" if is_flaperon else "flaps_and_ailerons",
         "is_flaperon": is_flaperon,
+        "slats": {
+            "type": params.get('slat_type', 'none'),
+            "y_in_m": round(max(fuselage_diam*.6, half_span*.08), 3),
+            "y_out_m": round(half_span*.94, 3),
+            "s_equipped_over_s": round(max(0, segment_area(min(half_span*.94, max(fuselage_diam*.6, half_span*.08)), half_span*.94)) / S, 5)
+                if params.get('slat_type', 'none') != 'none' else 0.0,
+        },
         "flaps": {
             "type": flap_type,
             "name": flap_name_pl,
@@ -349,7 +387,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "y_in_m": round(y_f_in, 2),
             "y_out_m": round(y_f_out, 2),
             "S_flapped_m2": round(s_flapped_wing, 2),
-            "s_flapped_over_s": round(s_flapped_wing / S, 3),
+            "s_flapped_over_s": round(s_flapped_wing / S, 5),
             "S_flap_surface_m2": round(s_flap_surface, 2),
             "s_flap_over_s": round(s_flap_surface / S, 3),
         },
@@ -368,6 +406,8 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "S_aileron_surface_m2": round(s_aileron_surface, 2),
             "s_aileron_over_s": round(s_aileron_surface / S, 3),
             "roll_helix_pb_2v": round(roll_helix_pb_2v, 3),
+            "cl_p": round(cl_p, 5),
+            "cl_delta_a": round(cl_delta_a, 5),
             "roll_authority_ok": roll_authority_ok,
             "min_pb_2v_req": min_pb_2v_req,
             "delta_a_max_deg": delta_a_max_deg,
@@ -417,12 +457,14 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "tc_ratio": tc_wing
         },
         "fuselage": {
+            "sizing_note": "Kabina: rozstaw rzędów 0,80 m, fotel 0,48 m; przejście i poszycie oraz 4 średnice na nos i ogon. Układ roboczy, wymaga projektu kabiny." if ac_type in ('turboprop_regional','jet_business','jet_transport') else "Wstępna proporcja zależna od rozpiętości; wymaga sprawdzenia zabudowy.",
             "length": round(fuselage_len, 2),
             "diameter": round(fuselage_diam, 2),
             "fineness": round(fuselage_fineness, 2),
             "S_wet": round(s_wet_fus, 2)
         },
         "horizontal_tail": {
+            "x_ac_m": .90 * fuselage_len,
             "S_h": round(S_h, 2),
             "S_wet": round(s_wet_htail, 2),
             "b_h": round(b_h, 2),
@@ -435,6 +477,7 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "ce_over_ch": round(float(params.get("elevator_chord_ratio", params.get("ce_ch", 0.35))), 3)
         },
         "vertical_tail": {
+            "x_ac_m": .90 * fuselage_len,
             "S_v": round(S_v, 2),
             "S_wet": round(s_wet_vtail, 2),
             "h_v": round(h_v, 2),

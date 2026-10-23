@@ -26,12 +26,13 @@
         <p style="margin:4px 0 0 0; font-size:0.85rem; color:#64748b;">Wyznaczone empirycznie na bazie certyfikowanych konstrukcji dla wybranej klasy samolotu.</p>
       </div>
       <div class="studio-actions">
-        <button type="button" class="btn btn-primary" id="btnApplyAllTrendSuggestions" title="Przenieś wszystkie kluczowe sugestie do założeń projektu">
-          Zastosuj do projektu
+        <button type="button" class="btn btn-primary" id="btnApplyAllTrendSuggestions" title="Przenieś dostępne proporcje geometrii do projektu">
+          Zastosuj geometrię
         </button>
       </div>
     </div>
-    <div id="trendSuggestionsStatus" style="margin-top:6px; font-size:0.8rem;" role="status"></div>
+    <button type="button" class="btn btn-outline" id="trendResetMassModel">Masa pusta: wróć do korelacji klasy</button>
+      <div id="trendSuggestionsStatus" style="margin-top:6px; font-size:0.8rem;" role="status"></div>
     <div class="trend-table-scroll" style="margin-top:10px;">
       <table class="b-table">
         <thead>

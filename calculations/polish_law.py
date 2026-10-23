@@ -544,9 +544,9 @@ def limit_load_factors(category, m0: float):
         n_neg = -1.0
         ref = "EASA CS-25.337: n+ = max(2,5; 2,1 + 24000/(W+10000)) ≤ 3,8; n- = -1,0"
     elif basis in ("cs23_normal", "cs23_commuter"):
-        n_pos = min(3.8, n_formula)
+        n_pos = min(3.8, max(2.5, n_formula))
         n_neg = -0.4 * n_pos
-        ref = "CS-23 Amdt 4 §23.337(a)(1): n+ = 2,1 + 24000/(W+10000) ≤ 3,8; n- = -0,4·n+"
+        ref = "CS-23 Amdt 4 §23.337(a)(1): n+ = max(2,5; 2,1 + 24000/(W+10000)) ≤ 3,8; n- = -0,4·n+"
     elif basis == "cs23_utility":
         n_pos = 4.4
         n_neg = -0.4 * n_pos
@@ -577,7 +577,7 @@ def limit_load_factors(category, m0: float):
         n_neg = -0.4 * n_pos
         ref = "EASA CS-UAS / STANAG 4671 USAR.337: n+ = 2,1 + 10900/(W+4536) ≤ 3,8; n- = -0,4·n+"
     else:
-        n_pos = min(3.8, n_formula)
+        n_pos = min(3.8, max(2.5, n_formula))
         n_neg = -0.4 * n_pos
         ref = "CS-23 Amdt 4 §23.337(a)(1) (Normal)"
 

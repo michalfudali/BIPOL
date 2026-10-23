@@ -18,9 +18,10 @@ import math
 from calculations.atmosphere import isa_atmosphere, G0, RHO0
 from calculations.paturski_ml import paturski_project_6_performance
 from calculations.runway import takeoff_distance
+from calculations.flight_model import flight_point, level_flight_envelope, mission_masses
 
 
-def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, params: dict):
+def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, params: dict, mass_result: dict = None):
     """
     Parametry:
       - m0: masa startowa MTOW [kg]
@@ -49,7 +50,7 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         params=params,
         m0=m0,
         p3_aero=aero.get("paturski_p3"),
-        m_fuel=params.get("m_fuel")
+        m_fuel=mass_result["m_fuel"] if mass_result else None, mass_result=mass_result
     )
     t6_1 = p6["table_6_1_power_balance_h0"]
     t6_2 = p6["table_6_2_climb_and_ceilings"]
@@ -75,43 +76,8 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         P0_avail = dp["pw"] * W
         T0_avail = None
 
-    def eval_wy_at_alt(v_ms: float, h_m: float = 0.0):
-        if is_glider:
-            isa = isa_atmosphere(h_m)
-            q = 0.5 * isa["rho"] * (v_ms ** 2)
-            cz = ws / max(1.0, q)
-            cx = cx0 + k_clean * (cz ** 2)
-            drag = q * S * cx
-            return -drag * v_ms / W
-        isa = isa_atmosphere(h_m)
-        rho = isa["rho"]
-        sigma = isa["sigma"]
-        q = 0.5 * rho * (v_ms ** 2)
-        cz = ws / max(1.0, q)
-        cx = cx0 + k_clean * (cz ** 2)
-        drag = q * S * cx
-        if engine_type == "jet":
-            thrust = T0_avail * math.pow(sigma, 0.85)
-            power_excess = (thrust - drag) * v_ms
-        else:
-            psi = max(0.02, sigma - (1.0 - sigma) / 7.55)
-            p_avail = P0_avail * eta_p * psi
-            power_excess = p_avail - drag * v_ms
-        return power_excess / W
-
-    # 4. Prędkość maksymalna na poziomie morza V_max_SL
-    if is_glider:
-        v_max_sl_ms = max(float(params.get("cruise_speed_kmh", 120.0)) * 1.5 / 3.6, 60.0)
-    else:
-        v_low = float(offer["v_w_h0_kmh"]) / 3.6 if offer["v_w_h0_kmh"] > 0 else vs_clean_ms * 1.3
-        v_high = 380.0
-        for _ in range(40):
-            v_mid = 0.5 * (v_low + v_high)
-            if eval_wy_at_alt(v_mid, 0.0) > 0.0:
-                v_low = v_mid
-            else:
-                v_high = v_mid
-        v_max_sl_ms = 0.5 * (v_low + v_high)
+    sl_flight = level_flight_envelope(params, sizing, m0, S, cx0, k_clean, cz_max_clean, 0)
+    v_max_sl_ms = sl_flight['max_ms'] or 0.0
 
     # 5. Krzywa wznoszenia wy(V) na poziomie morza z Metody Mocy Paturskiego (Tabela 6.1)
     if is_glider:
@@ -147,13 +113,19 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     phi_ge = 1.6**2 / (1 + 1.6**2)
     takeoff = takeoff_distance(ws, cz_max_to, aero['cx0_to'], k_to, engine_type,
         (dp.get('tw') if engine_type == 'jet' else dp.get('pw')) or 0.,
-        eta_p, float(params.get('prop_eff_to', .65)))
+        eta_p, float(params.get('prop_eff_to', .65)),
+        mu_ground=(0.055 if params.get('runway_surface') == 'grass' else float(params.get('mu_ground', 0.03))))
     takeoff = {key: round(value, 1) if isinstance(value, float) else value
                for key, value in takeoff.items()}
 
     # 9. Lądowanie (Fiszdon / Raymer)
     v_app_ms = 1.30 * vs_lnd_ms
     v_td_ms = 1.15 * vs_lnd_ms
+    # Landing is evaluated at mission landing mass, not take-off mass.
+    landing_mass = mission_masses(mass_result)['landing_start'] if mass_result else m0
+    ws_lnd = landing_mass * G0 / S
+    vs_landing = math.sqrt(2 * ws_lnd / (RHO0 * cz_max_lnd))
+    v_app_ms, v_td_ms = 1.30 * vs_landing, 1.15 * vs_landing
     cx0_lnd = aero["cx0_lnd"]
     gamma_app_rad = math.radians(3.5)
     r_flare = (v_app_ms ** 2) / (G0 * 0.15)
@@ -165,8 +137,8 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     v_rms_lnd = v_td_ms / math.sqrt(2.0)
     q_rms_lnd = 0.5 * RHO0 * (v_rms_lnd ** 2)
     cz_lnd_roll = 0.20
-    cx_lnd_roll = cx0_lnd + phi_ge * k_to * (cz_lnd_roll ** 2)
-    a_mean_brake = G0 * (mu_brake + (q_rms_lnd / ws) * max(0.0, cx_lnd_roll - mu_brake * cz_lnd_roll))
+    cx_lnd_roll = cx0_lnd + phi_ge * aero["k_lnd"] * (cz_lnd_roll ** 2)
+    a_mean_brake = G0 * (mu_brake + (q_rms_lnd / ws_lnd) * (cx_lnd_roll - mu_brake * cz_lnd_roll))
     s_brake_lnd = (v_td_ms ** 2) / (2.0 * a_mean_brake)
     s_g_lnd = s_free_lnd + s_brake_lnd
     s_lnd_15 = s_air_lnd + s_g_lnd
@@ -193,6 +165,9 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     t_turn_360_s = (2.0 * math.pi) / psi_dot_rad_s if psi_dot_rad_s > 0 else None
 
     return {
+        "cruise_check": dict(flight_point(params, sizing, m0, S, cx0, k_clean, h_cr, v_cr_req_ms),
+            altitude_m=h_cr, tas_kmh=v_cr_req_kmh, cl_max=cz_max_clean),
+        "level_flight_available_sl": sl_flight['available'] and not is_glider,
         "speeds": {
             "vs_clean_kmh": round(vs_clean_ms * 3.6, 1),
             "vs_to_kmh": round(vs_to_ms * 3.6, 1),
@@ -219,6 +194,8 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         },
         "takeoff": takeoff,
         "landing": {
+            "mass_kg": landing_mass,
+            "vs_landing_mass_kmh": vs_landing * 3.6,
             "air_approach_m": round(s_air_lnd, 1),
             "free_roll_m": round(s_free_lnd, 1),
             "braking_roll_m": round(s_brake_lnd, 1),

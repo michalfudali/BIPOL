@@ -10,6 +10,8 @@ TAKEOFF_MASS_FRACTION = 0.975
 MIN_MASS_ITERATIONS = 5
 FLAP_TAKEOFF_DEFLECTION_DEG = 20.0
 FLAP_LANDING_DEFLECTION_DEG = 40.0
+# Largest accepted gap between the P2 assumed and the P4 computed Kmax before iterating.
+POLAR_CONSISTENCY_TOLERANCE = 0.20
 
 
 def review_coursework(result):
@@ -38,6 +40,15 @@ def review_coursework(result):
           flap_states['takeoff']['deflection_deg'] == FLAP_TAKEOFF_DEFLECTION_DEG and
           flap_states['landing']['deflection_deg'] == FLAP_LANDING_DEFLECTION_DEG,
           'Wychylenia w stopniach, potwierdzone przez autora notatek. Przyrosty nośności i oporu są oszacowaniami dla tych konfiguracji.')
+    k_p2 = mass['mission_assumptions'].get('k_max_preliminary')
+    if k_p2:
+        aero = result['aerodynamics']
+        k_p4, cx0_p4 = aero['k_max'], aero['cx0_clean']
+        check('polar_consistency', f'Spójność biegunowej P2 i P4 (Kmax ±{POLAR_CONSISTENCY_TOLERANCE:.0%})',
+              abs(k_p2 - k_p4) <= POLAR_CONSISTENCY_TOLERANCE * k_p4,
+              f"P2: Kmax = {k_p2:.1f} (Cx0 = {p['cx0']:.4f}, e = {p['oswald_e']:.2f}); "
+              f"P4: Kmax = {k_p4:.1f} (Cx0 = {cx0_p4:.4f}, e = {aero['oswald_e']:.2f}). "
+              'Przy większej różnicy przyjmij w założeniach P2 wartości z P4 i powtórz bilans masy.')
     if p['engine_type'] != 'none':
         drive_key = 'thrust_to_weight' if p['engine_type'] == 'jet' else 'power_loading_kg_kw'
         climb = next(c for c in trends['relationships'] if c['x_key'] == drive_key and c['y_key'] == 'climb_rate_ms')
