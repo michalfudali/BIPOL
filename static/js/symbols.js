@@ -1,5 +1,5 @@
 /**
- * BIPOL Studio - skład indeksów w symbolach technicznych.
+ * bipol-requiem - skład indeksów w symbolach technicznych.
  * Zapisy tekstowe (V_S0, VS0, Cz_max, wy_max, m₀, x^C) stają się prawdziwymi
  * indeksami dolnymi i górnymi w HTML, SVG i na wykresach canvas. Dotyczy to
  * również komunikatów z backendu, bo moduł obserwuje zmiany dokumentu.

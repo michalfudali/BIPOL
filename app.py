@@ -1,5 +1,5 @@
 """
-Aplikacja Webowa BIPOL Studio - Wstępne Projektowanie Samolotów
+Aplikacja Webowa bipol-requiem - Wstępne Projektowanie Samolotów
 Wydział Mechaniczny Energetyki i Lotnictwa Politechniki Warszawskiej (MEiL PW)
 Zakład Samolotów i Śmigłowców (ZSiS)
 """
@@ -373,5 +373,5 @@ if __name__ == '__main__':
     # Local only by default: the Werkzeug debugger allows code execution.
     host = os.environ.get('HOST', '127.0.0.1')
     debug = os.environ.get('FLASK_DEBUG') == '1'
-    print(f"Startowanie serwera BIPOL Studio: http://{host}:{port} (debug={'tak' if debug else 'nie'})...")
+    print(f"Startowanie serwera bipol-requiem: http://{host}:{port} (debug={'tak' if debug else 'nie'})...")
     app.run(host=host, port=port, debug=debug)

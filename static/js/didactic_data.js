@@ -1,5 +1,5 @@
 /**
- * BIPOL Studio - Kompletna Encyklopedia Dydaktyczna Parametrów i Konstrukcji MEiL PW
+ * bipol-requiem - Kompletna Encyklopedia Dydaktyczna Parametrów i Konstrukcji MEiL PW
  * Opracowana na podstawie:
  * 1. Prof. dr hab. inż. Cezary Galiński: "Wybrane zagadnienia konstrukcji samolotów", OW PW, Warszawa 2020.
  * 2. Materiały dydaktyczne BIPOL I (dr inż. Marcin Figat, prof. C. Galiński - ZSiS MEiL PW).

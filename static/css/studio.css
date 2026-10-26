@@ -1,4 +1,4 @@
-/* Układ pracowni i paleta zaadaptowane z załączonego BIPOL Studio. */
+/* Układ pracowni i paleta zaadaptowane z bipol-requiem. */
 :root { --primary:#168c83; --primary-dark:#10796f; --primary-light:#edf8f6; --bg-main:#f4f7f8; }
 body.studio-layout { background:#f4f7f8; color:#203b47; padding-left:240px; }
 .studio-sidebar { position:fixed; inset:0 auto 0 0; width:240px; z-index:1500; display:flex; flex-direction:column; padding:28px 17px 18px; background:#102d39; color:#b9cbd0; overflow-y:auto; }

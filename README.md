@@ -1,4 +1,4 @@
-# BIPOL Studio - System Wstępnego Projektowania Samolotów (MEiL PW)
+# bipol-requiem - System Wstępnego Projektowania Samolotów (MEiL PW)
 
 Kompletne środowisko projektowo-obliczeniowe wspierające przedmioty **BIPOL I** (NK307 *Budowa i Projektowanie Obiektów Latających I*) w **Zakładzie Samolotów i Śmigłowców (ZSiS)** oraz **Mechanika Lotu I** (ML.NK472) w **Zakładzie Mechaniki (ZM)** na **Wydziale Mechanicznym Energetyki i Lotnictwa Politechniki Warszawskiej (MEiL PW)**.
 

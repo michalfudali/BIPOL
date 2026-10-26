@@ -1,7 +1,7 @@
-# Project: BIPOL Studio Trend Analysis Integration & Aircraft Database Editor
+# Project: bipol-requiem Trend Analysis Integration & Aircraft Database Editor
 
 ## Architecture
-BIPOL Studio is an aircraft preliminary design platform with a Flask backend and a reactive single-page frontend.
+bipol-requiem is an aircraft preliminary design platform with a Flask backend and a reactive single-page frontend.
 The Trend Analysis Integration consists of four main architectural subsystems:
 1. **Statistical Suggestions Engine (`calculations/trends.py`, `app.py`)**:
    - Computes empirical parameter suggestions across all 7 aircraft classes (`piston_ga`, `turboprop_regional`, `jet_business`, `jet_transport`, `glider`, `motoglider`, `uav`).
