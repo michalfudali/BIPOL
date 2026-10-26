@@ -1,0 +1,11 @@
+{% set review = res.submission_review %}
+<section id="submission-review">
+  <h3>Przegląd kompletności opracowania</h3>
+  <p>Zakres: {{ selected_sections|join(', ')|upper }}. Kontrole odnoszą się do obliczonego wariantu. Odniesienia są deklaracjami autora; ich treść wymaga przeglądu przez prowadzącego. Zestawienie nie przyznaje punktów.</p>
+  <p>Identyfikator wariantu: <code style="overflow-wrap:anywhere;word-break:break-all">{{ review.signature }}</code>.</p>
+  <table class="compact-table"><caption>Opracowania autora i wykryte braki</caption><thead><tr><th>Podpunkt</th><th>Stan</th><th>Odniesienie autora / wymagane uzupełnienie</th></tr></thead><tbody>
+  {% for item in review['items'] if item.project in selected_sections %}
+    <tr><td>{{ item.key|replace('_','.')|upper }}. {{ item.label }}<br>{{ 'Obowiązkowe' if item.mandatory else 'Opcjonalne' }}, maks. {{ item.points }} pkt</td><td>{{ {'blocked':'Wykryte braki', 'stale':'Do aktualizacji', 'manual':'Własne opracowanie', 'review':'Do przeglądu'}[item.status] }}</td><td>{% if item.evidence %}<p class="author-text">{{ item.evidence }}</p>{% endif %}{% if item.evidence_stale %}<p>Odniesienie pochodzi z innego wariantu obliczeń; wymaga ponownego sprawdzenia.</p>{% endif %}{% for check in item.checks if not check.passed %}<p>{{ check.label }}: {{ check.detail }}</p>{% endfor %}{% if not item.evidence %}<p>{{ item.prompt }}</p>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table>
+</section>

@@ -1332,7 +1332,7 @@ def paturski_project_6_performance(geom_res: dict, sizing_res: dict, params: dic
         },
         "table_6_1_power_balance_h0": table_6_1_h0,
         "table_6_2_climb_and_ceilings": {
-            "time_method": "Całkowanie dt=dh/wy,max(h) przy stałej masie; pułap teoretyczny jest asymptotyczny, więc nie ma skończonego czasu dolotu.",
+            "time_method": "Całkowanie dt=dh/w_y,max(h) przy stałej masie; pułap teoretyczny jest asymptotyczny, więc nie ma skończonego czasu dolotu.",
             "altitudes_table": table_6_2_climb,
             "ceilings": {
                 "h_t_theoretical_m": round(h_t_theoretical_m),

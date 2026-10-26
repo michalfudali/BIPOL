@@ -3089,3 +3089,8 @@ html, body { line-height: 1.55; }
   font-family: 'Cambria Math', monospace;
 }
 
+
+/* Indeksy symboli składane przez symbols.js; line-height: 0 nie rozpycha wierszy tabel. */
+sub.sym, sup.sym { position: relative; font-size: .72em; line-height: 0; vertical-align: baseline; }
+sub.sym { bottom: -.35em; }
+sup.sym { top: -.55em; }

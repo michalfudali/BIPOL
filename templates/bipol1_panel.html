@@ -1,0 +1,67 @@
+<section class="studio-card" id="bipol1Panel">
+  <style>#bipol1Panel [hidden]{display:none!important}#bipol1Panel>label{display:block;margin:1rem 0}#bipol1Panel input[type=text]{width:100%}#bipol1Panel details{margin:1rem 0}#bipol1Results li{margin:.6rem 0}</style>
+  <h2>Misja i masa samolotu — BIPOL 1</h2>
+  <p>Wprowadź przebieg lotu, wybierz źródło masy pustej i sprawdź bilans. Późniejsze notatki mają pierwszeństwo: przelot 0,94 Kmax; krążenie według PDF 0,8 Kmax.</p>
+  <div class="trend-controls">
+    <label>Metoda masowa<select id="mass_method" data-bipol1><option value="auto">Automatycznie według zrzutu</option><option value="proportion">Proporcji — bez zrzutu</option><option value="iterative">Iteracyjna — bilans kolejnych faz</option></select></label>
+    <label>Masa pusta<select id="empty_mass_model" data-bipol1><option value="class_correlation">Korelacja klasy / dotychczasowy model</option><option value="trend">Regresja wybranych samolotów</option><option value="coefficients">Własne współczynniki A i C</option><option value="two_point">Dwa punkty linii trendu</option><option value="fixed_fraction">Stały udział — założenie robocze</option></select></label>
+    <label>Masa odniesienia do doboru próby [kg]<input id="mass_initial_guess" data-bipol1 type="number" min="1" max="1000000" value="5000"></label>
+  </div>
+  <div class="trend-controls" data-bipol1-group="coefficients">
+    <label>A (dla m₀ w kg)<input id="empty_mass_a" data-bipol1 type="number" min="0.000001" step="any" value="0.95"></label>
+    <label>C<input id="empty_mass_c" data-bipol1 type="number" min="-2" max="2" step="any" value="-0.05"></label>
+  </div>
+  <div class="trend-controls" data-bipol1-group="two_point">
+    <label>x₁: masa [kg]<input id="mass_point_x1" data-bipol1 type="number" min="1" value="1000"></label>
+    <label>y₁: mₑ/m₀<input id="mass_point_y1" data-bipol1 type="number" min="0.01" max="0.99" step="any" value="0.60"></label>
+    <label>x₂: masa [kg]<input id="mass_point_x2" data-bipol1 type="number" min="1" value="2000"></label>
+    <label>y₂: mₑ/m₀<input id="mass_point_y2" data-bipol1 type="number" min="0.01" max="0.99" step="any" value="0.55"></label>
+  </div>
+  <div class="trend-controls" data-bipol1-group="fixed_fraction"><label>Stały udział masy pustej<input id="empty_mass_fraction" data-bipol1 type="number" min="0.15" max="0.95" step="any" value="0.55"></label></div>
+  <label>Źródło korelacji i definicja masy pustej<input id="mass_law_source" data-bipol1 type="text" maxlength="4000" placeholder="Dokument, strona, próba; co obejmuje masa pusta"></label>
+  <details open><summary>Przebieg misji</summary>
+    <p>Zasięg projektu oznacza całą trasę. Dolot = zasięg całkowity − powrót. Zrzut dotyczy cargo; pasażerowie i załoga pozostają na pokładzie.</p>
+    <div class="trend-controls">
+      <label>Odcinek powrotny [km]<input id="return_range_km" data-bipol1 type="number" min="0" value="0"></label>
+      <label>Zrzucany ładunek cargo [kg]<input id="payload_drop_kg" data-bipol1 type="number" min="0" value="0"></label>
+      <label>Prędkość krążenia TAS [km/h]<input id="loiter_speed_kmh" data-bipol1 type="number" min="1" max="1200" placeholder="Jak przelotowa, jeśli puste"></label>
+      <label>Czas maksymalnej mocy / ciągu [min]<input id="max_power_time_min" data-bipol1 type="number" min="0" max="1440" value="0"></label>
+    </div>
+    <div class="trend-controls" data-bipol1-task>
+      <label data-bipol1-prop>Maksymalna moc łączna na etapie zadania [kW]<input id="max_power_kw" data-bipol1 type="number" min="0" step="any"></label>
+      <label data-bipol1-jet>Maksymalny ciąg łączny na etapie zadania [kN]<input id="max_thrust_kn" data-bipol1 type="number" min="0" step="any"></label>
+      <label>SFC przy maksymalnym ustawieniu <span id="bipol1SfcUnit"></span><input id="max_power_sfc" data-bipol1 type="number" min="0.001" max="1000" step="any"></label>
+    </div>
+  </details>
+  <details><summary>Wznoszenie i rozpędzanie — Corke</summary>
+    <div class="trend-controls">
+      <label>Metoda<select id="climb_fraction_mode" data-bipol1><option value="auto">Wykres; poza zakresem oznaczone przybliżenie</option><option value="corke">Tylko wykres — bez ekstrapolacji</option><option value="reading">Własne odczyty rzędnych</option></select></label>
+      <label>Wysokość początkowa [m]<input id="climb_start_altitude_m" data-bipol1 type="number" min="0" max="20000" value="0"></label>
+      <label>Początkowa TAS [km/h]<input id="climb_start_speed_kmh" data-bipol1 type="number" min="1" max="1200" placeholder="Jak przelotowa, jeśli puste"></label>
+    </div>
+    <div class="trend-controls" data-bipol1-corke-reading>
+      <label>Rzędna początkowa Wₚ/W₀,₁<input id="corke_start_ordinate" data-bipol1 type="number" min="0.001" max="1" step="any" value="0.99"></label>
+      <label>Rzędna końcowa Wₘ/W₀,₁<input id="corke_end_ordinate" data-bipol1 type="number" min="0.001" max="1" step="any" value="0.98"></label>
+    </div>
+    <p>Proporcja masy jest ilorazem rzędnych wykresu. Macha wyznaczamy z TAS i atmosfery ISA na obu wysokościach. <a href="/static/images/bipol1-corke.png" target="_blank" rel="noopener">Wykres źródłowy</a>.</p>
+  </details>
+  <details><summary>Szkic, powierzchnia omywana i biegunowa wstępna</summary>
+    <div class="trend-controls">
+      <label>Źródło biegunowej<select id="preliminary_polar_mode" data-bipol1><option value="input">Cx₀ z założeń — oszacowanie robocze</option><option value="raymer">Wykres Raymera</option><option value="reading">Własny odczyt Kmax</option></select></label>
+      <label>Swet/S ze szkicu<input id="sketch_swet_ratio" data-bipol1 type="number" min="1" max="20" step="any" value="4"></label>
+      <label>Krzywa Raymera<select id="raymer_family" data-bipol1><option value="prop_fixed">Śmigłowy, podwozie stałe</option><option value="prop_retractable">Śmigłowy, podwozie chowane</option><option value="jet">Odrzutowy</option><option value="glider">Szybowiec</option><option value="military_subsonic">Bojowy poddźwiękowy</option><option value="military_supersonic">Bojowy naddźwiękowy</option></select></label>
+      <label data-bipol1-raymer-reading>Własny Kmax<input id="raymer_kmax" data-bipol1 type="number" min="1" max="150" step="any" value="15"></label>
+      <label>Klasa do kontroli Cx₀<select id="cx0_reference_class" data-bipol1><option value="single_fixed">Jednosilnikowy, stałe podwozie</option><option value="single_retractable">Jednosilnikowy, chowane podwozie</option><option value="small_twin">Mały dwusilnikowy</option><option value="transport">Duży transportowy</option><option value="military">Bojowy</option><option value="agricultural">Rolniczy</option><option value="motoglider">Motoszybowiec</option></select></label>
+    </div>
+    <p>Kmax z AR/(Swet/S), następnie Cx₀ = π·AR·e/(4·Kmax²). Interpolacja ma dokładność odczytu graficznego. Krzywych nie ekstrapolujemy. <a href="/static/images/bipol1-wetted-area.png" target="_blank" rel="noopener">Swet/S — rys. 1</a> · <a href="/static/images/bipol1-raymer.png" target="_blank" rel="noopener">Wykres i tabela Cx₀</a>.</p>
+    <label>Źródło odczytów i Swet/S<input id="graph_source" data-bipol1 type="text" maxlength="4000" placeholder="Rysunek, krzywa, punkty odczytu, powierzchnie ze szkicu"></label>
+  </details>
+  <details><summary>Dane źródłowe i uzgodnienia</summary>
+    <label>Daty trendów<select id="trend_year_basis" data-bipol1><option value="certification">Certyfikacja — obecna baza</option><option value="production">Produkcja — według PDF</option></select></label>
+    <p>Znaczenie roku wybierzesz w edytorze samolotu w bazie. Daty produkcji i certyfikacji są analizowane osobno.</p>
+    <label>Odniesienie do uzgodnionego szkicu odręcznego<input id="sketch_reference" data-bipol1 type="text" maxlength="4000" placeholder="Nazwa pliku / arkusza i data uzgodnienia"></label>
+    <label>Uzgodnienie misji i wymagań z prowadzącym<input id="mission_approval_reference" data-bipol1 type="text" maxlength="4000" placeholder="Data i zakres uzgodnienia"></label>
+  </details>
+  <button type="button" class="btn btn-primary" id="bipol1Calculate">Oblicz masę i sprawdź projekt</button>
+  <div id="bipol1Results" aria-live="polite"></div>
+</section>

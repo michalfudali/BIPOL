@@ -75,7 +75,8 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
     unmanned = bool(m_sizing.get("unmanned", False)) or params.get("aircraft_type") == "uav"
     n_crew = int(m_sizing.get("n_crew") or 0)
     phases = mission_masses(m_sizing)
-    m_fuel_res = max(0.0, phases['landing_start'] - (m_sizing['m0'] - m_fuel))
+    dropped = m_sizing.get('m_payload_dropped',0)
+    m_fuel_res = max(0.0, phases['landing_start'] - (m_sizing['m0'] - m_fuel - dropped))
 
     def layout(x_lemac):
         """Ramiona mas, stany załadowania i zakres ŚC w locie dla danego położenia ŚDA."""
@@ -125,13 +126,14 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         def to_percent_mac(x):
             return round(((x - x_lemac) / mac) * 100.0, 1)
 
-        def state(key, name, crew=0.0, payload=False, fuel=0.0):
+        def state(key, name, crew=0.0, payload=False, fuel=0.0, released=0.0):
             """Stan załadowania złożony z masy pustej, załogi, ładunku i paliwa (BIPOL_3, wzór 3.1)."""
-            mass = m_empty + crew + (m_payload if payload else 0.0) + fuel
-            mom = mom_empty + crew * x_arms["crew"] + (mom_payload if payload else 0.0) + fuel * x_arms["fuel"]
+            mass = m_empty + crew + (m_payload if payload else 0.0) + fuel - released
+            drop_arm = x_arms['payload_equivalent'] if unmanned else x_arms['baggage']
+            mom = mom_empty + crew * x_arms["crew"] + (mom_payload if payload else 0.0) + fuel * x_arms["fuel"] - released*drop_arm
             x_cg = mom / max(1.0, mass)
             return {"key": key, "name": name, "mass_kg": round(mass, 1), "xcg_m": round(x_cg, 3),
-                    "xcg_mac_pct": to_percent_mac(x_cg), "_payload": payload, "_fuel": fuel}
+                    "xcg_mac_pct": to_percent_mac(x_cg), "_payload": payload, "_fuel": fuel, "_released":released}
 
         # Warianty wg BIPOL_3: MTOW, lądowanie, start i lądowanie bez ładunku płatnego, samolot pusty.
         # MTOW pozostaje ostatni (odczytują go widoki rysunku).
@@ -144,8 +146,13 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         states += [
             state("zfw", "Masa bez paliwa (ZFW)" if not unmanned else "Pusty + wyposażenie zadaniowe (ZFW)",
                   crew=m_crew, payload=True),
-            state("mlw", "Masa lądowania (MLW)", crew=m_crew, payload=True, fuel=m_fuel_res),
+            state("mlw", "Masa lądowania (MLW)", crew=m_crew, payload=True, fuel=m_fuel_res,released=dropped),
         ]
+        if dropped:
+            before = next(s for s in m_sizing['mission_phases'] if s['key']=='drop')
+            fuel_at_drop = before['mass_start_kg']-(m_empty+m_crew+m_payload)
+            states += [state('before_drop','Przed zrzutem',crew=m_crew,payload=True,fuel=max(0,fuel_at_drop)),
+                       state('after_drop','Po zrzucie',crew=m_crew,payload=True,fuel=max(0,fuel_at_drop),released=dropped)]
         if m_fuel > 0 and m_payload > 0:
             if not unmanned:
                 states.append(state("tow_no_payload", "Start bez ładunku płatnego", crew=m_crew, fuel=m_fuel))
@@ -156,12 +163,12 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         variants = []
         if not unmanned and n_crew and m_crew > 0:
             for s in states[1:]:
-                light, heavy = (state(s["key"], s["name"], crew=n_crew * pilot, payload=s["_payload"], fuel=s["_fuel"])
+                light, heavy = (state(s["key"], s["name"], crew=n_crew * pilot, payload=s["_payload"], fuel=s["_fuel"],released=s['_released'])
                                 for pilot in (55.0, 110.0))
                 variants.append({"key": s["key"], "name": s["name"],
                                  "light_pct": light["xcg_mac_pct"], "heavy_pct": heavy["xcg_mac_pct"]})
         for s in states:
-            del s["_payload"], s["_fuel"]
+            del s["_payload"], s["_fuel"], s['_released']
 
         # Zakres położeń środka ciężkości w locie (samolot pusty nie lata; BIPOL_3, pkt 7)
         flight = ([s["xcg_mac_pct"] for s in states if s["key"] != "oew"]

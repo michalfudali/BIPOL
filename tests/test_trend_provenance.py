@@ -94,9 +94,11 @@ def test_empty_mass_suggestion_inserts_equation_one_into_the_mass_balance():
 def test_rising_empty_mass_trend_is_explained_when_equation_five_has_no_solution(ga):
     apply = ga['bipol_projects']['p1']['trend_analysis']['suggestions']['me_m0']['apply']
     assert apply['empty_mass_trend_C'] > 0
-    params = {**AIRCRAFT_PRESETS['ga_trainer'], 'empty_mass_trend_A': apply['empty_mass_trend_A'],
+    # A positive C alone does not prove absence of a root. Force an
+    # impossible law (me/m0 > 1 throughout the admissible mass interval).
+    params = {**AIRCRAFT_PRESETS['ga_trainer'], 'empty_mass_trend_A': 20,
               'empty_mass_trend_C': apply['empty_mass_trend_C']}
-    with pytest.raises(ValueError, match='Równanie \(1\).*C < 0'):
+    with pytest.raises(ValueError, match=r'Równanie \(1\).*C < 0'):
         calculate_mass_sizing(validate_parameters(params))
 
 

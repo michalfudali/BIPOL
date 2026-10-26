@@ -32,6 +32,17 @@ NUMERIC_LIMITS = {
     "empty_mass_trend_A": (1e-6, 1e6), "empty_mass_trend_C": (-2, 2),
     "elevator_chord_ratio": (0.05, 1), "rudder_chord_ratio": (0.05, 1),
     "ce_ch": (0.05, 1), "cr_cv": (0.05, 1),
+    "mass_initial_guess": (1, 1000000), "payload_drop_kg": (0, 500000),
+    "return_range_km": (0, 30000), "outbound_range_km": (0, 30000), "max_power_time_min": (0, 1440),
+    "max_power_kw": (0, 1000000), "max_thrust_kn": (0, 10000), "max_power_sfc": (0.001, 1000),
+    "loiter_speed_kmh": (1, 1200), "climb_start_speed_kmh": (1, 1200),
+    "climb_start_altitude_m": (0, 20000),
+    "corke_start_ordinate": (0.001, 1), "corke_end_ordinate": (0.001, 1),
+    "sketch_swet_ratio": (1, 20), "raymer_kmax": (1, 150),
+    "empty_mass_a": (0.000001, 10000), "empty_mass_c": (-2, 2),
+    "mass_point_x1": (1, 1000000), "mass_point_x2": (1, 1000000),
+    "mass_point_y1": (0.01, .99), "mass_point_y2": (0.01, .99),
+    "takeoff_mass_fraction": (.970, .975), "landing_mass_fraction": (.970, .975),
 }
 
 DEFAULTS = {
@@ -51,6 +62,10 @@ DEFAULTS = {
     "mission_phase_model": "galinski", "mission_ld_factor": CRUISE_LD_FACTOR,
     "gear_attachment": "fuselage",
     "takeoff_distance_m": 0, "landing_distance_m": 0,
+    "mass_method": "auto", "empty_mass_model": "class_correlation",
+    "mass_initial_guess": 5000, "payload_drop_kg": 0, "return_range_km": 0,
+    "max_power_time_min": 0, "preliminary_polar_mode": "input",
+    "climb_fraction_mode": "auto", "trend_year_basis": "certification",
 }
 
 
@@ -58,6 +73,17 @@ def validate_parameters(data):
     if not isinstance(data, dict):
         raise ValueError("Parametry projektu muszą być obiektem JSON.")
     p = {**DEFAULTS, **data}
+    if 'coursework' in p:
+        from calculations.coursework import validate_coursework
+        validate_coursework(p['coursework'])
+    # Migrate earlier mission keys without silently discarding a task or route.
+    if 'max_power_time_min' not in data:
+        p['max_power_time_min'] = data.get('t_max_thrust_min') or data.get('task_time_min') or 0
+    if data.get('mission_has_drop') is True and 'payload_drop_kg' not in data:
+        p['payload_drop_kg'] = data.get('m_cargo',0)
+    for optional_speed in ('loiter_speed_kmh','climb_start_speed_kmh'):
+        if p.get(optional_speed) == 0:
+            p.pop(optional_speed)
     for key in ('report_notes', 'source_notes'):
         if key in p and (not isinstance(p[key], str) or len(p[key]) > 15000):
             raise ValueError(f'Pole {key}: wymagany tekst do 15000 znaków.')
@@ -170,6 +196,8 @@ def validate_parameters(data):
     p['mission_phase_model'] = 'galinski'
     p['flap_takeoff_deg'] = FLAP_TAKEOFF_DEFLECTION_DEG
     p['flap_landing_deg'] = FLAP_LANDING_DEFLECTION_DEG
+    from calculations.bipol1 import validate_bipol1
+    validate_bipol1(p)
     if 'trend_observations' in p:
         from calculations.trend_observations import validate_observations
         p['trend_observations'] = validate_observations(p['trend_observations'])

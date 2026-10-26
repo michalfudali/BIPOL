@@ -911,7 +911,8 @@ function collectFormData() {
   const nameEl = document.getElementById('projectNameDisplay');
   data['name'] = activeProj ? activeProj.name : (nameEl ? nameEl.textContent.trim() : 'Wstępny Projekt Samolotu');
   data['locked_params'] = Array.from(window.userLockedParams || []);
-  return window.BipolDesignBasis ? BipolDesignBasis.collect(data) : data;
+  const basis = window.BipolDesignBasis ? BipolDesignBasis.collect(data) : data;
+  return window.Bipol1 ? Bipol1.collect(basis) : basis;
 }
 
 let calculationSequence = 0;
@@ -1249,7 +1250,7 @@ function populateP1P2Tables(res) {
     const dp = res.sizing?.design_point || {};
     p2Dp.innerHTML = `
       <tr><td>Obciążenie powierzchni skrzydła <b>(W/S)</b></td><td class="num"><b>${(dp.ws ?? 0).toFixed(1)}</b></td><td>N/m²</td><td>Ograniczenie prędkości lądowania Vs0 (maksymalne dopuszczalne W/S)</td></tr>
-      <tr><td>${dp.tw ? 'Obciążenie ciągu <b>(T/W)</b>' : 'Obciążenie mocy <b>(P/W)</b>'}</td><td class="num"><b>${dp.tw ? Number(dp.tw).toFixed(3) : (dp.pw ?? 0).toFixed(1) + ' (' + (dp.pw_hp_kg ?? 0).toFixed(3) + ' KM/kg)'}</b></td><td>${dp.tw ? '-' : 'W/N'}</td><td>Ograniczenie prędkości wznoszenia wy oraz drogi rozbiegu Sto</td></tr>
+      <tr><td>${dp.tw ? 'Obciążenie ciągu <b>(T/W)</b>' : 'Obciążenie mocy <b>(P/W)</b>'}</td><td class="num"><b>${dp.tw ? Number(dp.tw).toFixed(3) : (dp.pw ?? 0).toFixed(1) + ' (' + (dp.pw_hp_kg ?? 0).toFixed(3) + ' KM/kg)'}</b></td><td>${dp.tw ? '-' : 'W/N'}</td><td>Ograniczenie prędkości wznoszenia w_y oraz drogi rozbiegu S_to</td></tr>
       <tr><td>Obliczona powierzchnia nośna <b>S</b></td><td class="num"><b>${(res.geometry?.wing?.S ?? 0).toFixed(2)}</b></td><td>m²</td><td>Wyznaczona ze stosunku MTOW &bull; g / (W/S)</td></tr>
       <tr><td>${dp.power_kw ? 'Wymagana moc silnika <b>P_sil</b>' : 'Wymagany ciąg silnika <b>T</b>'}</td><td class="num"><b>${dp.power_kw ? Number(dp.power_kw).toFixed(1) + ' kW (' + (dp.power_hp ?? 0).toFixed(1) + ' KM)' : (dp.thrust_kn ?? 0).toFixed(2) + ' kN'}</b></td><td>${dp.power_kw ? 'kW (KM)' : 'kN'}</td><td>Minimalna moc zespołu napędowego spełniająca wszystkie wymogi</td></tr>
     `;
@@ -1477,7 +1478,7 @@ function populateP5Tables(res) {
       <tr><td>Prędkość oderwania przy starcie (1.12 &bull; Vs_TO)</td><td><b>V_LOF</b></td><td class="num"><b>${(sp.v_lof_kmh ?? 0).toFixed(1)}</b></td><td class="num">${((sp.v_lof_kmh ?? 0)/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Bezpieczny margines prędkości przy oderwaniu kół</td></tr>
       <tr><td>Prędkość podejścia do lądowania (1.3 &bull; Vs0)</td><td><b>V_app</b></td><td class="num"><b>${(sp.v_app_kmh ?? 0).toFixed(1)}</b></td><td class="num">${((sp.v_app_kmh ?? 0)/3.6).toFixed(1)}</td><td class="num">&mdash;</td><td>Podejście po ścieżce schodzenia (H = 15 m)</td></tr>
       <tr><td>Prędkość przelotowa obliczeniowa</td><td><b>V_cr</b></td><td class="num"><b>${vCr.toFixed(1)}</b></td><td class="num">${(vCr/3.6).toFixed(1)}</td><td class="num"><b>M ${machCr.toFixed(3)}</b></td><td>Standardowa prędkość marszowa w fazie przelotu</td></tr>
-      <tr><td>Maksymalna prędkość lotu poziomego przy ziemi</td><td><b>V_max</b></td><td class="num"><b>${vMax.toFixed(1)}</b></td><td class="num">${(vMax/3.6).toFixed(1)}</td><td class="num"><b>M ${(vMax/1225).toFixed(3)}</b></td><td>Punkt zrównania mocy rozporządzalnej i niezbędnej (wy = 0)</td></tr>
+      <tr><td>Maksymalna prędkość lotu poziomego przy ziemi</td><td><b>V_max</b></td><td class="num"><b>${vMax.toFixed(1)}</b></td><td class="num">${(vMax/3.6).toFixed(1)}</td><td class="num"><b>M ${(vMax/1225).toFixed(3)}</b></td><td>Punkt zrównania mocy rozporządzalnej i niezbędnej (w_y = 0)</td></tr>
     `;
   }
 
@@ -2096,7 +2097,7 @@ function renderProjectManagerModal() {
             <span class="spec-tag" title="Masa startowa MTOW">MTOW: ${mtowStr}</span>
             <span class="spec-tag" title="Rozpiętość skrzydła">b: ${spanStr}</span>
             <span class="spec-tag" title="Prędkość przeciągnięcia z klapami">Vs0: ${vStallStr}</span>
-            <span class="spec-tag" title="Prędkość wznoszenia wy_max">wy: ${wyStr}</span>
+            <span class="spec-tag" title="Maksymalna prędkość wznoszenia">w_y,max: ${wyStr}</span>
           </div>
         </div>
         <div class="project-card-actions">
@@ -2849,7 +2850,7 @@ function renderWizardStep5Summary() {
     <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Ładunek</td><td class="num"><b>${occSummaryText}</b></td><td>Ładunek płatny</td></tr>
     <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
     <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
-    <tr><td><b>Osiągi lotniskowe</b></td><td>Całkowity start do 15 m / Wznoszenie wy</td><td class="num"><b>Sto = ${Sto} m, wy = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
+    <tr><td><b>Osiągi lotniskowe</b></td><td>Całkowity start do 15 m / Wznoszenie w_y</td><td class="num"><b>S_to = ${Sto} m, w_y = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
     <tr><td><b>Zespół Napędowy</b></td><td>Rodzaj, zabudowa i zużycie paliwa</td><td class="num"><b>${propSummaryText}</b></td><td>Zespół napędowy</td></tr>
     <tr><td><b>Założenia skrzydła</b></td><td>${escapeHtml(document.getElementById('wiz_wing_input_mode').selectedOptions[0].textContent)}</td><td class="num"><b>b = ${document.getElementById('wiz_wingspan_m').value} m; S = ${document.getElementById('wiz_wing_area_m2').value} m²; Λ = ${AR}</b></td><td>Wielkości zależne są obliczane</td></tr>
     <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>Klapa: ${flap} &bull; Slot: ${slat}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
@@ -3749,7 +3750,7 @@ function hydrateSemesterProjectsData(res) {
         ${indStr} &bull;
         Pułap praktyczny (w_max = 0.5 m/s): <b>h_p = ${cs.hp_service_m ?? '—'} m</b> &bull;
         Pułap teoretyczny (w_max = 0): <b>h_t = ${cs.ht_theoretical_m ?? '—'} m</b> &bull;
-        Czas wznoszenia na pułap praktyczny (całkowanie dh/wy,max przy stałej masie): <b>t_hp = ${cs.thp_min ?? '—'} min (${cs.thp_s ?? '—'} s)</b>.
+        Czas wznoszenia na pułap praktyczny (całkowanie dh/w_y,max przy stałej masie): <b>t_hp = ${cs.thp_min ?? '—'} min (${cs.thp_s ?? '—'} s)</b>.
       `;
     }
 

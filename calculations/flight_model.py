@@ -45,6 +45,14 @@ def propulsion_lapse(params, altitude_m, speed_ms=0.0):
 
 def mission_masses(mass):
     """Masses from the actual fuel fractions, retaining reserve/unusable fuel."""
+    if mass.get('mission_phases'):
+        phases = {}
+        for phase in mass['mission_phases']:
+            phases[phase['key']+'_start'] = phase['mass_start_kg']
+            phases[phase['key']+'_end'] = phase['mass_end_kg']
+        phases['cruise_mean'] = (phases['cruise_start']+phases['cruise_end'])/2
+        phases['fuel_after_landing'] = mass['reserve_fuel_kg']
+        return phases
     fractions = mass['fuel_fractions_detail']
     current = mass['m0']
     phases = {}

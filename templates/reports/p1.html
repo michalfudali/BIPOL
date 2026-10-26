@@ -14,3 +14,12 @@
 <div class="equation"><div class="formula">\[C_x=C_{x0}+kC_z^2,\qquad K_{\max}=\frac{1}{2\sqrt{C_{x0}k}}={{ res.aerodynamics.k_max|texnum(1) }}.\]</div></div>
 <p>Przyjęto \(C_{x0}={{ res.aerodynamics.cx0_clean|texnum(4) }}\) i \(k={{ res.aerodynamics.k_clean|texnum(5) }}\). Współczynnik indukowany uwzględnia efektywne wydłużenie i kształt obrysu skrzydła. {% if doc.powered %}Dla prędkości przelotowej oszacowanie daje {% if params.engine_type == 'jet' %}ciąg niezbędny {{ p_data.t_req_est_kn|reportnum(2) }} kN{% else %}moc niezbędną {{ p_data.p_req_est_kw|reportnum(1) }} kW{% endif %}.{% endif %}</p>
 {% include 'trend_report.html' %}
+{% set bp=res.mass.preliminary_polar %}
+<h3>Biegunowa do bilansu masy BIPOL 1</h3>
+<p>Metoda: {{ bp.mode }}. Kmax = {{ bp.kmax|reportnum(3) }},
+  Cx₀ = {{ bp.cx0|reportnum(5) }}{% if bp.swet_ratio %}, Swet/S ze szkicu = {{ bp.swet_ratio|reportnum(3) }}{% endif %}.
+  {{ bp.source }}. {{ bp.reading_note }}. Ten model wstępny jest porównywany z biegunową szczegółową P4.</p>
+<h3>Kompletność BIPOL 1</h3>
+<p>{{ res.bipol1_review.basis }}</p>
+<ul>{% for c in res.bipol1_review.checks %}<li>{{ 'Spełnione' if c.passed else 'Do uzupełnienia' }}:
+  <strong>{{ c.label }}</strong> — {{ c.detail }}</li>{% endfor %}</ul>

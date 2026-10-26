@@ -500,8 +500,10 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
     if trend_value is not None and not 0 < trend_value < 1:
         warnings.append('Ekstrapolacja daje niefizyczny udział masy. Nie używaj jej do bilansu mas.')
     time_trends = []
+    year_basis = params.get('trend_year_basis','certification')
+    time_rows = [r for r in rows if (r.get('year_basis') or 'certification') == year_basis]
     for key, (label, unit) in METRICS.items():
-        subset, fit, forecast = time_trend(rows, key, weights, forecast_year)
+        subset, fit, forecast = time_trend(time_rows, key, weights, forecast_year)
         time_trends.append({'key': key, 'label': label, 'unit': unit, 'fit': fit,
             'available_n': len(subset), 'points': [{'x': r['year'], 'y': r[key], 'model': r['model']} for r in subset],
             'forecast_year': forecast_year if fit else None, 'forecast': forecast,
@@ -601,7 +603,7 @@ def analyze_trends(params, m0, m_empty, geom_res=None):
         'report_charts': report_charts, 'sample': sample, 'suggestions': suggestions,
         'reference_year': reference_year, 'forecast_year': forecast_year,
         'mass_trend_decreasing': mass_fit['C'] < 0 if mass_fit else None,
-        'year_basis': 'Rok certyfikacji wariantu (nie rok produkcji)',
+        'year_basis': 'Rok produkcji' if year_basis=='production' else 'Rok certyfikacji wariantu (nie rok produkcji)',
         'method': 'Linia trendu log(OEW/MTOW) = log(A) + C·log(m₀ [kg]) z ważonej regresji; A i C odczytano z dwóch punktów tej linii wzorami BIPOL_1. Domyślnie rodziny mają równą wagę.',
         'limitations': 'OEW obejmuje wyposażenie operacyjne i nie jest tożsama z masą własną każdego projektu. Cechy geometryczne i sterów (V_H, lotki, stery, wznios) oparto na 82 certyfikowanych konstrukcjach (Raymer, Roskam, Corke, TCDS, MEiL PW). Rodziny są grupowane heurystycznie. Korelacja nie dowodzi przyczynowości.',
         'geometry_trends_analysis': geometry_trends_analysis}
@@ -747,13 +749,16 @@ def trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample
 
         lo, hi = PHYSICAL_BOUNDS.get(metric, (-math.inf, math.inf))
         if rule == 'time':
-            dated, fit, forecast = time_trend(rows, metric, weights, forecast_year)
+            date_basis = params.get('trend_year_basis','certification')
+            dated_rows = [r for r in rows if (r.get('year_basis') or 'certification')==date_basis]
+            dated, fit, forecast = time_trend(dated_rows, metric, weights, forecast_year)
             # A forecast beyond every similar aircraft is an extrapolation artefact, not a design value.
             supported = fit and forecast is not None and lo < forecast < hi and fit['y_min'] <= forecast <= fit['y_max']
             if supported:
                 value, model, n = forecast, 'time_trend', len(dated)
-                prov.update(method=f'Trend w funkcji roku certyfikacji ekstrapolowany na {forecast_year} r.',
-                            formula=f'{symbol}(rok) = a·rok + b', x_label='Rok certyfikacji', fit=dict(fit),
+                date_label = 'Rok produkcji' if date_basis=='production' else 'Rok certyfikacji'
+                prov.update(method=f'Trend: {date_label.lower()}, ekstrapolowany na {forecast_year} r.',
+                            formula=f'{symbol}(rok) = a·rok + b', x_label=date_label, fit=dict(fit),
                             observations=[{'model': r['model'], 'x': r['year'], 'value': r[metric], 'weight': w,
                                            'source': r['source_id']} for r, w in zip(dated, weights(dated))])
                 prov['steps'] += [f"a = {_pl(fit['slope'], 4, True)}{unit_text}/rok; b = {_pl(fit['intercept'], 6, True)}{unit_text}",

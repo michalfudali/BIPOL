@@ -5,13 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BIPOL Studio - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=14">
+  <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=15">
   <link rel="stylesheet" href="/static/css/studio.css?v=2">
   <link rel="stylesheet" href="/static/css/trends.css?v=2">
   <link rel="stylesheet" href="/static/css/aircraft-editor.css?v=1">
   <link rel="stylesheet" href="/static/css/workspace.css?v=1">
   <link rel="stylesheet" href="/static/css/calculation-tree.css?v=1">
   <link rel="stylesheet" href="/static/css/experience.css?v=3">
+  <link rel="stylesheet" href="/static/css/coursework.css?v=1">
 </head>
 <body class="studio-layout">
   <a class="studio-skip-link" href="#studioMainWorkspace">Przejdź do treści</a>
@@ -156,6 +158,7 @@
           <button class="bipol-tab" data-target="tab-calculation-tree">Drzewo obliczeń</button>
           <button class="bipol-tab" data-target="tab-variants">Warianty</button>
           <button class="bipol-tab" data-target="tab-reports">Raporty</button>
+          <button class="bipol-tab" data-target="tab-coursework">Plan na 5,0</button>
           <button class="bipol-tab" data-target="tab-glide">Lot szybowy</button>
           <button class="bipol-tab" data-target="tab-methods">Metody</button>
           <button class="bipol-tab" data-target="tab-trends">Baza i trendy</button>
@@ -173,6 +176,7 @@
 
         {% include "inputs_panel.html" %}
         {% include "studio_panels.html" %}
+        {% include "coursework_panel.html" %}
         {% include "calculation_tree.html" %}
 
         <!-- MODUŁ CAD: RYSUNEK ZESTAWIENIOWY WG POLSKICH NORM CAD (ZPK MEiL PW / PN-EN ISO) -->
@@ -978,7 +982,7 @@
 
               <div style="margin-bottom:1.25rem;">
                 <h4 style="color:#005691; margin:0 0 0.25rem 0;">Projekt Nr 5: Osiągi Samolotu (15 pkt.)</h4>
-                <p>Wykres ofertowy: krzywe prędkości wznoszenia wy(V), prędkości minimalne, przelotowe i maksymalne, pułap teoretyczny i praktyczny, analiza zasięgu i długotrwałości, wyznaczenie długości rozbiegu i startu nad przeszkodę 15m.</p>
+                <p>Wykres ofertowy: krzywe prędkości wznoszenia w_y(V), prędkości minimalne, przelotowe i maksymalne, pułap teoretyczny i praktyczny, analiza zasięgu i długotrwałości, wyznaczenie długości rozbiegu i startu nad przeszkodę 15m.</p>
               </div>
 
               <div style="margin-bottom:1.25rem;">
@@ -1154,7 +1158,7 @@
                   <div style="overflow-x:auto;">
                     <table class="b-table" id="p1_similar_table">
                       <thead>
-                        <tr><th>Konstrukcja referencyjna</th><th>MTOW m0 [kg]</th><th>Masa pusta me [kg]</th><th>Powierzchnia S [m²]</th><th id="p1_sim_power_th">Moc silnika [kW]</th><th>Vmax [km/h]</th><th>Wydłużenie AR</th><th>Śmigło d [m]</th></tr>
+                        <tr><th>Konstrukcja referencyjna</th><th>MTOW m₀ [kg]</th><th>Masa pusta m_e [kg]</th><th>Powierzchnia S [m²]</th><th id="p1_sim_power_th">Moc silnika [kW]</th><th>Vmax [km/h]</th><th>Wydłużenie AR</th><th>Śmigło d [m]</th></tr>
                       </thead>
                       <tbody id="p1_similar_tbody"></tbody>
                     </table>
@@ -1233,7 +1237,7 @@
                   <div style="overflow-x:auto;">
                     <table class="b-table">
                       <thead>
-                        <tr><th>Profil kandydacki</th><th>Cx min</th><th>Cx(Cz_proj)</th><th>Cz max</th><th>(Cz/Cx) max</th><th>Przeciągnięcie</th><th>Status</th></tr>
+                        <tr><th>Profil kandydacki</th><th>Cx min</th><th>Cx(Cz_proj)</th><th>Cz max</th><th>(Cz/Cx)_max</th><th>Przeciągnięcie</th><th>Status</th></tr>
                       </thead>
                       <tbody id="p2_airfoil_tbody"></tbody>
                     </table>
@@ -1541,7 +1545,7 @@
                         <tr>
                           <th>L.p.</th><th>Cz∞</th><th>Cx∞</th><th>α∞ [°]</th><th>Cx'∞</th>
                           <th>αi [°]</th><th>αp [°]</th><th>Cxi</th><th>C'xp</th>
-                          <th>CzH</th><th>CxH</th><th>C'x_szk</th><th>Cx</th>
+                          <th>CzH</th><th>CxH</th><th>C'_x,szk</th><th>Cx</th>
                           <th>ΔCzH</th><th>C'z</th><th>K=C'z/Cx</th><th>E=C'z³/Cx²</th>
                         </tr>
                       </thead>
@@ -2024,8 +2028,8 @@
                   <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
                 </optgroup>
                 <optgroup label="EASA Lekkie, Szybowce i Motoszybowce (CS-22 / VLA / LSA)">
-                  <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
-                  <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                  <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., przeciągnięcie ≤ 45 kt)</option>
+                  <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., przeciągnięcie ≤ 45 kt)</option>
                   <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, m/b² ≤ 3.0 kg/m²)</option>
                   <option value="cs22_glider">EASA CS-22 (Szybowiec czysty • MTOM ≤ 850 kg, max 2 os., bez napędu)</option>
                 </optgroup>
@@ -2122,11 +2126,11 @@
 
           <div class="input-row">
             <div class="input-group" data-param="takeoff_distance_m"><label for="wiz_takeoff_distance_m">Maks. całkowita długość startu [m]</label><input type="number" id="wiz_takeoff_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><div class="input-group" data-param="landing_distance_m"><label for="wiz_landing_distance_m">Maks. całkowita długość lądowania [m]</label><input type="number" id="wiz_landing_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><details class="legacy-runway"><summary>Dodatkowe ograniczenie rozbiegu</summary><div class="input-group">
-              <label for="wiz_takeoff_run_m">Wymagana droga rozbiegu Sto [m]:</label>
+              <label for="wiz_takeoff_run_m">Wymagana droga rozbiegu S_to [m]:</label>
               <input step="any" required type="number" id="wiz_takeoff_run_m" min="60" max="3000" value="210">
             </div></details>
             <div class="input-group">
-              <label for="wiz_climb_rate_ms">Min. wznoszenie przy ziemi wy [m/s]:</label>
+              <label for="wiz_climb_rate_ms">Min. wznoszenie przy ziemi w_y [m/s]:</label>
               <input step="any" required type="number" id="wiz_climb_rate_ms" min="1.5" max="30" value="4.1">
             </div>
           </div>
@@ -2238,12 +2242,12 @@
             <div class="input-group">
               <label for="wiz_flap_type">Mechanizacja spływu (Klapa wewnętrzna):</label>
               <select id="wiz_flap_type">
-                <option value="plain">Klapa zwykła (Plain Flap, &Delta;Cz = +0.45)</option>
-                <option value="split">Klapa krokodylowa (Split Flap, &Delta;Cz = +0.55)</option>
-                <option value="single_slotted" selected>Klapa szczelinowa (Single Slotted, &Delta;Cz = +0.85)</option>
-                <option value="fowler">Klapa Fowlera (Fowler Flap, &Delta;Cz = +1.35)</option>
-                <option value="junkers">Klapa zewnętrzna Junkersa (STOL, &Delta;Cz = +0.95)</option>
-                <option value="flaperon">Klapolotka (Flaperon, Motoszybowce, &Delta;Cz = +0.50)</option>
+                <option value="plain">Klapa zwykła (Plain Flap, przyrost wsp. siły nośnej +0.45)</option>
+                <option value="split">Klapa krokodylowa (Split Flap, przyrost wsp. siły nośnej +0.55)</option>
+                <option value="single_slotted" selected>Klapa szczelinowa (Single Slotted, przyrost wsp. siły nośnej +0.85)</option>
+                <option value="fowler">Klapa Fowlera (Fowler Flap, przyrost wsp. siły nośnej +1.35)</option>
+                <option value="junkers">Klapa zewnętrzna Junkersa (STOL, przyrost wsp. siły nośnej +0.95)</option>
+                <option value="flaperon">Klapolotka (Flaperon, Motoszybowce, przyrost wsp. siły nośnej +0.50)</option>
               </select><p class="basis-note">Wychylenia według wytycznych: start 20°, lądowanie 40°.</p>
             </div>
             <div class="input-group">
@@ -2262,8 +2266,8 @@
               <label for="wiz_slat_type">Mechanizacja natarcia (Przedskrzydło / Slot):</label>
               <select id="wiz_slat_type">
                 <option value="none">Brak przedskrzydła (Gładkie natarcie)</option>
-                <option value="fixed_slot">Stały slot (Fixed Slat, STOL/Rolnicze, &Delta;Cz = +0.40)</option>
-                <option value="slats_auto">Automatyczny slot ruchomy (Handley-Page / Szynowy, &Delta;Cz = +0.55)</option>
+                <option value="fixed_slot">Stały slot (Fixed Slat, STOL/Rolnicze, przyrost wsp. siły nośnej +0.40)</option>
+                <option value="slats_auto">Automatyczny slot ruchomy (Handley-Page / Szynowy, przyrost wsp. siły nośnej +0.55)</option>
               </select>
             </div>
           </div>
@@ -2337,12 +2341,22 @@
   <script>
     window.INITIAL_PORTAL_MODE = "{{ initial_portal_mode or '' }}";
   </script>
+  <script src="/static/vendor/katex/katex.min.js"></script>
+  <script src="/static/vendor/katex/contrib/auto-render.min.js"></script>
+  <script>
+    // Wzory \( … \) w opisach metod; pojedynczy $ nie jest ogranicznikiem, bo występuje w kosztach.
+    document.addEventListener('DOMContentLoaded', () => renderMathInElement(document.body, {
+      delimiters: [{left: '\\[', right: '\\]', display: true}, {left: '\\(', right: '\\)', display: false}],
+      throwOnError: false, strict: 'ignore'
+    }));
+  </script>
+  <script src="/static/js/symbols.js?v=1"></script>
   <script src="/static/js/studio-core.js?v=2"></script>
   <script src="/static/js/aircraft-preview.js?v=4"></script>
   <script src="/static/js/studio-visuals.js?v=2"></script>
-  <script src="/static/js/didactic_data.js?v=12"></script>
-  <script src="/static/js/charts.js?v=14"></script>
-  <script src="/static/js/app.js?v=21"></script>
+  <script src="/static/js/didactic_data.js?v=13"></script>
+  <script src="/static/js/charts.js?v=15"></script>
+  <script src="/static/js/app.js?v=22"></script>
   <script src="/static/js/constraints-ui.js?v=5"></script>
   <script src="/static/js/design-basis.js?v=4"></script>
   <script src="/static/js/studio.js?v=7"></script>
@@ -2350,8 +2364,10 @@
   <script src="/static/js/aircraft-editor.js?v=1"></script>
   <script src="/static/js/trend-inputs.js?v=2"></script>
   <script src="/static/js/trend-provenance.js?v=1"></script>
-  <script src="/static/js/trends.js?v=7"></script>
-  <script src="/static/js/workspace.js?v=4"></script>
-  <script src="/static/js/calculation-tree.js?v=1"></script>
+  <script src="/static/js/trends.js?v=9"></script>
+  <script src="/static/js/bipol1.js?v=1"></script>
+  <script src="/static/js/workspace.js?v=5"></script>
+  <script src="/static/js/calculation-tree.js?v=2"></script>
+  <script src="/static/js/coursework.js?v=1"></script>
 </body>
 </html>

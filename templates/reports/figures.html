@@ -1,6 +1,6 @@
 <script>
 (() => {
-  const res = {{ res|tojson }};
+  const res = {{ figure_results|tojson }};
   const chart = (id, options) => {
     const box = document.getElementById(id);
     if (box) box.innerHTML = BipolVisuals.chart(options);
@@ -36,7 +36,7 @@
   }
   chart('repSchrenk',{title:'Rozkład Schrenka',xLabel:'y [m]',yLabel:'Cięciwa zastępcza [m]',
     series:[['Geometryczny','c_geom'],['Eliptyczny','c_ellip'],['Schrenka','c_schrenk']].map(([name,key],i)=>({name,dash:i===1,data:g.schrenk.map(p=>[p.y,p[key]])}))});
-  chart('repClimb',{title:'Prędkość wznoszenia',xLabel:'V [km/h]',yLabel:'wy [m/s]',
+  chart('repClimb',{title:'Prędkość wznoszenia',xLabel:'V [km/h]',yLabel:'w_y [m/s]',
     series:[{name:'Poziom morza, ISA',data:res.performance.climb.climb_curve.map(p=>[p.v_kmh,p.wy_ms])}]});
   const glide=res.performance.glide;
   chart('repGlideChart',{title:'Biegunowa opadania',xLabel:'V TAS [km/h]',yLabel:'Opadanie [m/s]',

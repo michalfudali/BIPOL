@@ -31,8 +31,8 @@ function drawMatchingChart(canvasId, sizing) {
   if (sizing.engine_type === 'none') {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#526b77'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Szybowiec bez napędu', width / 2, height / 2 - 12);
-    ctx.fillText('Diagram doboru mocy nie ma zastosowania.', width / 2, height / 2 + 12);
+    BipolSymbols.fillText(ctx, 'Szybowiec bez napędu', width / 2, height / 2 - 12);
+    BipolSymbols.fillText(ctx, 'Diagram doboru mocy nie ma zastosowania.', width / 2, height / 2 + 12);
     return;
   }
 
@@ -69,7 +69,7 @@ function drawMatchingChart(canvasId, sizing) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(yVal.toFixed(isJet ? 2 : 1), pad.left - 8, y + 4);
+    BipolSymbols.fillText(ctx, yVal.toFixed(isJet ? 2 : 1), pad.left - 8, y + 4);
   }
   
   for (let i = 0; i <= 5; i++) {
@@ -83,19 +83,19 @@ function drawMatchingChart(canvasId, sizing) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(Math.round(xVal), x, pad.top + plotH + 18);
+    BipolSymbols.fillText(ctx, Math.round(xVal), x, pad.top + plotH + 18);
   }
   
   // Axes labels
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Obciążenie powierzchni W/S [N/m²]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Obciążenie powierzchni W/S [N/m²]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText(isJet ? 'Obciążenie ciągu T/W [-]' : 'Obciążenie mocy P/W [W/N]', 0, 0);
+  BipolSymbols.fillText(ctx, isJet ? 'Obciążenie ciągu T/W [-]' : 'Obciążenie mocy P/W [W/N]', 0, 0);
   ctx.restore();
   
   // Draw Curves
@@ -164,12 +164,12 @@ function drawMatchingChart(canvasId, sizing) {
   ctx.fillStyle = '#b45309';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(`Punkt projektowy (${dp.ws} N/m²)`, dpX + 8, dpY - 6);
+  BipolSymbols.fillText(ctx, `Punkt projektowy (${dp.ws} N/m²)`, dpX + 8, dpY - 6);
   
   // Legend
   const leg = [
     { label: takeoffLabel, color: '#dc2626' },
-    { label: 'Wznoszenie (wy)', color: '#2563eb' },
+    { label: 'Wznoszenie (w_y)', color: '#2563eb' },
     { label: 'Przelot (Vcr)', color: '#059669' },
     { label: 'Vmin (Cz,max/1,1)', color: '#9333ea' },
     ...(Number.isFinite(sizing.ws_landing) ? [{ label: 'Lądowanie', color: '#0f766e' }] : []),
@@ -182,7 +182,7 @@ function drawMatchingChart(canvasId, sizing) {
     ctx.fillStyle = '#475569';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(item.label, legX + 16, pad.top + 10);
+    BipolSymbols.fillText(ctx, item.label, legX + 16, pad.top + 10);
     legX += ctx.measureText(item.label).width + 28;
   });
 }
@@ -221,7 +221,7 @@ function drawPolarChart(canvasId, aero) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(yVal.toFixed(1), pad.left - 6, y + 4);
+    BipolSymbols.fillText(ctx, yVal.toFixed(1), pad.left - 6, y + 4);
   }
   
   for (let i = 0; i <= 5; i++) {
@@ -234,18 +234,18 @@ function drawPolarChart(canvasId, aero) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(xVal.toFixed(2), x, pad.top + plotH + 18);
+    BipolSymbols.fillText(ctx, xVal.toFixed(2), x, pad.top + plotH + 18);
   }
   
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Współczynnik oporu Cx [-]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Współczynnik oporu Cx [-]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Współczynnik siły nośnej Cz [-]', 0, 0);
+  BipolSymbols.fillText(ctx, 'Współczynnik siły nośnej Cz [-]', 0, 0);
   ctx.restore();
   
   // Draw Curves: Clean, TO, LND
@@ -286,7 +286,7 @@ function drawPolarChart(canvasId, aero) {
   ctx.beginPath();
   ctx.arc(xOpt, yOpt, 5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillText(`K_max = ${aero.k_max}`, xOpt + 8, yOpt + 4);
+  BipolSymbols.fillText(ctx, `K_max = ${aero.k_max}`, xOpt + 8, yOpt + 4);
 }
 
 // 3. SCHRENK LIFT DISTRIBUTION
@@ -320,7 +320,7 @@ function drawSchrenkChart(canvasId, schrenkData) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(yVal.toFixed(2), pad.left - 6, y + 4);
+    BipolSymbols.fillText(ctx, yVal.toFixed(2), pad.left - 6, y + 4);
   }
   
   for (let i = 0; i <= 5; i++) {
@@ -333,18 +333,18 @@ function drawSchrenkChart(canvasId, schrenkData) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(xVal.toFixed(1), x, pad.top + plotH + 18);
+    BipolSymbols.fillText(ctx, xVal.toFixed(1), x, pad.top + plotH + 18);
   }
   
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Względna półrozpiętość η = y / (b/2) [-]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Względna półrozpiętość η = y / (b/2) [-]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Cięciwa c(y) [m]', 0, 0);
+  BipolSymbols.fillText(ctx, 'Cięciwa c(y) [m]', 0, 0);
   ctx.restore();
   
   function drawKrzywa(key, color, isDashed = false, width = 2) {
@@ -385,8 +385,8 @@ function drawClimbChart(canvasId, climbData) {
     const message = 'Brak krzywej wznoszenia.';
     document.getElementById(canvasId)?.setAttribute('aria-label', message);
     ctx.fillStyle = '#526d79'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(message, width / 2, height / 2 - 10, width - 30);
-    ctx.fillText('Lot bez napędu: sprawdź moduł „Lot szybowy”.', width / 2, height / 2 + 16, width - 30);
+    BipolSymbols.fillText(ctx, message, width / 2, height / 2 - 10, width - 30);
+    BipolSymbols.fillText(ctx, 'Lot bez napędu: sprawdź moduł „Lot szybowy”.', width / 2, height / 2 + 16, width - 30);
     return;
   }
   const xMin = curve[0].v_kmh * 0.9;
@@ -409,18 +409,18 @@ function drawClimbChart(canvasId, climbData) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(yVal.toFixed(1), pad.left - 6, y + 4);
+    BipolSymbols.fillText(ctx, yVal.toFixed(1), pad.left - 6, y + 4);
   }
   
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Prędkość lotu V [km/h]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Prędkość lotu V [km/h]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Prędkość wznoszenia wy [m/s]', 0, 0);
+  BipolSymbols.fillText(ctx, 'Prędkość wznoszenia w_y [m/s]', 0, 0);
   ctx.restore();
   
   // Curve
@@ -442,7 +442,7 @@ function drawClimbChart(canvasId, climbData) {
   ctx.beginPath();
   ctx.arc(pMaxX, pMaxY, 5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillText(`wy_max = ${climbData.wy_max_ms} m/s`, pMaxX - 20, pMaxY - 10);
+  BipolSymbols.fillText(ctx, `wy_max = ${climbData.wy_max_ms} m/s`, pMaxX - 20, pMaxY - 10);
 }
 
 // 5. VN ENVELOPE (CS-23 / CS-25)
@@ -476,12 +476,12 @@ function drawVnEnvelope(canvasId, env) {
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Prędkość przyrządowa V [km/h]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Prędkość przyrządowa V [km/h]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Współczynnik przeciążenia n [-]', 0, 0);
+  BipolSymbols.fillText(ctx, 'Współczynnik przeciążenia n [-]', 0, 0);
   ctx.restore();
   
   // Maneuver Polygon
@@ -545,7 +545,7 @@ function drawVnEnvelope(canvasId, env) {
     ctx.fillStyle = '#64748b';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(s.label, x, pad.top + plotH + 18);
+    BipolSymbols.fillText(ctx, s.label, x, pad.top + plotH + 18);
   });
 }
 
@@ -586,18 +586,18 @@ function drawBalanceDiagram(canvasId, balance) {
     ctx.fillStyle = '#64748b';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(Math.round(yVal), pad.left - 6, y + 4);
+    BipolSymbols.fillText(ctx, Math.round(yVal), pad.left - 6, y + 4);
   }
   
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Położenie ŚM [% ŚDA / MAC]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Położenie ŚM [% ŚDA / MAC]', pad.left + plotW / 2, height - 10);
   
   ctx.save();
   ctx.translate(16, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Masa samolotu [kg]', 0, 0);
+  BipolSymbols.fillText(ctx, 'Masa samolotu [kg]', 0, 0);
   ctx.restore();
   
   // Neutral Point vertical line (Stateczność)
@@ -614,7 +614,7 @@ function drawBalanceDiagram(canvasId, balance) {
   ctx.fillStyle = '#dc2626';
   ctx.font = 'bold 10px sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(`Punkt Neutralny (${balance.neutral_point.x_n_mac_pct}%)`, xNp + 5, pad.top + 15);
+  BipolSymbols.fillText(ctx, `Punkt Neutralny (${balance.neutral_point.x_n_mac_pct}%)`, xNp + 5, pad.top + 15);
   
   // Safe CG limits box
   const xFwd = toX(balance.cg_range.forward_pct);
@@ -645,7 +645,7 @@ function drawBalanceDiagram(canvasId, balance) {
     ctx.fillStyle = '#0f172a';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`${s.name} (${s.xcg_mac_pct}%)`, x + 7, y - 4);
+    BipolSymbols.fillText(ctx, `${s.name} (${s.xcg_mac_pct}%)`, x + 7, y - 4);
   });
 }
 

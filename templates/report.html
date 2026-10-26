@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ params.name }} — {{ doc.title }} — BIPOL I</title>
   {% include 'math_assets.html' %}
+  <script>{{ report_assets.symbols|safe }}</script>
   <style>{{ report_assets.css|safe }}</style>
 </head>
 <body>
@@ -57,6 +58,7 @@
       {% if doc.failed %}<p>Nie wszystkie rozpatrzone kryteria zostały spełnione. Korekty wymagają: {% for c in doc.failed %}{{ c.parameter|lower }}{% if not loop.last %}; {% endif %}{% endfor %}. Przed przyjęciem wariantu do dalszego opracowania należy skorygować odpowiednie założenia i powtórzyć obliczenia.</p>{% else %}<p>Spełniono {{ doc.checks|selectattr('passed')|list|length }} z {{ doc.checks|length }} rozpatrzonych kryteriów.{% if doc.pending %} Pozostałe kryteria wymagają uzupełnienia danych wskazanych w tabeli.{% endif %}</p>{% endif %}
       {% endif %}
       {% if params.get('report_notes') %}<section id="author-notes"><h3>Uwagi i wnioski autora</h3><p class="author-text">{{ params.report_notes }}</p></section>{% endif %}
+      {% include 'reports/submission_review.html' %}
       <h3>Zakres modelu i założenia</h3>
       <p>Obliczenia wykonano dla atmosfery ISA i geometrii wstępnej. Przyjęto paraboliczną biegunową oporu oraz uproszczone charakterystyki napędu. Osiągi i położenie środka masy zależą od tych założeń; wyniki stanowią podstawę dalszego wymiarowania, a nie potwierdzenie zdatności do lotu.</p>
       <p>{% if 'p3' in selected_sections %}Rozkład mas oparto na oszacowaniu udziałów zespołów i ich ramion. Schemat trzech rzutów dokumentuje proporcje modelu; wymagany arkusz rysunkowy i szczegóły konstrukcyjne opracowuje się oddzielnie. {% endif %}{% if 'p2' in selected_sections %}Dane porównawcze profili i model kosztowy mają charakter wstępny. {% endif %}{% if 'p6' in selected_sections %}Obwiednię wyznaczono dla przyjętych obciążeń manewrowych i podmuchowych. Ocena wytrzymałości wymaga osobnej analizy struktury.{% endif %}</p>

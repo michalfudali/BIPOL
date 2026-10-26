@@ -1,0 +1,28 @@
+<h3>Sprawdzenie metody BIPOL 1</h3>
+<p>Wybrano metodę {{ 'iteracyjną' if m.mass_method=='iterative' else 'proporcji' }}.
+  Paliwo zużyte: {{ m.fuel_burn_kg|reportnum(3) }} kg; rezerwa i paliwo nieużywalne:
+  {{ m.reserve_fuel_kg|reportnum(3) }} kg. Pozostały ładunek: {{ m.m_payload_landing|reportnum(1) }} kg.</p>
+<div class="equation">\[m_{e,misja}=m_{ląd}-m_{ład,poz}-m_{zał}-m_{f,poz},\quad
+  m_{e,trend}=A\,m_0^{C+1}K_{vs},\quad \frac{|m_{e,misja}-m_{e,trend}|}{m_{e,trend}}\leq 0{,}001.\]</div>
+<p>W modelach roboczych stałego udziału i korelacji klasy druga ocena masy pustej
+  pochodzi z wybranego modelu, a nie z własnej próby. Różnica ocen wynosi
+  {{ (100*m.mission_assumptions.empty_mass_residual_relative)|reportnum(6) }}%.</p>
+<table><caption>Paliwo i zrzut w poszczególnych fazach</caption><thead><tr><th>Faza</th><th>Masa przed [kg]</th><th>Spalone paliwo [kg]</th><th>Zrzut [kg]</th><th>Masa po [kg]</th></tr></thead><tbody>
+{% for phase in m.mission_phases %}<tr><td>{{ phase.phase }}</td><td>{{ phase.mass_start_kg|reportnum(2) }}</td><td>{{ phase.fuel_burn_kg|reportnum(3) }}</td><td>{{ phase.payload_drop_kg|reportnum(2) }}</td><td>{{ phase.mass_end_kg|reportnum(2) }}</td></tr>{% endfor %}
+</tbody></table>
+{% if doc.powered %}{% set c=m.mission_assumptions.corke %}
+<p>Wznoszenie: Mₚ={{ c.mach_start|reportnum(4) }}, Mₘ={{ c.mach_end|reportnum(4) }};
+  rzędne {{ c.ordinate_start|reportnum(6) }} i {{ c.ordinate_end|reportnum(6) }};
+  iloraz {{ c.fraction|reportnum(6) }}. {% if c.provisional %}Poza zakresem wykresu — przybliżenie robocze do zastąpienia danymi źródłowymi.{% else %}{{ c.source }}.{% endif %}
+  Krążenie: K = 0,8 Kmax = {{ m.mission_assumptions.loiter_ld|reportnum(3) }};
+  TAS = {{ m.mission_assumptions.loiter_speed_kmh|reportnum(1) }} km/h.</p>{% endif %}
+{% set bp=m.preliminary_polar %}
+<p>Biegunowa wstępna: metoda {{ bp.mode }}, Kmax={{ bp.kmax|reportnum(3) }},
+  Cx₀={{ bp.cx0|reportnum(5) }}{% if bp.swet_ratio %}, Swet/S={{ bp.swet_ratio|reportnum(3) }}{% endif %}.
+  {{ bp.source }}. {{ bp.reading_note }}. Kontrolny przedział Cx₀:
+  {{ bp.cx0_bounds[0]|reportnum(3) }}–{{ bp.cx0_bounds[1]|reportnum(3) }}.</p>
+<h4>Kompletność danych i uzgodnień</h4>
+<p>{{ res.bipol1_review.basis }}</p>
+<table><thead><tr><th>Sprawdzenie</th><th>Wynik</th><th>Uzasadnienie</th></tr></thead><tbody>
+{% for c in res.bipol1_review.checks %}<tr><td>{{ c.label }}</td><td>{{ 'Spełnione' if c.passed else 'Do uzupełnienia' }}</td><td>{{ c.detail }}</td></tr>{% endfor %}
+</tbody></table>

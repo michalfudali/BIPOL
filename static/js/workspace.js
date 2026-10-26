@@ -114,7 +114,7 @@
       const cards = [...root.children].filter(node => node.matches('.b-card,.subpoint-card'));
       cards.forEach((node,index) => {
         const header = node.querySelector('.b-card-header,.subpoint-header');
-        const text = header?.querySelector('h3,h4')?.textContent.replace(/Podpunkt\s+[\w.]+\s*/,'').replace(/^[^\p{L}\p{N}]+/u,'').trim() || 'Dane szczegółowe';
+        const text = BipolSymbols.source(header?.querySelector('h3,h4')).replace(/Podpunkt\s+[\w.]+\s*/,'').replace(/^[^\p{L}\p{N}]+/u,'').trim() || 'Dane szczegółowe';
         const d = disclosure(node,text,index===0);
         if (header && !header.querySelector('button,a,input,select')) header.classList.add('quiet-original-heading');
         if (d && index===0) d.classList.add('quiet-primary-analysis');
@@ -123,7 +123,7 @@
     }
     document.querySelectorAll('.project-workstation').forEach(root => {
       root.querySelectorAll(':scope > .subpoint-card').forEach((node,index) => {
-        const title=node.querySelector('h4')?.textContent.replace(/Podpunkt\s+[\w.]+\s*/,'').trim()||'Szczegóły';
+        const title=BipolSymbols.source(node.querySelector('h4')).replace(/Podpunkt\s+[\w.]+\s*/,'').trim()||'Szczegóły';
         disclosure(node,title,index===0); node.querySelector('.subpoint-header')?.classList.add('quiet-original-heading');
       });
       const checklist=root.querySelector('.project-checklist-box');if(checklist)disclosure(checklist,'Lista kontrolna zaliczenia');

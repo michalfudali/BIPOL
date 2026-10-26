@@ -6,7 +6,8 @@
   const distances = [['unknown','Nieokreślona'],['ground_roll','Rozbieg / dobieg'],['15m','Całkowita do / znad 15 m'],['50ft','Całkowita do / znad 50 ft'],['field_length','Długość pola wg źródła']];
   const fields = [
     field('model','Model *',0,'text',{required:true}), field('manufacturer','Producent *',0,'text'),
-    field('family','Rodzina konstrukcji',0,'text'), field('year','Rok certyfikacji',0,'number',{min:1900,max:2100,step:1}),
+    field('family','Rodzina konstrukcji',0,'text'), field('year','Rok według źródła',0,'number',{min:1900,max:2100,step:1}),
+    field('year_basis','Znaczenie daty',0,'select',{options:[['certification','Certyfikacja wariantu'],['production','Produkcja (BIPOL_1)']]}),
     field('aircraft_type','Klasa konstrukcyjna *',0,'select',{options:[['piston_ga','Tłokowy GA'],['turboprop_regional','Turbośmigłowy'],['jet_business','Odrzutowiec biznesowy'],['jet_transport','Odrzutowiec transportowy'],['glider','Szybowiec'],['motoglider','Motoszybowiec'],['uav','Bezzałogowy']]}),
     field('m0','Maksymalna masa startowa [kg] *',1,'number',{required:true,min:0.001}),
     field('me','Masa pusta OEW [kg]',1), field('s','Powierzchnia skrzydła [m²]',1), field('b','Rozpiętość [m]',1),

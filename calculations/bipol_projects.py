@@ -146,16 +146,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     # =========================================================================
     # 2.1 Profil misji i ułamki masowe
     fuel_detail = mass_res["fuel_fractions_detail"]
-    mission_profile = [
-        {"phase": "1. Rozruch i kołowanie (Warm-up & Taxi)", "fraction": fuel_detail["warmup"], "mass_end_kg": round(m0 * fuel_detail["warmup"], 1)},
-        {"phase": "2. Start i rozbieg (Takeoff)", "fraction": fuel_detail["takeoff"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"], 1)},
-        {"phase": "3. Wznoszenie i przyspieszanie (Climb)", "fraction": fuel_detail["climb"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"], 1)},
-        {"phase": "4. Przelot obliczeniowy (Cruise Breguet)", "fraction": fuel_detail["cruise"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"] * fuel_detail["cruise"], 1)},
-        {"phase": "5. Zniżanie do lądowania (Descent)", "fraction": fuel_detail["descent"], "mass_end_kg": round(m0 * fuel_detail["warmup"] * fuel_detail["takeoff"] * fuel_detail["climb"] * fuel_detail["cruise"] * fuel_detail["descent"], 1)},
-        {"phase": "6. Oczekiwanie / Rezerwa nawigacyjna (Loiter)", "fraction": fuel_detail["loiter"], "mass_end_kg": round(m0 * fuel_detail["total_mff"] / fuel_detail["landing"], 1)},
-        {"phase": "7. Lądowanie i kołowanie (Landing)", "fraction": fuel_detail["landing"], "mass_end_kg": round(m0 * fuel_detail["total_mff"], 1)}
-    ]
-    
+    mission_profile = mass_res['mission_phases']
+
     # 2.2 Dobór profilu skrzydła z katalogu (BIPOL_3_2010.pdf)
     isa_cr = isa_atmosphere(h_cr)
     mu_cr = 1.789e-5 * math.pow(isa_cr["T"] / 288.15, 1.5) * ((288.15 + 110.4) / (isa_cr["T"] + 110.4))
@@ -556,7 +548,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
              comment='Nie zadano osobnego wymagania Vmax; przelot sprawdzono na jego wysokości.'),
         dict(param='Prędkość przelotowa Vcr TAS [km/h]', project_assumed=v_cr_kmh,
              actual_calc=v_cr_kmh if cruise_ok else None, comment=verdict(cruise_ok) if powered else 'Lot ślizgowy; brak napędu.'),
-        dict(param='Prędkość wznoszenia wy,max [m/s]', project_assumed=params['climb_rate_ms'] if powered else None,
+        dict(param='Prędkość wznoszenia w_y,max [m/s]', project_assumed=params['climb_rate_ms'] if powered else None,
              actual_calc=perf_res['climb']['wy_max_ms'] if powered else None,
              comment=verdict(climb_ok) if powered else 'Nie dotyczy wznoszenia z napędem.'),
         dict(param='Całkowita długość startu do 15 m [m]', project_assumed=takeoff_req if powered else None,

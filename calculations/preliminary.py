@@ -57,7 +57,7 @@ BIPOL_1_CX0_TABLE = {
 def classify_bipol_cx0(params):
     """Przyporządkowanie projektu do jednej z siedmiu klas z BIPOL_1.pdf s. 3."""
     ac_type = params.get('aircraft_type', 'piston_ga')
-    gear = params.get('landing_gear_type', params.get('gear_type', 'fixed'))
+    gear = 'retractable' if params.get('retractable_gear') or params.get('gear_retraction')=='retractable' else params.get('landing_gear_type', params.get('gear_type', 'fixed'))
     n_eng = int(params.get('n_engines', 1))
 
     if ac_type in ('glider', 'motoglider'):
@@ -88,7 +88,7 @@ def preliminary_insights(params, mass, geometry, aero):
     ld_max = 1 / (2 * math.sqrt(cd0 * k))
     operating_points = []
     for key, label, cl, formula in (
-        ('max_ld', 'Największa doskonałość / zasięg śmigłowy', cl_ld, 'Cz = √(Cx₀/k), Kmax = 1/(2√(Cx₀k))'),
+        ('max_ld', 'Największa doskonałość / zasięg śmigłowy', cl_ld, 'Cz = √(Cx₀/k), Kmax = 1/(2√(Cx₀·k))'),
         ('jet_range', 'Największy zasięg odrzutowy', cl_ld / math.sqrt(3), 'Cz = √(Cx₀/(3k))'),
         ('prop_endurance', 'Najdłuższy lot śmigłowy / minimum mocy', cl_ld * math.sqrt(3), 'Cz = √(3Cx₀/k)'),
     ):
@@ -101,18 +101,26 @@ def preliminary_insights(params, mass, geometry, aero):
     q = .5*rho*v*v
     n45 = math.sqrt(2)
 
-    # BIPOL_1.pdf, s. 2–3: Oszacowanie Kmax z wykresu Raymera (Rys. 2)
-    # Zależność: AR_wet = AR / (Swet / S); Kmax_raymer = 0.5 * sqrt(pi * AR * e / (Cfe * Swet/S))
-    # Następnie Cx0 ze wzoru (3): Cx0 = pi * AR * e / (4 * Kmax^2)
+    # Fig. 2 is read directly: a Cfe assumption is not a Raymer graph reading.
     ar_wet = ar / max(0.1, swet_over_s)
     bipol_class_key = classify_bipol_cx0(params)
     bipol_class = BIPOL_1_CX0_TABLE[bipol_class_key]
-    cfe_typical = bipol_class['cfe_typical']
     e_oswald = float(params.get('oswald_e', 0.80))
-
-    cx0_raymer_est = cfe_typical * swet_over_s
-    k_max_raymer = 0.5 * math.sqrt((math.pi * ar * e_oswald) / max(0.001, cx0_raymer_est))
-    cx0_from_kmax_formula3 = (math.pi * ar * e_oswald) / (4.0 * max(0.1, k_max_raymer ** 2))
+    from calculations.bipol1 import preliminary_polar
+    reading = mass['preliminary_polar']
+    graph_error = None
+    if reading['mode'] == 'input':
+        family = ('glider' if params['engine_type']=='none' else 'jet' if params['engine_type']=='jet'
+                  else 'prop_retractable' if params.get('retractable_gear') else 'prop_fixed')
+        try:
+            reading = preliminary_polar(dict(params,preliminary_polar_mode='raymer',
+                sketch_swet_ratio=swet_over_s,aspect_ratio=ar,raymer_family=family))
+        except ValueError as error:
+            reading = None
+            graph_error = str(error)
+    k_max_raymer = reading['kmax'] if reading else None
+    cx0_raymer_est = reading['cx0'] if reading else None
+    cx0_from_kmax_formula3 = cx0_raymer_est
 
     # Kontrola Cx0 względem 7 klas z tabeli BIPOL_1 s. 3
     in_range = bipol_class['cx0_range'][0] <= cd0 <= bipol_class['cx0_range'][1]
@@ -138,11 +146,12 @@ def preliminary_insights(params, mass, geometry, aero):
     raymer_estimate = {
         'wetted_aspect_ratio': round(ar_wet, 2),
         'swet_over_s': round(swet_over_s, 2),
-        'cfe_assumed': cfe_typical,
-        'k_max_raymer': round(k_max_raymer, 2),
-        'cx0_from_raymer': round(cx0_raymer_est, 4),
-        'cx0_from_formula3': round(cx0_from_kmax_formula3, 4),
-        'source': 'Raymer (Rys. 1–2 w BIPOL_1); BIPOL_1 s. 3, wzór (3): Kmax = 0.5·√(π·A·e/Cx₀)'
+        'k_max_raymer': round(k_max_raymer, 2) if k_max_raymer is not None else None,
+        'cx0_from_raymer': round(cx0_raymer_est, 4) if cx0_raymer_est is not None else None,
+        'cx0_from_formula3': round(cx0_from_kmax_formula3, 4) if cx0_from_kmax_formula3 is not None else None,
+        'used_in_mass': params.get('preliminary_polar_mode','input')!='input',
+        'limitation': graph_error,
+        'source': 'BIPOL_1, rys. 2: przybliżony odczyt graficzny, bez ekstrapolacji; wzór (3).'
     }
 
     return {
@@ -160,6 +169,6 @@ def preliminary_insights(params, mass, geometry, aero):
             'cl_required': n45*ws/q, 'stall_limited_n': q*aero['cz_max_clean']/ws,
             'tw_required': q*cd0/ws + k*n45*n45*ws/q,
             'tw_lower_bound': n45/ld_max,
-            'formula': 'n = 1/cosφ; r = V²/[g√(n²−1)]; T/W = qCx₀/(W/S) + k·n²·(W/S)/q'},
+            'formula': 'n = 1/cosφ; r = V²/[g√(n²−1)]; T/W = q·Cx₀/(W/S) + k·n²·(W/S)/q'},
         'limitations': 'Biegunowa paraboliczna, stałe zużycie jednostkowe i sprawność napędu, lot ustalony. Prędkości TAS dla masy startowej i wysokości przelotowej. Cz powyżej Czmax oznacza nieosiągalny punkt. Warunek ciągu w zakręcie nie uwzględnia ograniczeń konstrukcji ani dostępnej mocy.'
     }

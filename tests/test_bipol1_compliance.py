@@ -51,6 +51,7 @@ class TestBipol1MassSizing:
         params = dict(AIRCRAFT_PRESETS['ga_trainer'])
         params['mass_method'] = 'iterative'
         params['payload_drop_kg'] = 150.0  # zrzut 150 kg
+        params['m_cargo'] = 150.0  # zrzucany ładunek musi być na pokładzie
         params['outbound_range_km'] = 600.0
         params['return_range_km'] = 600.0
 
@@ -141,8 +142,11 @@ class TestBipol1CorkeClimb:
         ff_prop = corke_climb_fuel_fraction("prop", h_cr_m=8000.0, v_cr_ms=120.0)
         ff_jet = corke_climb_fuel_fraction("jet", h_cr_m=11000.0, v_cr_ms=230.0)
 
-        assert 0.93 < ff_prop < 0.99
-        assert 0.93 < ff_jet < 0.99
+        # The original graph has no separate engine-type penalty. At these
+        # subsonic Mach numbers its ratios are much closer to 1 than 0.99.
+        assert 0.99 < ff_prop < 1.0
+        assert 0.99 < ff_jet < 1.0
+        assert ff_jet < ff_prop
 
 
 class TestBipol1TrendsAndAverages:

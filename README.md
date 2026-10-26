@@ -99,6 +99,14 @@ statków powietrznych (t.j. Dz. U. z 2025 r. poz. 1137).
 
 ## Funkcje
 
+Widok **Plan na 5,0** łączy plan punktów z przeglądem wszystkich 21 podpunktów
+P1–P6. Według lokalnego regulaminu 2026/27 ocena 5,0 wymaga 191–200 pkt
+łącznie z projektów i zejściówek oraz spełnienia osobnych warunków zaliczenia.
+Można zapisać odniesienia do własnych opracowań, sprawdzić ich aktualność po
+zmianie wariantu i utworzyć nowy projekt z biegunową P4 przeniesioną do P2.
+Raport zawiera przegląd braków i opracowań dla wybranego zakresu.
+Wyniki audytu i ograniczenia: [Audyt na 5,0](docs/AUDYT_NA_5_2026-10-24.md).
+
 ### 1. Baza 110 tematów projektowych z wydziałowej listy BIPOL I:
 Aplikacja zawiera wszystkie **110 tematów** podzielonych na **13 kategorii**:
 1. **Motoszybowce** (1- i 2-miejscowe; rozpiętości 13,5m, 15m, >20m; silnik ciągnący, pchający, chowany)

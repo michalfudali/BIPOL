@@ -292,6 +292,26 @@ def calculate():
     data = request.get_json(force=True)
     return jsonify(run_bipol_project(data))
 
+
+@app.post('/api/coursework/grade')
+def coursework_grade():
+    from calculations.coursework import grade_plan
+    return jsonify(grade_plan(request.get_json(force=True)))
+
+
+@app.post('/api/coursework/iterate-polar')
+def coursework_iterate_polar():
+    """One explicit design iteration; no project or catalogue is modified here."""
+    baseline = run_bipol_project(request.get_json(force=True))
+    params = baseline['params']
+    aero = baseline['aerodynamics']
+    updated = {**params, 'cx0': aero['cx0_clean'], 'oswald_e': aero['oswald_e'],
+               'preliminary_polar_mode': 'input'}
+    result = run_bipol_project(updated)
+    return jsonify(result=result, before=baseline['submission_review']['polar'],
+                   after=result['submission_review']['polar'],
+                   mtow_before=baseline['mass']['m0'], mtow_after=result['mass']['m0'])
+
 @app.route('/report', methods=['GET', 'POST'])
 def report():
     allowed_sections = ('p1', 'p2', 'p3', 'p4', 'p5', 'p6')
@@ -307,12 +327,15 @@ def report():
 def document_context(results, sections, folder_cover=False):
     assets = {
         'css': 'static/css/report.css',
+        'symbols': 'static/js/symbols.js',
         'core': 'static/js/studio-core.js',
         'visuals': 'static/js/studio-visuals.js',
         'document': 'static/js/report.js',
     }
     return dict(res=results, params=results['params'], selected_sections=sections,
                 doc=report_document(results, sections, request.args, folder_cover),
+                figure_results={key: results[key] for key in
+                                ('sizing', 'aerodynamics', 'envelope', 'geometry', 'performance', 'bipol_projects')},
                 report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8')
                                .replace('</script', '<\\/script') for name, path in assets.items()})
 

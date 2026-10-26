@@ -132,7 +132,7 @@ const DIDACTIC_DATABASE = {
       pros: [
         "Strumień powietrza przepływający przez szczelinę z dolnej na górną powierzchnię przyspiesza i regeneruje warstwę przyścienną na klapie.",
         "Opóźnienie oderwania strugi do kątów wychylenia 35–40° – wysoki przyrost ΔCz_max rzędu 1.0 – 1.25.",
-        "Bardzo korzystny przyrost doskonałości przy starcie (wychylenie 10–15°), wyraźnie skracający rozbieg Sto.",
+        "Bardzo korzystny przyrost doskonałości przy starcie (wychylenie 10–15°), wyraźnie skracający rozbieg S_to.",
         "Umiarkowana masa i wysoka niezawodność – standard współczesnego lotnictwa ogólnego (GA CS-23)."
       ],
       cons: [
@@ -747,7 +747,7 @@ const PARAMETER_ENCYCLOPEDIA = {
     short_desc: "Najmniejsza prędkość lotu poziomego z całkowicie wypuszczonymi klapami. Wyznacza pionową linię graniczną maksymalnego obciążenia powierzchni W/S na Matching Chart!",
     full_definition: "Prędkość przeciągnięcia Vs0 jest twardym ograniczeniem bezpieczeństwa (np. przepisy CS-23 wymagają dla samolotów jednosilnikowych Vs0 ≤ 61 węzłów = 113 km/h). Definiuje prędkość podejścia do lądowania V_app = 1.3 · Vs0.",
     formula: "(W/S)_max = ½ · ρ₀ · V_s0² · C_z,max,lnd   ⇔   V_s0 = √[ 2·(W/S) / (ρ₀ · C_z,max,lnd) ]",
-    effect_increase: "Wyższa dopuszczalna prędkość Vs0 pozwala zaprojektować znacznie mniejsze i lżejsze skrzydło (większe W/S), ale wydłuża drogę dobiegu (Slnd ~ V_s0²) i utrudnia operowanie z krótkich lotnisk.",
+    effect_increase: "Wyższa dopuszczalna prędkość Vs0 pozwala zaprojektować znacznie mniejsze i lżejsze skrzydło (większe W/S), ale wydłuża drogę dobiegu (S_lnd ~ V_s0²) i utrudnia operowanie z krótkich lotnisk.",
     typical_ranges: "Samoloty STOL i ULM: 55–75 km/h | Samoloty szkolne i turystyczne GA (limit CS-23): 80–113 km/h | Turbośmigłowe: 130–160 km/h | Komunikacyjne: 180–220 km/h.",
     galinski_note: "Chcesz zmniejszyć prędkość lądowania Vs0 bez powiększania skrzydła? Zastosuj skuteczniejszą mechanizację spływu (klapę Fowlera lub dwuszczelinową) oraz sloty na krawędzi natarcia (Rozdz. 16.3 i 16.4)!"
   },
@@ -767,9 +767,9 @@ const PARAMETER_ENCYCLOPEDIA = {
     symbol: "w_y [m/s]",
     title: "Wymagana maksymalna prędkość wznoszenia przy ziemi (Rate of Climb MSL)",
     short_desc: "Pionowa prędkość wznoszenia na poziomie morza (w_y = dH/dt). Wyznacza wymagany nadmiar mocy ponad moc niezbędną do lotu poziomego (Projekt P5).",
-    full_definition: "Zgodnie z zasadami Mechaniki Lotu I prędkość wznoszenia wy wynika bezpośrednio z nadmiaru mocy rozporządzalnej (P_rozp - P_potrz) podzielonego przez ciężar samolotu W = m0·g.",
+    full_definition: "Zgodnie z zasadami Mechaniki Lotu I prędkość wznoszenia w_y wynika bezpośrednio z nadmiaru mocy rozporządzalnej (P_rozp - P_potrz) podzielonego przez ciężar samolotu W = m0·g.",
     formula: "w_y = (P_rozp − P_potrz) / W = V · (T/W − 1/K)",
-    effect_increase: "Wyższe wymagane wznoszenie wy podnosi krzywą wznoszenia na Matching Chart, wymagając mocniejszego silnika lub większego wydłużenia skrzydła Λ.",
+    effect_increase: "Wyższe wymagane wznoszenie w_y podnosi krzywą wznoszenia na Matching Chart, wymagając mocniejszego silnika lub większego wydłużenia skrzydła Λ.",
     typical_ranges: "Motoszybowce i ULM: 2.5–4.0 m/s | Samoloty szkolne i turystyczne GA: 4.0–6.5 m/s | Samoloty akrobacyjne i turbośmigłowe: 8.0–18.0 m/s | Odrzutowe: 12–30 m/s.",
     galinski_note: "Dla uzyskania wysokiego wznoszenia przy małej mocy silnika kluczowa jest niska masa konstrukcji oraz czystość aerodynamiczna szwów nitowych i owiewek."
   },

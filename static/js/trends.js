@@ -61,7 +61,7 @@
     const t=a.time_trends.find(t=>t.key===$('trendTimeMetric').value);
     if(t) {
       const forecast=t.fit&&t.forecast_physical?{x:t.forecast_year,y:t.forecast,model:'Prognoza +5 lat'}:null;
-      $('trendTimeChart').innerHTML=plot(t.points,t.fit,{title:`${t.label} — trend czasowy`,xLabel:'Rok certyfikacji',yLabel:`${t.label} [${t.unit}]`,forecast})+
+      $('trendTimeChart').innerHTML=plot(t.points,t.fit,{title:`${t.label} — trend czasowy`,xLabel:a.year_basis,yLabel:`${t.label} [${t.unit}]`,forecast})+
         `<p>${t.fit?`Prognoza na ${t.forecast_year} (rok opracowania + 5 lat; ${fmt(t.extrapolation_years,0)} lat po ostatniej obserwacji): <strong>${fmt(t.forecast,3)} ${esc(t.unit)}</strong>${!t.forecast_physical?' — wartość poza zakresem fizycznym; odrzuć prognozę.':''}${t.provisional?' · próba poniżej 20 obserwacji.':''}`:'Wymagane co najmniej 3 kompletne daty i rozpiętość czasu ≥5 lat.'}</p>`;
     }
     $('trendMassChart').innerHTML=plot(valid.map(r=>({x:r.m0,y:r.empty_fraction,model:r.model})),a.mass_fit,
@@ -106,6 +106,7 @@
     if(!s) return false;
     // The alternative (sample mean) of eq. (1) is a fixed fraction, not the trend equation.
     const patch=BipolTrendInputs.patch(key,value??s.suggested_value,collectFormData(),currentResults?.mass?.m0,value==null?s:null);
+    if(key==='me_m0') patch.empty_mass_model='class_correlation';
     const previous={};
     for(const [field,fieldValue] of Object.entries(patch)) {
       previous[field]={base:formBaseParams[field],input:$(field)?.value};
@@ -241,7 +242,8 @@
     const tp=a.two_point;
     $('trendMassStats').innerHTML=`<p class="studio-equation">OEW / MTOW = ${fmt(a.reg_A,4)} · m₀<sup>${fmt(a.reg_C,4)}</sup> · ${fmt(a.k_vs,2)}</p><p>${fitText(a.mass_fit)} · projekt ${fmt(a.we_wo_actual,3)} · trend ${fmt(a.we_wo_trend,3)}</p>${tp?`<p>Dwa punkty linii trendu: (${fmt(tp.x1,0)} kg; ${fmt(tp.y1,4)}) i (${fmt(tp.x2,0)} kg; ${fmt(tp.y2,4)}) → C = log(y₁/y₂)/log(x₁/x₂) = ${fmt(tp.C,4)}, A = y₁/x₁<sup>C</sup> = ${fmt(tp.A,4)}.</p>`:''}<p>${esc(a.method)} Model masy pustej w bilansie: ${res.mass.empty_mass_model==='bipol1_trend'?'równanie (1) z tej analizy':res.mass.empty_mass_model==='fixed_fraction'?'stały udział':'korelacja klasy'}.</p>`;
     const metric=$('trendTimeMetric').value;
-    $('trendTimeMetric').innerHTML=a.time_trends.map(t=>`<option value="${esc(t.key)}">${esc(t.label)} [${esc(t.unit)}] · n=${t.available_n}</option>`).join('');
+    // <option> nie składa indeksów: lista pomija końcowy symbol (V_H, c_e/c_H), wykres pokazuje go złożonego.
+    $('trendTimeMetric').innerHTML=a.time_trends.map(t=>`<option value="${esc(t.key)}">${esc(t.label.replace(/\s+\S*_\S*$/,''))} [${esc(t.unit)}] · n=${t.available_n}</option>`).join('');
     $('trendTimeMetric').value=metric||'ar';
     const labels={empty_fraction:'OEW / MTOW [−]',ar:'Wydłużenie AR [−]',wing_loading_kg_m2:'Obciążenie powierzchni [kg/m²]',h_tail_area:'Powierzchnia usterzenia poziomego [m²]',v_tail_area:'Powierzchnia usterzenia pionowego [m²]'};
     const required=new Set(['v_h','v_v','empty_fraction','aileron_span_fraction','aileron_chord_ratio','elevator_chord_ratio','rudder_chord_ratio','dihedral_deg']);
@@ -256,7 +258,7 @@
 
   function exportRows() {
     const a=result.bipol_projects.p1.trend_analysis;
-    const rows=[['Model','Rodzina','Klasa','Rok certyfikacji','MTOW [kg]','OEW [kg]','S [m²]','b [m]','AR','Moc łączna [kW]','Ciąg łączny [kN]','V przelotowa [km/h]','Mach przelotu','Zasięg [km]','m₀/S [kg/m²]','m₀/P [kg/kW]','P/m₀ [kW/kg]','Wznoszenie [m/s]','Całkowity start wg źródła [m]','Całkowite lądowanie wg źródła [m]','Źródło','Lokalizacja danych','Licencja','Definicja masy','Atrybucja']];
+    const rows=[['Model','Rodzina','Klasa',a.year_basis,'MTOW [kg]','OEW [kg]','S [m²]','b [m]','AR','Moc łączna [kW]','Ciąg łączny [kN]','V przelotowa [km/h]','Mach przelotu','Zasięg [km]','m₀/S [kg/m²]','m₀/P [kg/kW]','P/m₀ [kW/kg]','Wznoszenie [m/s]','Całkowity start wg źródła [m]','Całkowite lądowanie wg źródła [m]','Źródło','Lokalizacja danych','Licencja','Definicja masy','Atrybucja']];
     for(const r of a.similar_aircraft)rows.push([r.model,r.family,r.aircraft_type,r.year,r.m0,r.me,r.s,r.b,r.ar,r.p_kw,r.t_kn,r.v_cruise_kmh,r.cruise_mach,r.range_km,r.wing_loading_kg_m2,r.power_loading_kg_kw,r.specific_power_kw_kg,r.climb_rate_ms,r.takeoff_distance_m,r.landing_distance_m,a.sources[r.source_id].url,r.source_locator,a.sources[r.source_id].license,r.empty_mass_definition,a.sources[r.source_id].attribution||a.sources[r.source_id].citation]);
     return rows;
   }
@@ -316,6 +318,8 @@
     $('btnApplyAllTrendSuggestions')?.addEventListener('click', applyAllKeySuggestions);
     $('trendResetMassModel')?.addEventListener('click',async()=>{
       delete formBaseParams.empty_mass_fraction;
+      formBaseParams.empty_mass_model='class_correlation';
+      if($('empty_mass_model'))$('empty_mass_model').value='class_correlation';
       delete formBaseParams.empty_mass_trend_A;
       delete formBaseParams.empty_mass_trend_C;
       await performCalculation();

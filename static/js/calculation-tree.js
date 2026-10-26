@@ -93,7 +93,7 @@
         'm_payload = n_pax · (m_pax + m_bag) + m_cargo', 'P1');
     }
     output('m_crew', 'Masa załogi', m.m_crew, 'kg', ['n_crew', 'm_crew_person'],
-      'm_crew = n_crew · m_crew_person', 'P1');
+      'm_crew = n_crew · m_os', 'P1');
 
     if (mode === 'span_area') {
       input('wingspan_m', 'Rozpiętość b', 'm', 'wing');

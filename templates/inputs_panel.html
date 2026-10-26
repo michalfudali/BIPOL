@@ -174,8 +174,8 @@
                           <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
                         </optgroup>
                         <optgroup label="EASA Lekkie, Szybowce i Motoszybowce (CS-22 / VLA / LSA)">
-                          <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., Vs0 ≤ 45 kt)</option>
-                          <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., Vs0 ≤ 45 kt)</option>
+                          <option value="cs_vla">EASA CS-VLA (Bardzo lekki • MTOM ≤ 750 kg, max 2 os., przeciągnięcie ≤ 45 kt)</option>
+                          <option value="cs_lsa">EASA CS-LSA (Lekki sportowy • MTOM ≤ 600/650 kg, max 2 os., przeciągnięcie ≤ 45 kt)</option>
                           <option value="cs22_motoglider">EASA CS-22 (Motoszybowiec turystyczny TMG • MTOM ≤ 850 kg, m/b² ≤ 3.0 kg/m²)</option>
                           <option value="cs22_glider">EASA CS-22 (Szybowiec czysty • MTOM ≤ 850 kg, max 2 os., bez napędu)</option>
                         </optgroup>
@@ -291,14 +291,14 @@
                     <div class="input-row">
                       <div class="input-group" data-param="takeoff_distance_m"><label for="takeoff_distance_m">Maks. całkowita długość startu [m]</label><input type="number" id="takeoff_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><div class="input-group" data-param="landing_distance_m"><label for="landing_distance_m">Maks. całkowita długość lądowania [m]</label><input type="number" id="landing_distance_m" min="0" max="20000" step="any" value="600"><small>Przeszkoda 15 m; 0 = nie określono.</small></div><details class="legacy-runway"><summary>Dodatkowe ograniczenie rozbiegu</summary><div class="input-group" data-param="takeoff_run_m">
                         <label for="takeoff_run_m">
-                          <span class="label-text">Droga rozbiegu Sto [m] <span class="info-circle-icon" data-param="takeoff_run_m" tabindex="0">i</span></span>
+                          <span class="label-text">Droga rozbiegu S_to [m] <span class="info-circle-icon" data-param="takeoff_run_m" tabindex="0">i</span></span>
                         </label>
                         <input step="any" required type="number" id="takeoff_run_m" min="60" max="3500" value="210">
                         <div class="param-didactic-hint" id="hint_takeoff_run_m"></div>
                       </div></details>
                       <div class="input-group" data-param="climb_rate_ms">
                         <label for="climb_rate_ms">
-                          <span class="label-text">Wznoszenie przy ziemi wy [m/s] <span class="info-circle-icon" data-param="climb_rate_ms" tabindex="0">i</span></span>
+                          <span class="label-text">Wznoszenie przy ziemi w_y [m/s] <span class="info-circle-icon" data-param="climb_rate_ms" tabindex="0">i</span></span>
                         </label>
                         <input step="any" required type="number" id="climb_rate_ms" min="1.5" max="35" value="4.1">
                         <div class="param-didactic-hint" id="hint_climb_rate_ms"></div>

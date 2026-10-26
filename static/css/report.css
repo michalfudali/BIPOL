@@ -109,3 +109,8 @@ svg .axis-label { font: 12px Arial, sans-serif; fill: #222; }
   a { text-decoration: none; }
   th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* Indeksy symboli składane przez symbols.js; line-height: 0 nie rozpycha wierszy tabel. */
+sub.sym, sup.sym { position: relative; font-size: .72em; line-height: 0; vertical-align: baseline; }
+sub.sym { bottom: -.35em; }
+sup.sym { top: -.55em; }

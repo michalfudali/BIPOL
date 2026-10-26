@@ -40,6 +40,14 @@ def run_bipol_project(params: dict):
 
     # Etap P1 i P2: Bilans masowy (szacowanie MTOW)
     mass_res = calculate_mass_sizing(params)
+    if params.get('preliminary_polar_mode','input') != 'input':
+        params['cx0'] = mass_res['preliminary_polar']['cx0']
+        param_states['cx0'] = dict(state='derived',value=params['cx0'],
+            formula='BIPOL_1 (3): π·AR·e/(4·Kmax²)',sources=['sketch_swet_ratio','raymer_family','raymer_kmax'])
+    if mass_res['empty_mass_law'].get('aircraft_ids'):
+        # Freeze the cohort used in the nonlinear solve for the P1 report.
+        params['trend_aircraft_ids'] = mass_res['empty_mass_law']['aircraft_ids']
+        params['trend_count'] = 0
     m0 = mass_res["m0"]
 
     # Kategoria operacji UAS zależy od ryzyka operacji, a nie od progu masy 600 kg.
@@ -218,4 +226,8 @@ def run_bipol_project(params: dict):
     }
 
     result["instructor_review"] = review_coursework(result)
+    from calculations.bipol1 import review_bipol1
+    result['bipol1_review'] = review_bipol1(result)
+    from calculations.coursework import review_submission
+    result['submission_review'] = review_submission(result)
     return result

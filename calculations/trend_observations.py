@@ -33,6 +33,12 @@ def validate_observations(rows):
             if key == 'year' and not number.is_integer():
                 raise ValueError('Rok certyfikacji musi być liczbą całkowitą.')
             clean[key] = number
+        if row.get('year_basis'):
+            if row['year_basis'] not in ('production','certification'):
+                raise ValueError('Podstawa daty: production albo certification.')
+            clean['year_basis'] = row['year_basis']
+        elif 'year' in clean:
+            clean['year_basis'] = 'certification'
         if len(clean) == 1:
             continue
         source = row.get('source', '')

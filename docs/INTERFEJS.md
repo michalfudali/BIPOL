@@ -64,6 +64,21 @@ Precyzja danych biegunowej szybowania pozostaje pełna; zaokrąglenia dotyczą
 prezentacji. Testy zachowują nowy model wydłużenia efektywnego oraz rozszerzone
 zbiory referencyjne z `76d212d`.
 
+## Symbole i indeksy
+
+`static/js/symbols.js` składa indeksy dolne i górne w aplikacji i w raportach,
+również w komunikatach z backendu. W tekstach źródłowych symbole zapisuje się
+jawnie: `V_S0`, `C_x,szk`, `(W/S)_max`, `m_0^C`, `C_{x0}`. Moduł rozpoznaje też
+zapisy łączne, np. `VS0`, `Vs1`, `Cz max`, `Cx₀` i `Kmax`. Skróty `wy`, `Sto`
+i `me` trzeba pisać jako `w_y`, `S_to` i `m_e`, bo nie da się ich odróżnić od słów.
+
+- Etykiety wykresów canvas rysuje `BipolSymbols.fillText(ctx, …)`.
+- Tekst z indeksami kopiuje się przez `BipolSymbols.source(el)`. `textContent`
+  zamienia w<sub>y</sub> na „wy”.
+- `<option>`, `title` i `aria-label` nie mogą zawierać indeksów. Listy wyboru
+  podają nazwę wielkości bez symbolu; symbol pokazuje wykres.
+- Wzory `\( … \)` w aplikacji składa ten sam lokalny KaTeX co w raportach.
+
 ## Weryfikacja
 
 ```sh
