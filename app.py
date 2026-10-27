@@ -6,6 +6,7 @@ Zakład Samolotów i Śmigłowców (ZSiS)
 import os
 import json
 import math
+import sqlite3
 from pathlib import Path
 from flask import Flask, Response, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
@@ -44,6 +45,17 @@ app.jinja_env.globals['worked_iteration'] = worked_iteration
 PROJECT_TITLES = {'const': 'Stałe fizyczne', 'p1': 'P1 · Projekt koncepcyjny', 'p2': 'P2 · Studium wykonalności',
                   'p3': 'P3 · Projekt wstępny i analiza masowa', 'p4': 'P4 · Charakterystyki aerodynamiczne',
                   'p5': 'P5 · Osiągi', 'p6': 'P6 · Obwiednia obciążeń'}
+
+
+@app.get('/healthz')
+def health():
+    from calculations.aircraft_store import connect
+    try:
+        with connect() as con:
+            con.execute('SELECT revision FROM catalog_state WHERE singleton = 1').fetchone()
+        return jsonify(status='ok', application='BiPOL Requiem')
+    except (sqlite3.Error, OSError, RuntimeError):
+        return jsonify(status='unavailable'), 503
 
 
 @app.context_processor
