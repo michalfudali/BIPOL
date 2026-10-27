@@ -6,6 +6,9 @@ Kompletne środowisko projektowo-obliczeniowe wspierające przedmioty **BIPOL I*
 
 ## Uruchomienie i sprawdzenie zmian
 
+Wdrożenie internetowe w Google Cloud (Docker, Gunicorn, trwała baza SQLite i HTTPS):
+[`docs/WDROZENIE_GCP.md`](docs/WDROZENIE_GCP.md).
+
 Python 3.11 lub nowszy:
 
 Na systemie Windows serwer uruchamia się bezpośrednio skryptem:
