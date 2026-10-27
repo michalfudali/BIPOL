@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const {escape: esc, format: fmt} = BipolStudio;
   const labels = {blocked:'Wykryte braki', stale:'Sprawdź po zmianie wariantu', manual:'Własne opracowanie', review:'Do przeglądu'};
-  let review, resultProject, fresh = false, iterating = false, gradeSequence = 0, gradeTimer;
+  let review, resultProject, fresh = false, iterating = false, gradeSequence = 0, gradeTimer, lastGradeKey = '', lastGradePlan = null, inflightGradeKey = '';
   const data = () => structuredClone(formBaseParams.coursework || {});
 
   function persist(value) {
@@ -28,15 +28,31 @@
       ${plan.complete ? '' : '<p>Wynik pozostaje warunkowy do wpisania wszystkich ocen i potwierdzenia zaliczenia wszystkich zejściówek.</p>'}`;
   }
 
+  const scorePayload = () => {
+    const v = data();
+    return JSON.stringify({scores: v.scores || {}, quiz_points: v.quiz_points ?? null, quizzes_passed: v.quizzes_passed ?? null});
+  };
+
   async function updateGrade(sequence, projectId) {
+    const payload = JSON.stringify(data());
+    const cacheKey = scorePayload();
+    if (cacheKey === lastGradeKey && lastGradePlan) {
+      renderGrade(lastGradePlan);
+      return;
+    }
+    inflightGradeKey = cacheKey;
     try {
-      const response = await fetch('/api/coursework/grade', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data())});
+      const response = await fetch('/api/coursework/grade', {method:'POST', headers:{'Content-Type':'application/json'}, body:payload});
       const plan = await response.json();
-      if (sequence !== gradeSequence || projectId !== getActiveProjectId()) return;
+      if (sequence !== gradeSequence || (projectId && projectId !== getActiveProjectId())) return;
       if (!response.ok) throw Error(plan.message || 'Nie udało się obliczyć punktacji.');
+      lastGradeKey = cacheKey;
+      lastGradePlan = plan;
       renderGrade(plan);
     } catch (error) {
-      if (sequence === gradeSequence && projectId === getActiveProjectId()) $('courseworkGrade').textContent = error.message;
+      if (sequence === gradeSequence && (!projectId || projectId === getActiveProjectId())) $('courseworkGrade').textContent = error.message;
+    } finally {
+      if (inflightGradeKey === cacheKey) inflightGradeKey = '';
     }
   }
 
@@ -65,7 +81,10 @@
     $('courseworkQuizPoints').value = value.quiz_points ?? '';
     $('courseworkQuizzesPassed').value = value.quizzes_passed == null ? '' : value.quizzes_passed ? 'yes' : 'no';
     clearTimeout(gradeTimer);
-    updateGrade(++gradeSequence, getActiveProjectId());
+    const projectId = getActiveProjectId();
+    const cacheKey = scorePayload();
+    if (cacheKey === inflightGradeKey) return;
+    updateGrade(++gradeSequence, projectId);
   }
 
   function state(item) {

@@ -72,7 +72,7 @@
         if (spec.type === 'select') {
           // Preserve source-specific definitions instead of silently changing them.
           if (value && ![...input.options].some(o=>o.value===value)) input.add(new Option(value,value));
-          input.value = value ?? (spec.key.endsWith('_basis')?'unknown':spec.options[0][0]);
+          input.value = value ?? ([...input.options].some(o=>o.value==='unknown')?'unknown':spec.options[0][0]);
         } else input.value = value ?? '';
       }
       $('ac_manufacturer').required = !original;
@@ -86,6 +86,7 @@
       $('ac_t_kn').disabled=v.engine_type!=='jet';$('ac_t_kn').closest('label').hidden=v.engine_type!=='jet';
       $('ac_n_engines').readOnly=v.engine_type==='none';
       if(v.engine_type==='none')$('ac_n_engines').value='0';
+      else if(Number($('ac_n_engines').value)<=0)$('ac_n_engines').value='1';
       const rows=[['Wydłużenie b²/S',span>0&&area>0?span*span/area:null,''],['OEW / MTOW',mass>0&&empty>0?empty/mass:null,''],['Obciążenie m₀/S',mass>0&&area>0?mass/area:null,'kg/m²']];
       if(v.engine_type==='prop')rows.push(['Obciążenie m₀/P',mass>0&&power>0?mass/power:null,'kg/kW']);
       if(v.engine_type==='jet')rows.push(['Stosunek T/W',mass>0&&thrust>0?thrust*1000/(mass*9.80665):null,'']);

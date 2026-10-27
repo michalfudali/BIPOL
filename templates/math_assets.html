@@ -2,16 +2,17 @@
 <script>{{ math_assets().katex|safe }}</script>
 <script>{{ math_assets().render|safe }}</script>
 <script>
+window.BIPOL_MATH_OPTIONS = {
+  delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '\\[', right: '\\]', display: true},
+    {left: '\\(', right: '\\)', display: false},
+    {left: '$', right: '$', display: false}
+  ],
+  throwOnError: false,
+  strict: 'ignore'
+};
 document.addEventListener('DOMContentLoaded', function () {
-  renderMathInElement(document.body, {
-    delimiters: [
-      {left: '$$', right: '$$', display: true},
-      {left: '\\[', right: '\\]', display: true},
-      {left: '\\(', right: '\\)', display: false},
-      {left: '$', right: '$', display: false}
-    ],
-    throwOnError: false,
-    strict: 'ignore'
-  });
+  renderMathInElement(document.body, window.BIPOL_MATH_OPTIONS);
 });
 </script>

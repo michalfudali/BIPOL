@@ -1109,7 +1109,10 @@
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p1')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 1
                 </button>
-                <button type="button" class="btn btn-outline" onclick="openFolderCoverReport()" style="color:#fff; border-color:#93c5fd;">
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p1', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
+                </button>
+                <button type="button" class="btn btn-outline" onclick="openFolderCoverReport()" style="font-weight:700;">
                   🏷️ Etykieta na Teczkę
                 </button>
               </div>
@@ -1178,6 +1181,9 @@
               <div class="project-hero-actions">
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p2')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 2
+                </button>
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p2', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
                 </button>
               </div>
             </div>
@@ -1303,11 +1309,14 @@
                 <div class="subtitle">Rysunek w 3 rzutach, profil 200 mm, analiza wyważenia i rozkład Schrenka &bull; Termin: Tydzień 8 &bull; Max: 27 pkt</div>
               </div>
               <div class="project-hero-actions">
-                <button type="button" class="btn btn-outline" onclick="setPortalMode('holistic'); document.querySelector('.bipol-tab[data-target=tab-cad]')?.click();" style="color:#fff; border-color:#93c5fd; font-weight:700;">
+                <button type="button" class="btn btn-outline" onclick="setPortalMode('holistic'); document.querySelector('.bipol-tab[data-target=tab-cad]')?.click();" style="font-weight:700;">
                   📐 Podgląd Arkusza CAD 3-Rzutowego A3Z
                 </button>
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p3')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 3
+                </button>
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p3', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
                 </button>
               </div>
             </div>
@@ -1442,6 +1451,9 @@
               <div class="project-hero-actions">
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p4')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 4
+                </button>
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p4', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
                 </button>
               </div>
             </div>
@@ -1638,6 +1650,9 @@
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p5')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 5
                 </button>
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p5', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
+                </button>
               </div>
             </div>
 
@@ -1766,6 +1781,9 @@
               <div class="project-hero-actions">
                 <button type="button" class="btn btn-warning" onclick="openIndividualProjectReport('p6')" style="font-weight:800; color:#0f172a;">
                   🖨️ Generuj Sprawozdanie Projektu 6
+                </button>
+                <button type="button" class="btn btn-outline" onclick="downloadIndividualProjectDocx('p6', this)" style="font-weight:700;">
+                  📝 Pobierz DOCX
                 </button>
               </div>
             </div>
@@ -2173,6 +2191,10 @@
                 <option value="none" hidden>Nie dotyczy — bez napędu</option>
               </select>
             </div>
+            <div class="input-group" id="wiz_group_n_engines">
+              <label for="wiz_n_engines">Liczba silników [szt.]:</label>
+              <input type="number" id="wiz_n_engines" min="1" max="8" step="1" value="1">
+            </div>
           </div>
 
           <div class="input-row">
@@ -2205,8 +2227,8 @@
             <p>Dobierz układ płata, obrys i mechanizację. Wielkości wynikające z założeń są obliczane automatycznie.</p>
           </div>
 
-          <div class="wizard-suggest-banner" style="margin-bottom:12px; background:#f0f9ff; border:1px solid #bae6fd; padding:6px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:0.78rem; color:#0369a1;">📊 <strong>Analiza trendów (BIPOL_1):</strong> AR z trendu oraz średnie V_H, V_V, lotek, sterów i wzniosu z podobnych samolotów:</span>
+          <div class="wizard-suggest-banner" style="margin-bottom:12px; background:#f0f9ff; border:1px solid #bae6fd; padding:6px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:0.78rem; color:#0369a1;">📊 <strong>Analiza trendów (BIPOL_1):</strong> AR z trendu oraz średnie V_H, V_V, lotek, sterów i wzniosu z podobnych samolotów<span id="wizTrendPreviewGeometry"></span></span>
             <button type="button" class="btn btn-outline" id="wizSuggestTrendsBtn" style="padding:2px 8px; font-size:0.75rem; background:#ffffff; font-weight:700; color:#0284c7;">
               Zastosuj z trendów
             </button>

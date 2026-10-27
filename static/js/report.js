@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (status) status.textContent = missing.length ? `Przed oddaniem uzupełnij: ${missing.join(', ').toLowerCase()}.` : 'Dane na stronie tytułowej są uzupełnione.';
   };
   fields.forEach(input => input.addEventListener('input', sync));
+  document.addEventListener('bipol:report-replaced', sync);  // treść podmieniona poprawkami autora
   sync();
   const resetDrawing = () => {
     document.body.classList.remove('print-drawing','plain-drawing');

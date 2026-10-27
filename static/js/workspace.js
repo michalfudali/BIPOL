@@ -100,7 +100,7 @@
       const count = warnings.querySelectorAll('p').length;
       d.hidden = count === 0; summary.textContent = `Uwagi do danych (${count})`;
     }).observe(warnings,{childList:true});
-    disclosure($('trendSuggestionsPanel'),'Parametry z trendów — sprawdź i zastosuj w projekcie');
+    disclosure($('trendSuggestionsPanel'),'Parametry z trendów — sprawdź i zastosuj w projekcie',true);
   }
 
   function organizeAnalyses() {
@@ -115,7 +115,8 @@
       cards.forEach((node,index) => {
         const header = node.querySelector('.b-card-header,.subpoint-header');
         const text = BipolSymbols.source(header?.querySelector('h3,h4')).replace(/Podpunkt\s+[\w.]+\s*/,'').replace(/^[^\p{L}\p{N}]+/u,'').trim() || 'Dane szczegółowe';
-        const d = disclosure(node,text,index===0);
+        const d = disclosure(node,text,index===0 || id==='tab-compliance');
+        if (d && id==='tab-compliance' && index===1) d.id = 'complianceChecksDisclosure';
         if (header && !header.querySelector('button,a,input,select')) header.classList.add('quiet-original-heading');
         if (d && index===0) d.classList.add('quiet-primary-analysis');
         node.querySelectorAll('.formula-box').forEach(formula=>help(formula,'Wzory i objaśnienia'));
@@ -192,9 +193,10 @@
       for (let node=control.parentElement; node; node=node.parentElement) if (node.tagName==='DETAILS') node.open=true;
       requestAnimationFrame(() => {
         control.focus({preventScroll:true});
-        control.closest('.input-group')?.scrollIntoView({block:'center',behavior:'instant'});
+        const grp = control.closest('.input-group'); grp?.scrollIntoView({block:'center',behavior:'instant'}); if (grp) { grp.classList.add('is-quickfix-target'); setTimeout(() => grp.classList.remove('is-quickfix-target'), 2200); }
       });
     }
+    window.focusDesignParameter = paramId => { const control = $(paramId); if (!control) return; if (typeof setPortalMode === 'function') setPortalMode('holistic'); document.querySelector('.bipol-tab[data-target="tab-inputs"]')?.click(); reveal(control); };
     function update() {
       const query = normalize(search.value.trim());
       list.replaceChildren(); list.hidden = !query;
@@ -262,6 +264,8 @@
       document.querySelectorAll('[data-toggle-explanations]').forEach(button=>{button.setAttribute('aria-pressed',String(shown));button.textContent=shown?'Ukryj objaśnienia':'Objaśnienia';});
     });
     document.addEventListener('click',event=>{
+      const fixBtn=event.target.closest('[data-focus-param]');
+      if(fixBtn){event.preventDefault();window.focusDesignParameter?.(fixBtn.dataset.focusParam);return;}
       if(event.target.closest('[data-toggle-explanations]'))$('toggleDidacticHintsBtn').click();
       if(event.target.closest('[data-studio-target="tab-inputs"]')&&$('calculationStatus').classList.contains('is-error')) {
         const invalid=[...$('designForm').querySelectorAll('input[type=number]')].find(input=>!input.value.trim()||!Number.isFinite(Number(input.value))||!input.checkValidity());

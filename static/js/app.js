@@ -91,7 +91,7 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   window.BipolDesignBasis?.propulsion('');
   for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['takeoff_distance_m', 0, 600], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById(field);
-    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
+    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (minimum > 0 && Number(input.value) === 0) input.value = fallback; }
   }
   if (sfcEl) {
     sfcEl.readOnly = isGlider;
@@ -331,6 +331,12 @@ function initSidebarModularity() {
           engEl.value = 'prop';
           const locEl = document.getElementById('engine_location');
           if (locEl) locEl.value = (ac === 'turboprop_regional') ? 'wing' : (ac === 'uav' ? 'rear' : 'nose');
+        } else if (ac === 'motoglider') {
+          engEl.value = 'prop';
+          const locEl = document.getElementById('engine_location');
+          if (locEl) locEl.value = 'retractable';
+        } else if (ac === 'glider') {
+          engEl.value = 'none';
         }
       }
       syncAircraftClassAndEASAUI(false, 'aircraft');
@@ -1050,7 +1056,19 @@ function updateUI(res) {
   try {
     const checksTbody = document.getElementById('complianceChecksBody');
     if (checksTbody && Array.isArray(res.compliance_checks)) {
-      checksTbody.innerHTML = res.compliance_checks.map(c => `
+      const rank = c => c.passed ? 2 : (c.severity === 'warning' ? 1 : 0);
+      const sortedChecks = [...res.compliance_checks].sort((a, b) => rank(a) - rank(b));
+      const passedCount = res.compliance_checks.filter(c => c.passed).length;
+      const failedCount = res.compliance_checks.length - passedCount;
+      const summaryEl = document.querySelector('#complianceChecksDisclosure > summary');
+      if (summaryEl) {
+        summaryEl.textContent = failedCount > 0
+          ? `Weryfikacja Założeń Taktyczno-Technicznych (${passedCount}/${res.compliance_checks.length} spełnionych — ${failedCount} do poprawy)`
+          : `Weryfikacja Założeń Taktyczno-Technicznych (wszystkie ${passedCount}/${res.compliance_checks.length} spełnione ✓)`;
+      }
+      checksTbody.innerHTML = sortedChecks.map(c => {
+        const fixParam = !c.passed ? getComplianceFixParam(c) : '';
+        return `
         <tr>
           <td><b>${c.parameter}</b><br><small style="color:#64748b;">${c.note}</small></td>
           <td>${c.required}</td>
@@ -1059,9 +1077,10 @@ function updateUI(res) {
             <span class="badge ${c.passed ? 'badge-success' : (c.severity === 'warning' ? 'badge-warning' : 'badge-danger')}">
               ${c.passed ? '✓ Zgodne' : (c.severity === 'warning' ? 'Do oceny' : '✗ Niespełnione')}
             </span>
+            ${fixParam ? `<button type="button" class="compliance-fix-btn" data-focus-param="${escapeHtml(fixParam)}">Popraw →</button>` : ''}
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
     }
   } catch (err) {
     console.warn('Błąd complianceChecks:', err);
@@ -1595,6 +1614,52 @@ function populateP6Tables(res) {
   }
 }
 
+const WING_CONFIG_LABELS_PL = {
+  low: 'dolnopłat wolnonośny',
+  high: 'górnopłat wolnonośny',
+  braced_high: 'górnopłat zastrzałowy',
+  mid: 'średniopłat wolnonośny'
+};
+const FLAP_TYPE_LABELS_PL = {
+  plain: 'klapa zwykła',
+  split: 'klapa krokodylowa',
+  single_slotted: 'klapa szczelinowa',
+  fowler: 'klapa Fowlera',
+  junkers: 'klapa zewnętrzna Junkersa',
+  flaperon: 'klapolotka'
+};
+const SLAT_TYPE_LABELS_PL = {
+  none: 'gładkie natarcie (brak slotu)',
+  fixed_slot: 'stały slot',
+  slats_auto: 'automatyczny slot ruchomy',
+  krueger: 'klapa Kruegera'
+};
+const AIRCRAFT_CLASS_LABELS_PL = {
+  piston_ga: 'Samolot tłokowy GA',
+  motoglider: 'Motoszybowiec (TMG)',
+  glider: 'Szybowiec',
+  turboprop_regional: 'Samolot turbośmigłowy',
+  jet_business: 'Odrzutowiec dyspozycyjny',
+  jet_transport: 'Samolot komunikacyjny',
+  uav: 'Bezzałogowy statek powietrzny (UAV)'
+};
+
+function getComplianceFixParam(check) {
+  const param = String(check?.parameter || '').toLowerCase();
+  if (param.includes('przeciągnięcia') || param.includes('vs0')) return 'v_stall_kmh';
+  if (param.includes('wznoszenia') || param.includes('wy_max')) return 'climb_rate_ms';
+  if (param.includes('lot poziomy') || param.includes('dużej prędkości')) return 'cruise_speed_kmh';
+  if (param.includes('zasięg')) return 'range_km';
+  if (param.includes('długość startu')) return 'takeoff_distance_m';
+  if (param.includes('długość lądowania')) return 'landing_distance_m';
+  if (param.includes('stateczności') || param.includes('śc w locie')) return 'wing_config';
+  if (param.includes('pasażer') || param.includes('miejsc') || param.includes('osób')) return 'n_pax';
+  if (param.includes('rozpiętość') || param.includes('m/b²')) return 'aspect_ratio';
+  if (param.includes('mtom') || param.includes('mas')) return 'category';
+  return 'aircraft_type';
+}
+window.getComplianceFixParam = getComplianceFixParam;
+
 // Asystent Dydaktyczny wykrywający błędy koncepcyjne w projekcie studenta
 function updateDidacticAdvisor(res) {
   const advEl = document.getElementById('didacticAdvisorWarnings');
@@ -1645,9 +1710,11 @@ function updateDidacticAdvisor(res) {
   }
 
   if (warnings.length === 0) {
+    const wingLabel = WING_CONFIG_LABELS_PL[p.wing_config] || p.wing_config;
+    const flapLabel = FLAP_TYPE_LABELS_PL[p.flap_type] || p.flap_type;
     advEl.innerHTML = `
       <div style="background:#f0fdf4; border-left:4px solid #16a34a; padding:0.75rem; border-radius:4px; color:#14532d; font-size:0.85rem;">
-        <strong>✅ Konfiguracja poprawna dydaktycznie:</strong> Dobór układu nośnego (<code>${p.wing_config}</code>), mechanizacji spływu (<code>${p.flap_type}</code>), zbieżności (<code>η = ${p.taper_ratio}</code>) oraz prędkości jest spójny z wytycznymi konstrukcyjnymi MEiL PW.
+        <strong>✅ Konfiguracja poprawna dydaktycznie:</strong> Dobór układu nośnego (<b>${escapeHtml(wingLabel)}</b>), mechanizacji spływu (<b>${escapeHtml(flapLabel)}</b>), zbieżności (<code>η = ${p.taper_ratio}</code>) oraz prędkości jest spójny z wytycznymi konstrukcyjnymi MEiL PW.
       </div>
     `;
   } else {
@@ -2341,7 +2408,7 @@ function syncWizardPropulsionUI(triggerAutoSfc = false) {
   window.BipolDesignBasis?.propulsion('wiz_');
   for (const [field, minimum, fallback] of [['takeoff_run_m', 50, 500], ['takeoff_distance_m', 0, 600], ['climb_rate_ms', 1.5, 4.1]]) {
     const input = document.getElementById('wiz_' + field);
-    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (Number(input.value) === 0) input.value = fallback; }
+    if (input) { input.min = isGlider ? '0' : String(minimum); if (isGlider) input.value = '0'; else if (minimum > 0 && Number(input.value) === 0) input.value = fallback; }
   }
   if (sfcEl) {
     sfcEl.readOnly = isGlider;
@@ -2497,6 +2564,28 @@ function initWizardSystem() {
           if (wizLoc) wizLoc.value = (ac === 'turboprop_regional') ? 'wing' : (ac === 'uav' ? 'rear' : 'nose');
           const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
           if (wizSweep) wizSweep.value = (ac === 'turboprop_regional') ? 2 : 0;
+          const wizWingCfg = document.getElementById('wiz_wing_config');
+          if (wizWingCfg && wizWingCfg.value === 'mid') wizWingCfg.value = (ac === 'piston_ga') ? 'low' : 'high';
+          const wizFlap = document.getElementById('wiz_flap_type');
+          if (wizFlap && (wizFlap.value === 'flaperon' || (ac !== 'turboprop_regional' && wizFlap.value === 'fowler'))) {
+            wizFlap.value = 'single_slotted';
+          }
+        } else if (ac === 'motoglider') {
+          wizEngSel.value = 'prop';
+          const wizLoc = document.getElementById('wiz_engine_location');
+          if (wizLoc) wizLoc.value = 'retractable';
+          const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
+          if (wizSweep) wizSweep.value = 0;
+          const wizWingCfg = document.getElementById('wiz_wing_config');
+          if (wizWingCfg) wizWingCfg.value = 'mid';
+          const wizFlap = document.getElementById('wiz_flap_type');
+          if (wizFlap) wizFlap.value = 'flaperon';
+        } else if (ac === 'glider') {
+          wizEngSel.value = 'none';
+          const wizSweep = document.getElementById('wiz_sweep_quarter_deg');
+          if (wizSweep) wizSweep.value = 0;
+          const wizWingCfg = document.getElementById('wiz_wing_config');
+          if (wizWingCfg) wizWingCfg.value = 'mid';
         }
       }
       syncAircraftClassAndEASAUI(true, 'aircraft');
@@ -2583,6 +2672,7 @@ function syncFormToWizard() {
     { formId: 'climb_rate_ms', wizId: 'wiz_climb_rate_ms' },
     { formId: 'engine_type', wizId: 'wiz_engine_type' },
     { formId: 'engine_location', wizId: 'wiz_engine_location' },
+    { formId: 'n_engines', wizId: 'wiz_n_engines' },
     { formId: 'prop_efficiency', wizId: 'wiz_prop_efficiency' },
     { formId: 'sfc', wizId: 'wiz_sfc' },
     { formId: 'wing_config', wizId: 'wiz_wing_config' },
@@ -2686,6 +2776,8 @@ function suggestStepDefaults(step) {
     const isRangeLocked = rangeChk && rangeChk.checked;
     if (!isRangeLocked) {
       if (acType === 'piston_ga') setFieldValue('wiz_range_km', 750);
+      else if (acType === 'motoglider') setFieldValue('wiz_range_km', 600);
+      else if (acType === 'glider') setFieldValue('wiz_range_km', 250);
       else if (acType === 'turboprop_regional') setFieldValue('wiz_range_km', 2000);
       else if (acType === 'jet_business') setFieldValue('wiz_range_km', 2400);
       else if (acType === 'jet_transport') setFieldValue('wiz_range_km', 5000);
@@ -2698,6 +2790,8 @@ function suggestStepDefaults(step) {
     const isSpdLocked = spdChk && spdChk.checked;
     if (!isSpdLocked) {
       if (acType === 'piston_ga') setFieldValue('wiz_cruise_speed_kmh', 190);
+      else if (acType === 'motoglider') setFieldValue('wiz_cruise_speed_kmh', 160);
+      else if (acType === 'glider') setFieldValue('wiz_cruise_speed_kmh', 120);
       else if (acType === 'turboprop_regional') setFieldValue('wiz_cruise_speed_kmh', 450);
       else if (acType === 'jet_business') setFieldValue('wiz_cruise_speed_kmh', 680);
       else if (acType === 'jet_transport') setFieldValue('wiz_cruise_speed_kmh', 840);
@@ -2710,6 +2804,8 @@ function suggestStepDefaults(step) {
     const isStallLocked = stallChk && stallChk.checked;
     if (!isStallLocked) {
       if (acType === 'piston_ga') setFieldValue('wiz_v_stall_kmh', 85);
+      else if (acType === 'motoglider') setFieldValue('wiz_v_stall_kmh', 68);
+      else if (acType === 'glider') setFieldValue('wiz_v_stall_kmh', 62);
       else if (acType === 'turboprop_regional') setFieldValue('wiz_v_stall_kmh', 135);
       else if (acType === 'jet_business') setFieldValue('wiz_v_stall_kmh', 160);
       else if (acType === 'jet_transport') setFieldValue('wiz_v_stall_kmh', 190);
@@ -2721,22 +2817,44 @@ function suggestStepDefaults(step) {
     if (acType === 'piston_ga') {
       setFieldValue('wiz_cruise_altitude_m', 2000);
       setFieldValue('wiz_takeoff_run_m', 220);
+      setFieldValue('wiz_takeoff_distance_m', 600);
+      setFieldValue('wiz_landing_distance_m', 600);
       setFieldValue('wiz_climb_rate_ms', 4.5);
+    } else if (acType === 'motoglider') {
+      setFieldValue('wiz_cruise_altitude_m', 1500);
+      setFieldValue('wiz_takeoff_run_m', 250);
+      setFieldValue('wiz_takeoff_distance_m', 500);
+      setFieldValue('wiz_landing_distance_m', 500);
+      setFieldValue('wiz_climb_rate_ms', 3.2);
+    } else if (acType === 'glider') {
+      setFieldValue('wiz_cruise_altitude_m', 1500);
+      setFieldValue('wiz_takeoff_run_m', 0);
+      setFieldValue('wiz_takeoff_distance_m', 0);
+      setFieldValue('wiz_landing_distance_m', 350);
+      setFieldValue('wiz_climb_rate_ms', 0);
     } else if (acType === 'turboprop_regional') {
       setFieldValue('wiz_cruise_altitude_m', 6000);
       setFieldValue('wiz_takeoff_run_m', 700);
+      setFieldValue('wiz_takeoff_distance_m', 1100);
+      setFieldValue('wiz_landing_distance_m', 1000);
       setFieldValue('wiz_climb_rate_ms', 8.5);
     } else if (acType === 'jet_business') {
       setFieldValue('wiz_cruise_altitude_m', 11000);
       setFieldValue('wiz_takeoff_run_m', 950);
+      setFieldValue('wiz_takeoff_distance_m', 1400);
+      setFieldValue('wiz_landing_distance_m', 1200);
       setFieldValue('wiz_climb_rate_ms', 14.0);
     } else if (acType === 'jet_transport') {
       setFieldValue('wiz_cruise_altitude_m', 11500);
       setFieldValue('wiz_takeoff_run_m', 1600);
+      setFieldValue('wiz_takeoff_distance_m', 2400);
+      setFieldValue('wiz_landing_distance_m', 1900);
       setFieldValue('wiz_climb_rate_ms', 12.0);
     } else if (acType === 'uav') {
       setFieldValue('wiz_cruise_altitude_m', 5000);
       setFieldValue('wiz_takeoff_run_m', 180);
+      setFieldValue('wiz_takeoff_distance_m', 400);
+      setFieldValue('wiz_landing_distance_m', 400);
       setFieldValue('wiz_climb_rate_ms', 4.0);
     }
   }
@@ -2817,10 +2935,12 @@ function renderWizardStep5Summary() {
   const flap = getV('wiz_flap_type');
   const slat = getV('wiz_slat_type');
 
-  const locNames = { nose: 'Dziób kadłuba', wing: 'Gondole skrzydłowe', rear: 'Tył kadłuba / gondole ogonowe' };
+  const locNames = { nose: 'Dziób kadłuba', wing: 'Gondole skrzydłowe', rear: 'Tył kadłuba / gondole ogonowe', retractable: 'Napęd chowany w kadłubie' };
+  const nEng = getN('wiz_n_engines') || 1;
+  const engCountText = engType === 'none' ? '' : `${nEng}× `;
   const propSummaryText = engType === 'none' ? 'Bez napędu — szybowiec' : engType === 'jet'
-    ? `Odrzutowy (Turbofan) &bull; ${locNames[engLoc] || engLoc} &bull; TSFC = ${sfcVal} 1/h`
-    : `Śmigłowy &bull; ${locNames[engLoc] || engLoc} &bull; SFC = ${sfcVal} g/(kW&bull;h), &eta;_p = ${etaP}`;
+    ? `${engCountText}Odrzutowy (Turbofan) &bull; ${locNames[engLoc] || engLoc} &bull; TSFC = ${sfcVal} 1/h`
+    : `${engCountText}Śmigłowy &bull; ${locNames[engLoc] || engLoc} &bull; SFC = ${sfcVal} g/(kW&bull;h), &eta;_p = ${etaP}`;
 
   const catNames = {
     cs23_level1: 'EASA CS-23 Level 1 (0–1 pax)',
@@ -2839,21 +2959,37 @@ function renderWizardStep5Summary() {
     easa_uas_certified: 'EASA UAS Certified (ocena ryzyka operacji)'
   };
   const catLabel = catNames[cat] || `EASA (${cat.toUpperCase()})`;
+  const acClassLabel = AIRCRAFT_CLASS_LABELS_PL[acType] || acType.toUpperCase();
+  const flapLabel = FLAP_TYPE_LABELS_PL[flap] || flap;
+  const slatLabel = SLAT_TYPE_LABELS_PL[slat] || slat;
+  const wingMode = getV('wiz_wing_input_mode') || 'loading';
+  const bWiz = getN('wiz_wingspan_m');
+  const sWiz = getN('wiz_wing_area_m2');
+  const wingSummaryVal = wingMode === 'span_aspect'
+    ? `b = ${bWiz} m; Λ = ${AR} (S = ${AR > 0 ? (bWiz * bWiz / AR).toFixed(2) : '—'} m²)`
+    : wingMode === 'span_area'
+      ? `b = ${bWiz} m; S = ${sWiz} m² (Λ = ${sWiz > 0 ? (bWiz * bWiz / sWiz).toFixed(2) : '—'})`
+      : wingMode === 'area_aspect'
+        ? `S = ${sWiz} m²; Λ = ${AR} (b = ${sWiz > 0 && AR > 0 ? Math.sqrt(sWiz * AR).toFixed(2) : '—'} m)`
+        : `Λ = ${AR} (S i b wyznaczane z MTOW oraz VS0)`;
+  const runwaySummaryVal = engType === 'none'
+    ? 'Start na holu / za wyciągarką'
+    : `S_to = ${Sto > 0 ? Sto + ' m' : 'nie narzucono'}, w_y = ${wy} m/s`;
   const isUasSummary = (acType === 'uav' || cat.startsWith('easa_uas_'));
   const occSummaryText = isUasSummary
     ? `0 osób na pokładzie (sterowanie z GCS) &bull; ${mCargo} kg wyposażenie zadaniowe / sensory`
     : `${nCrew} pilot(ów), ${nPax} pasażer(ów), ${mCargo} kg cargo`;
 
   tbody.innerHTML = `
-    <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${escapeHtml(name)}</b></td><td><span class="badge badge-info">${acType.toUpperCase()}</span></td></tr>
+    <tr><td><b>Projekt i Klasa</b></td><td>Nazwa statku powietrznego</td><td class="num"><b>${escapeHtml(name)}</b></td><td><span class="badge badge-info">${escapeHtml(acClassLabel)}</span></td></tr>
     <tr><td><b>Przepisy EASA</b></td><td>Kategoria certyfikacyjna</td><td class="num"><b>${catLabel}</b></td><td>Wymóg przepisowy EASA</td></tr>
     <tr><td><b>Załoga i Ładunek</b></td><td>Piloci / Pasażerowie / Ładunek</td><td class="num"><b>${occSummaryText}</b></td><td>Ładunek płatny</td></tr>
     <tr><td><b>Zasięg i Pułap</b></td><td>Zasięg R / Wysokość przelotu H</td><td class="num"><b>R = ${R} km, H = ${H} m</b></td><td>Profil misji przelotowej</td></tr>
     <tr><td><b>Prędkości</b></td><td>Przelotowa Vcr / Lądowania Vs0</td><td class="num"><b>Vcr = ${Vcr} km/h, Vs0 = ${Vs0} km/h</b></td><td>Stosunek Vcr/Vs0 = ${(Vcr/Vs0).toFixed(2)}</td></tr>
-    <tr><td><b>Osiągi lotniskowe</b></td><td>Całkowity start do 15 m / Wznoszenie w_y</td><td class="num"><b>S_to = ${Sto} m, w_y = ${wy} m/s</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
+    <tr><td><b>Osiągi lotniskowe</b></td><td>Całkowity start do 15 m / Wznoszenie w_y</td><td class="num"><b>${runwaySummaryVal}</b></td><td>Długość pasa i odejście na 2. krąg</td></tr>
     <tr><td><b>Zespół Napędowy</b></td><td>Rodzaj, zabudowa i zużycie paliwa</td><td class="num"><b>${propSummaryText}</b></td><td>Zespół napędowy</td></tr>
-    <tr><td><b>Założenia skrzydła</b></td><td>${escapeHtml(document.getElementById('wiz_wing_input_mode').selectedOptions[0].textContent)}</td><td class="num"><b>b = ${document.getElementById('wiz_wingspan_m').value} m; S = ${document.getElementById('wiz_wing_area_m2').value} m²; Λ = ${AR}</b></td><td>Wielkości zależne są obliczane</td></tr>
-    <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>Klapa: ${flap} &bull; Slot: ${slat}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
+    <tr><td><b>Założenia skrzydła</b></td><td>${escapeHtml(document.getElementById('wiz_wing_input_mode').selectedOptions[0].textContent)}</td><td class="num"><b>${wingSummaryVal}</b></td><td>Wielkości zależne są obliczane</td></tr>
+    <tr><td><b>Mechanizacja</b></td><td>Klapy spływu i sloty natarcia</td><td class="num"><b>${escapeHtml(flapLabel)} &bull; ${escapeHtml(slatLabel)}</b></td><td>Zapewnienie wymaganego Vs0</td></tr>
   `;
 
   // Audyt spójności
@@ -2956,7 +3092,9 @@ async function commitWizardToForm() {
     document.getElementById('openReportBtn')?.setAttribute('data-results-stale','false');
     document.dispatchEvent(new CustomEvent('bipol:results', {detail:result}));
     closeWizard();
-    document.querySelector('.bipol-tab[data-target="tab-cad"]')?.click();
+    if (currentPortalMode === 'holistic') {
+      document.querySelector('.bipol-tab[data-target="tab-overview"]')?.click();
+    }
   } catch (error) { showWizardError(error.message); }
   finally { finish.disabled = false; finish.textContent = originalText; }
 }

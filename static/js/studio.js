@@ -202,7 +202,11 @@
       ['Masa pusta', m.m_empty, '#168c83'], ['Załoga i ładunek', m.m_crew + m.m_payload, '#667ed5'], ['Paliwo', m.m_fuel, '#d89b45']
     ].map(([label, value, color]) => `<div class="studio-mass-row"><span>${label}</span><strong>${fmt(value)} kg <small class="studio-mass-share">${fmt(value / total * 100,0)}%</small></strong><div><i style="width:${Math.min(100, value / total * 100)}%;background:${color}"></i></div></div>`).join('');
     $('studioMassClosure').textContent = `Masa startowa ${fmt(total)} kg · suma składników ${fmt(m.m_empty + m.m_crew + m.m_payload + m.m_fuel)} kg`;
-    $('studioChecks').innerHTML = checks.slice(0, 4).map(c => `<div class="studio-check"><span class="studio-check-icon ${c.passed ? 'pass' : 'attention'}">${c.passed ? '✓' : '!'}</span><div><strong>${esc(c.parameter)}</strong><small>${esc(c.required)} · wynik: ${esc(c.actual)}</small></div></div>`).join('');
+    const orderedChecks = [...checks].sort((a, b) => Number(a.passed) - Number(b.passed));
+    $('studioChecks').innerHTML = orderedChecks.slice(0, 4).map(c => {
+      const fixParam = !c.passed && typeof window.getComplianceFixParam === 'function' ? window.getComplianceFixParam(c) : '';
+      return `<div class="studio-check"><span class="studio-check-icon ${c.passed ? 'pass' : 'attention'}">${c.passed ? '✓' : '!'}</span><div><strong>${esc(c.parameter)}</strong><small>${esc(c.required)} · wynik: ${esc(c.actual)}${fixParam ? ` <button type="button" class="compliance-fix-btn" data-focus-param="${esc(fixParam)}">Popraw →</button>` : ''}</small></div></div>`;
+    }).join('');
     $('studioMission').innerHTML = `<svg viewBox="0 0 650 145" role="img" aria-label="Schemat misji: start, wznoszenie, przelot i rezerwa"><path d="M25 95H625" stroke="#cbdadd" stroke-dasharray="4 4"/><path d="M25 95H90L175 40H470L535 78H625" fill="none" stroke="#168c83" stroke-width="3"/><text x="25" y="122">Start</text><text x="108" y="122">Wznoszenie</text><text x="245" y="24">${fmt(p.cruise_altitude_m, 0)} m ISA · ${fmt(p.cruise_speed_kmh, 0)} km/h TAS</text><text x="280" y="122">Przelot · ${fmt(p.range_km, 0)} km</text><text x="510" y="122">Rezerwa · ${fmt(p.loiter_time_min ?? 45, 0)} min</text></svg>`;
     if (p.engine_type === 'none') $('studioMission').innerHTML = `<p>Lot bez napędu · wysokość odniesienia ${fmt(p.cruise_altitude_m, 0)} m ISA.</p><p>Założony zasięg misji nie jest prognozą lotu termicznego. Sprawdź doskonałość i opadanie w module lotu szybowego.</p>`;
     renderAircraft();
@@ -224,7 +228,10 @@
     $('studioGlideChart').innerHTML = BipolVisuals.chart({
       title: 'Dokładna biegunowa szybowania', xLabel: 'V TAS [km/h]', yLabel: 'Opadanie [m/s]',
       series: [{name: 'Model równowagi sił', data: points.map(point => [point.v_kmh, point.sink_ms])}],
-      points: [{x: best.v_kmh, y: best.sink_ms, label: 'Najlepsza doskonałość'}, {x: min.v_kmh, y: min.sink_ms, label: 'Min. opadanie'}]
+      points: [
+        {x: best.v_kmh, y: best.sink_ms, label: 'Najlepsza doskonałość', dx: 10, dy: -11},
+        {x: min.v_kmh, y: min.sink_ms, label: 'Min. opadanie', dx: 0, dy: 18, anchor: 'middle'}
+      ]
     });
     $('studioGlideModel').textContent = glide.model;
   }
@@ -258,15 +265,64 @@
     saveProject(active);
   }
 
-  async function report(downloadReport = false) {
+  async function downloadRenderedDocx(html) {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;left:-9999px;top:0;width:1200px;height:900px;visibility:hidden;pointer-events:none';
+    document.body.append(frame);
+    try {
+      frame.contentDocument.open();
+      frame.contentDocument.write(html);
+      frame.contentDocument.close();
+      await frame.contentWindow.BipolReportEditor.ready;
+      const {blob, filename: docName} = await frame.contentWindow.BipolReportEditor.buildDocx();
+      download(docName, blob, blob.type);
+      return docName;
+    } finally {
+      frame.remove();
+    }
+  }
+
+  async function downloadIndividualProjectDocx(pId, btn) {
+    const origText = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generowanie DOCX…'; }
+    try {
+      saveEditorial();
+      const result = await calculated(), editorial = getActiveProject()?.editorial || {};
+      const params = {...result.params, report_notes: editorial.notes || '', source_notes: editorial.sources || ''};
+      const q = new URLSearchParams({
+        student: params.student_name || '',
+        album: params.album_no || '',
+        group: params.group_no || '',
+        supervisor: params.supervisor || '',
+        date: params.submission_date || '',
+        academic_year: params.academic_year || ''
+      });
+      const response = await fetch(`/report/project/${encodeURIComponent(pId)}?${q}`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(params)
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).message || 'Nie udało się przygotować raportu DOCX.');
+      const html = await response.text();
+      await downloadRenderedDocx(html);
+      announce(`Pobrano edytowalny raport DOCX (${String(pId).toUpperCase()}).`);
+    } catch (error) {
+      announce(error.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+    }
+  }
+  window.downloadIndividualProjectDocx = downloadIndividualProjectDocx;
+
+  async function report(mode = 'preview') {
     saveEditorial();
     const sections = [...document.querySelectorAll('[name="studio-report-section"]:checked')].map(el => el.value);
     if (!sections.length) throw new Error('Wybierz co najmniej jeden etap raportu.');
     // Otwórz okno w obsłudze kliknięcia, aby przeglądarka nie blokowała podglądu.
-    const popup = downloadReport ? null : window.open('', '_blank');
-    if (!downloadReport && !popup) throw new Error('Zezwól na otwarcie okna raportu lub pobierz HTML.');
+    const popup = mode === 'preview' ? window.open('', '_blank') : null;
+    if (mode === 'preview' && !popup) throw new Error('Zezwól na otwarcie okna raportu lub pobierz plik.');
     try {
       if (popup) popup.document.body.textContent = 'Przygotowywanie raportu…';
+      if (mode === 'docx') $('studioReportStatus').textContent = 'Przygotowywanie pliku DOCX…';
       const result = await calculated(), editorial = getActiveProject()?.editorial || {};
       const response = await fetch(`/report?sections=${sections.join(',')}`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -274,19 +330,21 @@
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Nie udało się przygotować raportu.');
       const html = await response.text();
-      if (downloadReport) download(`${filename(result.params.name)}-raport.html`, html, 'text/html;charset=utf-8');
+      if (mode === 'html') download(`${filename(result.params.name)}-raport.html`, html, 'text/html;charset=utf-8');
+      else if (mode === 'docx') await downloadRenderedDocx(html);
       else { popup.document.open(); popup.document.write(html); popup.document.close(); }
       $('studioReportStatus').textContent = `Raport przygotowany: ${sections.map(s => s.toUpperCase()).join(', ')}.`;
     } catch (error) { popup?.close(); throw error; }
   }
 
-  async function parameterReport(downloadReport = false) {
+  async function parameterReport(mode = 'preview') {
     const {keys, chain, iterations, start} = BipolParamReport.options();
     if (!keys.length) throw new Error('Wybierz co najmniej jeden parametr raportu.');
-    const popup = downloadReport ? null : window.open('', '_blank');
-    if (!downloadReport && !popup) throw new Error('Zezwól na otwarcie okna raportu lub pobierz HTML.');
+    const popup = mode === 'preview' ? window.open('', '_blank') : null;
+    if (mode === 'preview' && !popup) throw new Error('Zezwól na otwarcie okna raportu lub pobierz plik.');
     try {
       if (popup) popup.document.body.textContent = 'Przygotowywanie karty obliczeń…';
+      if (mode === 'docx') $('studioReportStatus').textContent = 'Przygotowywanie karty obliczeń DOCX…';
       const result = await calculated();
       const params = {...result.params};
       if (start) params.mass_iteration_start_kg = Number(start); else delete params.mass_iteration_start_kg;
@@ -296,7 +354,8 @@
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Nie udało się przygotować raportu parametrów.');
       const html = await response.text();
-      if (downloadReport) download(`${filename(result.params.name)}-karta-obliczen.html`, html, 'text/html;charset=utf-8');
+      if (mode === 'html') download(`${filename(result.params.name)}-karta-obliczen.html`, html, 'text/html;charset=utf-8');
+      else if (mode === 'docx') await downloadRenderedDocx(html);
       else { popup.document.open(); popup.document.write(html); popup.document.close(); }
       $('studioReportStatus').textContent = `Karta obliczeń przygotowana: ${keys.length} ${keys.length === 1 ? 'pozycja' : 'pozycje'}.`;
     } catch (error) { popup?.close(); throw error; }
@@ -311,10 +370,12 @@
   async function action(name) {
     if (name === 'recalculate') { await performCalculation(); return; }
     if (name === 'reports') return navigate('tab-reports');
-    if (name === 'preview-report') return report(false);
-    if (name === 'download-report') return report(true);
-    if (name === 'preview-param-report') return parameterReport(false);
-    if (name === 'download-param-report') return parameterReport(true);
+    if (name === 'preview-report') return report('preview');
+    if (name === 'download-report') return report('html');
+    if (name === 'download-report-docx') return report('docx');
+    if (name === 'preview-param-report') return parameterReport('preview');
+    if (name === 'download-param-report') return parameterReport('html');
+    if (name === 'download-param-report-docx') return parameterReport('docx');
     if (name === 'export-json') { saveEditorial(); exportActiveProjectJSON(); return; }
     if (name === 'compare-csv') {
       const {rows} = comparisonRows();

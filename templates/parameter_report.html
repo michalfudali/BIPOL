@@ -14,7 +14,8 @@
 </head>
 <body>
   <aside class="report-toolbar no-print" aria-label="Ustawienia wydruku">
-    <div class="toolbar-row"><strong>Karta obliczeń wybranych parametrów</strong><a href="/" class="back-link">Wróć do projektu</a><button id="print-report">Drukuj / zapisz PDF</button></div>
+    <div class="toolbar-row"><strong>Karta obliczeń wybranych parametrów</strong><a href="/" class="back-link">Wróć do projektu</a><button id="edit-report" type="button" aria-pressed="false">Edytuj treść</button><button id="download-docx" type="button">Pobierz DOCX</button><button id="print-report">Drukuj / zapisz PDF</button></div>
+    <div class="edit-bar"><p class="edit-status" id="edit-status" role="status" aria-live="polite"></p><button id="restore-edits" type="button" hidden>Wczytaj poprzednie poprawki</button><button id="discard-edits" type="button" class="secondary" hidden>Odrzuć</button><button id="reset-edits" type="button" class="secondary" hidden>Przywróć wersję wygenerowaną</button></div>
     <details{% if doc.metadata|rejectattr('value')|list %} open{% endif %}>
       <summary>Dane na stronie tytułowej</summary>
       <div class="metadata-grid">{% for field in doc.metadata %}<label>{{ field.label }}<input data-report-meta-input="{{ field.key }}" data-label="{{ field.label }}" value="{{ field.value }}" maxlength="160"></label>{% endfor %}</div>
@@ -64,5 +65,6 @@
     </section>
   </main>
   <script>{{ report_assets.document|safe }}</script>
+  <script>{{ report_assets.editor|safe }}</script>
 </body>
 </html>

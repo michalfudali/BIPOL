@@ -10,12 +10,11 @@ Python 3.11 lub nowszy:
 
 Na systemie Windows serwer uruchamia się bezpośrednio skryptem:
 ```bat
-start_app.bat
+run.bat
 ```
-lub w wierszu poleceń:
+Zależności instaluje się jednorazowo:
 ```sh
 py -3.11 -m pip install -r requirements.txt
-py -3.11 app.py
 ```
 
 Serwer nasłuchuje domyślnie tylko na `127.0.0.1:5000`. Zmienne środowiskowe:

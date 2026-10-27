@@ -63,7 +63,41 @@
     }
   }
 
-  const api = {render, fetchSuggestions, applyInWizard};
+  let previewSeq = 0;
+  async function previewInWizard() {
+    const basisEl = typeof document !== 'undefined' ? document.getElementById('wizTrendPreviewBasis') : null;
+    const geomEl = typeof document !== 'undefined' ? document.getElementById('wizTrendPreviewGeometry') : null;
+    if (!basisEl && !geomEl) return;
+    const seq = ++previewSeq;
+    const field = id => document.getElementById(id)?.value;
+    try {
+      const data = await fetchSuggestions({
+        aircraft_type: field('wiz_aircraft_type') || 'piston_ga',
+        engine_type: field('wiz_engine_type'),
+        wing_configuration: field('wiz_wing_config')
+      });
+      if (seq !== previewSeq) return;
+      const ar = data.suggestions?.ar;
+      if (basisEl) {
+        basisEl.innerHTML = ar?.suggested_value != null
+          ? ` — <strong>AR &approx; ${num(ar.suggested_value, 2)}</strong> (próba n = ${ar.provenance?.sample?.selected_n ?? '?'})`
+          : '';
+      }
+      if (geomEl) {
+        const parts = ['ar', 'vh', 'v_v', 'dihedral_deg']
+          .map(k => data.suggestions?.[k])
+          .filter(s => s?.suggested_value != null)
+          .map(s => `${esc(s.symbol)} &approx; ${num(s.suggested_value, s.key === 'v_v' ? 3 : 2)}${unit(s)}`);
+        geomEl.innerHTML = parts.length ? ` — <strong>${parts.join(' &middot; ')}</strong>` : '';
+      }
+    } catch (_) {
+      if (seq !== previewSeq) return;
+      if (basisEl) basisEl.textContent = '';
+      if (geomEl) geomEl.textContent = '';
+    }
+  }
+
+  const api = {render, fetchSuggestions, applyInWizard, previewInWizard};
   root.BipolTrendProvenance = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

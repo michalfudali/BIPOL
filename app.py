@@ -27,6 +27,7 @@ from calculations.report_sketch import report_sketch
 from calculations.drawing_sheet import drawing_sheet
 from calculations import report_figures
 from calculations.calc_sheet import build_sheet, worked_iteration
+from calculations.report_docx import build_docx
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -338,6 +339,7 @@ def document_context(results, sections, folder_cover=False):
         'core': 'static/js/studio-core.js',
         'visuals': 'static/js/studio-visuals.js',
         'document': 'static/js/report.js',
+        'editor': 'static/js/report-editor.js',
     }
     return dict(res=results, params=results['params'], selected_sections=sections,
                 sheet=build_sheet(results),
@@ -346,6 +348,21 @@ def document_context(results, sections, folder_cover=False):
                                 ('sizing', 'aerodynamics', 'envelope', 'geometry', 'performance', 'bipol_projects')},
                 report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8')
                                .replace('</script', '<\\/script') for name, path in assets.items()})
+
+@app.post('/report/docx')
+def report_docx():
+    """Edytowalny DOCX z dokumentu w oknie podglądu, razem z poprawkami autora."""
+    if (request.content_length or 0) > 80 * 1024 * 1024:
+        raise ValueError('Raport jest zbyt duży do eksportu DOCX (limit 80 MB).')
+    payload = request.get_json(silent=True)
+    html = payload.get('html') if isinstance(payload, dict) else None
+    if not isinstance(html, str) or not html.strip():
+        raise ValueError('Brak treści raportu do eksportu DOCX.')
+    data = build_docx(html, title=str(payload.get('title') or '')[:300],
+                      author=str(payload.get('author') or '')[:160])
+    return Response(data, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={'Content-Disposition': 'attachment; filename="raport.docx"'})
+
 
 @app.post('/api/report/catalog')
 def report_catalog():

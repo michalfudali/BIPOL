@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const extraKeys = ['gear_attachment','gear_retraction','wing_input_mode','payload_input_mode','power_input_mode','wingspan_m',
-    'takeoff_distance_m','landing_distance_m','wing_area_m2','m_payload','engine_power_kw','wing_planform','dihedral_deg','aileron_type'];
+    'takeoff_distance_m','landing_distance_m','wing_area_m2','m_payload','engine_power_kw','n_engines','wing_planform','dihedral_deg','aileron_type'];
   const wingSources = {loading:['aspect_ratio'],span_aspect:['wingspan_m','aspect_ratio'],
     span_area:['wingspan_m','wing_area_m2'],area_aspect:['wing_area_m2','aspect_ratio']};
   let wizardBase = {};
@@ -11,6 +11,7 @@
   const value = (prefix, key) => $(prefix+key)?.value;
   const number = (prefix, key) => Number(value(prefix,key) || 0);
   const set = (prefix, key, val) => { if ($(prefix+key) && val != null) $(prefix+key).value = val; };
+  const defaultEngines = (prefix='') => value(prefix,'engine_type')==='none' ? 0 : (value(prefix,'engine_location')==='wing' || value(prefix,'engine_type')==='jet' ? 2 : 1);
   function derived(prefix, key, isDerived, formula='', result) {
     const input=$(prefix+key); if (!input) return;
     input.readOnly=isDerived;
@@ -79,6 +80,13 @@
       if(none) {if(loc.value!=='none')loc.dataset.poweredLocation=loc.value;loc.value='none';}
       else if(loc.value==='none'||!loc.value)loc.value=loc.dataset.poweredLocation||((engine==='jet')?'rear':'nose');
     }
+    const nEng=$(prefix+'n_engines'), base=prefix?wizardBase:(typeof formBaseParams!=='undefined'?formBaseParams:null);
+    if (nEng) {
+      const grp=nEng.closest('.input-group'); if(grp){grp.hidden=none;grp.style.display=none?'none':'';}
+      nEng.disabled=none; nEng.readOnly=none; nEng.min=none?'0':'1';
+      if (none) { nEng.value='0'; if(base)base.n_engines=0; }
+      else if (!Number.isFinite(Number(nEng.value)) || Number(nEng.value)<1) { const defN=defaultEngines(prefix); nEng.value=String(defN); if(base&&!(Number(base.n_engines)>=1))base.n_engines=defN; }
+    } else if (base) { if(none)base.n_engines=0; else if(!(Number(base.n_engines)>=1))base.n_engines=defaultEngines(prefix); }
     const title=$('wiz_pane3_title');
     if(prefix&&title)title.textContent=none?'Krok 3: Lot bez napędu':'Krok 3: Zespół napędowy';
     const description=prefix?$('wizardPane3')?.querySelector('.wizard-pane-header p'):null;
@@ -100,6 +108,7 @@
     for(const key of ['takeoff_distance_m','landing_distance_m'])set('',key,p[key]||0);
     set('','gear_attachment',p.gear_attachment||'fuselage');
     set('','gear_retraction',p.gear_retraction||'auto');
+    set('','n_engines',p.engine_type==='none'?0:(Number(p.n_engines)>=1?p.n_engines:defaultEngines('')));
     sync();propulsion();
   }
   function openWizard() {
@@ -112,7 +121,7 @@
     set('wiz_basis_','range_km', value('wiz_','range_km'));
     set('wiz_basis_','cruise_speed_kmh', value('wiz_','cruise_speed_kmh'));
     set('wiz_basis_','v_stall_kmh', value('wiz_','v_stall_kmh'));
-    sync('wiz_');propulsion('wiz_');topicNote();
+    if($('wizTrendProvenanceBasis'))$('wizTrendProvenanceBasis').hidden=true; if($('wizTrendProvenanceGeometry'))$('wizTrendProvenanceGeometry').hidden=true; sync('wiz_');propulsion('wiz_');topicNote(); window.BipolTrendProvenance?.previewInWizard?.();
   }
   function seed(params) {
     // Reset the new project wizard before applying a catalogue observation.
@@ -130,6 +139,7 @@
     for(const [key,val] of Object.entries(wizardBase))set('wiz_',key,val);
     for(const key of ['range_km','cruise_speed_kmh','v_stall_kmh'])set('wiz_basis_',key,wizardBase[key]);
     sync('wiz_');topicNote();
+    window.BipolTrendProvenance?.previewInWizard?.();
     const note=$('wizardCatalogSource');
     if(note){note.hidden=false;note.textContent=`Dane początkowe: ${params.reference_aircraft.model}. Przeniesiono dostępne parametry katalogowe. Pozostałe pola pochodzą z profilu klasy — sprawdź misję, załogę i ładunek przed zapisaniem projektu. Katalogowe MTOW i OEW służą do porównania.`;}
   }
@@ -149,7 +159,7 @@
     set('wiz_basis_','range_km', wizardBase.range_km || value('wiz_','range_km'));
     set('wiz_basis_','cruise_speed_kmh', wizardBase.cruise_speed_kmh || value('wiz_','cruise_speed_kmh'));
     set('wiz_basis_','v_stall_kmh', wizardBase.v_stall_kmh || value('wiz_','v_stall_kmh'));
-    syncAircraftClassAndEASAUI(true);syncWizardPropulsionUI(false);renderWizardStep4Mechanics();
+    syncAircraftClassAndEASAUI(true);syncWizardPropulsionUI(false);renderWizardStep4Mechanics();window.BipolTrendProvenance?.previewInWizard?.();
     sync('wiz_');topicNote();
   }
   // Fields without a wizard input still travel with the wizard snapshot.
@@ -170,6 +180,7 @@
     if($('wiz_basis_cruise_speed_kmh')){const bV=Number($('wiz_basis_cruise_speed_kmh').value);if(!isNaN(bV)&&bV>0)p['cruise_speed_kmh']=bV;}
     if($('wiz_basis_v_stall_kmh')){const bVs=Number($('wiz_basis_v_stall_kmh').value);if(!isNaN(bVs)&&bVs>0)p['v_stall_kmh']=bVs;}
     p.name=$('wiz_name').value.trim()||'Mój projekt BIPOL';
+    if(p.engine_type==='none')p.n_engines=0; else if(!(Number(p.n_engines)>=1))p.n_engines=defaultEngines('wiz_');
     const locked=new Set(wizardBase.locked_params||[]);
     for(const key of ['wingspan_m','wing_area_m2','aspect_ratio','m_payload','m_cargo','engine_power_kw'])locked.delete(key);
     for(const key of wingSources[p.wing_input_mode])locked.add(key);
@@ -207,7 +218,10 @@
     const base=prefix?wizardBase:formBaseParams;
     delete base.topic_id;delete base.topic_origin;
     if(prefix){set('wiz_','topic','');topicNote();}
-    const preset=classPresets[value(prefix,'aircraft_type')];if(!preset)return;
+    if(prefix){if($('wizTrendProvenanceBasis'))$('wizTrendProvenanceBasis').hidden=true;if($('wizTrendProvenanceGeometry'))$('wizTrendProvenanceGeometry').hidden=true;window.BipolTrendProvenance?.previewInWizard?.();}
+    const defN=defaultEngines(prefix); base.n_engines=defN; set(prefix,'n_engines',defN);
+    const preset=classPresets[value(prefix,'aircraft_type')];if(!preset){sync(prefix);return;}
+    if(preset.n_engines!=null){base.n_engines=preset.n_engines;set(prefix,'n_engines',preset.n_engines);}
     for(const key of ['aspect_ratio','cx0','oswald_e','sfc','v_h','v_v','ar_h','ar_v','loiter_time_min']){
       if (key==='aspect_ratio'&&(value(prefix,'wing_input_mode')!=='loading'||(prefix?(base.locked_params||[]):[...window.userLockedParams]).includes(key)))continue;
       base[key]=preset[key];set(prefix,key,preset[key]);
@@ -249,6 +263,8 @@
       const input=event.target;if(!input.matches('#designForm select, #projectWizardBackdrop select'))return;
       const prefix=input.id.startsWith('wiz_')?'wiz_':'';
       if(input.dataset.basisSelector!==undefined && value(prefix,'power_input_mode')==='fixed'&&number(prefix,'engine_power_kw')<=0)set(prefix,'engine_power_kw',73.5);
+      if(prefix==='wiz_'&&['wiz_engine_type','wiz_wing_config'].includes(input.id))window.BipolTrendProvenance?.previewInWizard?.();
+      if(input.id===prefix+'engine_location'&&value(prefix,'engine_type')!=='none'&&input.value==='wing'&&number(prefix,'n_engines')===1)set(prefix,'n_engines',2);
       sync(prefix);
     });
     try {const response=await fetch('/api/presets');const presets=await response.json();for(const preset of Object.values(presets))classPresets[preset.aircraft_type]??=preset;} catch(_){}

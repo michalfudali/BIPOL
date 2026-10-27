@@ -464,22 +464,52 @@ function drawVnEnvelope(canvasId, env) {
   function toX(val) { return pad.left + (val / vMax) * plotW; }
   function toY(val) { return pad.top + plotH - ((val - nMin) / (nMax - nMin)) * plotH; }
   
-  // Grid
-  ctx.strokeStyle = '#e2e8f0';
+  // Axes & numeric grid
   ctx.lineWidth = 1;
-  const nZeroY = toY(0);
-  ctx.beginPath();
-  ctx.moveTo(pad.left, nZeroY);
-  ctx.lineTo(pad.left + plotW, nZeroY);
-  ctx.stroke();
-  
+  const vStep = vMax > 600 ? 100 : (vMax > 260 ? 50 : 25);
+  for (let v = 0; v <= vMax; v += vStep) {
+    const gx = toX(v);
+    ctx.strokeStyle = v === 0 ? '#94a3b8' : '#f1f5f9';
+    ctx.beginPath();
+    ctx.moveTo(gx, pad.top);
+    ctx.lineTo(gx, pad.top + plotH);
+    ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(v), gx, pad.top + plotH + 15);
+  }
+
+  const keyNTicks = [env.limits.n_min, 0, env.limits.n_max];
+  for (let nInt = Math.ceil(nMin); nInt <= Math.floor(nMax); nInt++) {
+    if (keyNTicks.every(k => Math.abs(toY(k) - toY(nInt)) > 13)) keyNTicks.push(nInt);
+  }
+  keyNTicks.sort((a, b) => a - b).forEach(nVal => {
+    const gy = toY(nVal);
+    if (gy < pad.top - 2 || gy > pad.top + plotH + 2) return;
+    const isZero = Math.abs(nVal) < 1e-6;
+    const isLimit = Math.abs(nVal - env.limits.n_max) < 1e-3 || Math.abs(nVal - env.limits.n_min) < 1e-3;
+    ctx.strokeStyle = isZero ? '#94a3b8' : (isLimit ? '#cbd5e1' : '#f1f5f9');
+    ctx.setLineDash(isLimit && !isZero ? [4, 3] : []);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, gy);
+    ctx.lineTo(pad.left + plotW, gy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = isLimit ? '#0f172a' : '#64748b';
+    ctx.font = isLimit ? 'bold 10px sans-serif' : '10px sans-serif';
+    ctx.textAlign = 'right';
+    const txt = Number.isInteger(nVal) ? String(nVal) : (nVal > 0 ? `+${nVal.toFixed(2)}` : nVal.toFixed(2));
+    ctx.fillText(txt, pad.left - 6, gy + 3.5);
+  });
+
   ctx.fillStyle = '#334155';
   ctx.font = 'bold 11px sans-serif';
   ctx.textAlign = 'center';
-  BipolSymbols.fillText(ctx, 'Prędkość przyrządowa V [km/h]', pad.left + plotW / 2, height - 10);
+  BipolSymbols.fillText(ctx, 'Prędkość przyrządowa V [km/h]', pad.left + plotW / 2, height - 8);
   
   ctx.save();
-  ctx.translate(16, pad.top + plotH / 2);
+  ctx.translate(14, pad.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
   BipolSymbols.fillText(ctx, 'Współczynnik przeciążenia n [-]', 0, 0);
   ctx.restore();
@@ -532,8 +562,14 @@ function drawVnEnvelope(canvasId, env) {
     { label: 'VC', val: env.speeds.v_c_kmh },
     { label: 'VD', val: env.speeds.v_d_kmh }
   ].filter(s => Number.isFinite(s.val));  // CS-22 nie ma VC; VB tylko gdy jest przypadek podmuchu
+  let prevLabelX = -Infinity;
+  let staggerRow = 0;
   spds.forEach(s => {
     const x = toX(s.val);
+    if (x - prevLabelX < 34) staggerRow = (staggerRow + 1) % 2;
+    else staggerRow = 0;
+    prevLabelX = x;
+
     ctx.strokeStyle = '#cbd5e1';
     ctx.setLineDash([2, 2]);
     ctx.beginPath();
@@ -541,11 +577,17 @@ function drawVnEnvelope(canvasId, env) {
     ctx.lineTo(x, pad.top + plotH);
     ctx.stroke();
     ctx.setLineDash([]);
-    
-    ctx.fillStyle = '#64748b';
-    ctx.font = '10px sans-serif';
+
+    const labelY = pad.top + 11 + staggerRow * 13;
+    ctx.save();
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    BipolSymbols.fillText(ctx, s.label, x, pad.top + plotH + 18);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.strokeText(s.label, x, labelY);
+    ctx.fillStyle = '#0369a1';
+    BipolSymbols.fillText(ctx, s.label, x, labelY);
+    ctx.restore();
   });
 }
 
