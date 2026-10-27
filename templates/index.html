@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BiPOL Requiem - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
   <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="/static/css/style.css?v=15">
+  <link rel="stylesheet" href="/static/css/style.css?v=16">
   <link rel="stylesheet" href="/static/css/studio.css?v=3">
   <link rel="stylesheet" href="/static/css/trends.css?v=2">
   <link rel="stylesheet" href="/static/css/aircraft-editor.css?v=1">
@@ -2120,6 +2120,20 @@
             </button>
           </div>
 
+          <details class="wizard-trend-chart-box" id="wizTrendChartDetailsMission" open>
+            <summary class="wizard-trend-chart-summary">
+              <span>📈 Wykres z analizy trendów osiągów i zasięgu</span>
+              <small id="wizTrendSampleBadgeMission"></small>
+            </summary>
+            <div class="wizard-trend-chart-body">
+              <div class="wizard-trend-chart-toolbar">
+                <label for="wizTrendChartSelectMission">Wykres:</label>
+                <select id="wizTrendChartSelectMission" aria-label="Wybierz wykres z analizy trendów (Krok 2)"></select>
+              </div>
+              <div class="wizard-trend-chart-stage" id="wizTrendChartStageMission"></div>
+            </div>
+          </details>
+
           <div class="input-row">
             <div class="input-group">
               <label for="wiz_range_km">Zasięg obliczeniowy R [km]:</label>
@@ -2166,6 +2180,20 @@
             <h4 id="wiz_pane3_title">Krok 3: Zespół Napędowy i Sprawność Propulsywna (Projekt P2 / P4)</h4>
             <p>Wybierz typ silnika, rozmieszczenie napędu na płatowcu oraz parametry jednostkowego zużycia paliwa.</p>
           </div>
+
+          <details class="wizard-trend-chart-box" id="wizTrendChartDetailsPropulsion" open>
+            <summary class="wizard-trend-chart-summary">
+              <span>📈 Wykres z analizy trendów obciążenia napędu</span>
+              <small id="wizTrendSampleBadgePropulsion"></small>
+            </summary>
+            <div class="wizard-trend-chart-body">
+              <div class="wizard-trend-chart-toolbar">
+                <label for="wizTrendChartSelectPropulsion">Wykres:</label>
+                <select id="wizTrendChartSelectPropulsion" aria-label="Wybierz wykres z analizy trendów (Krok 3)"></select>
+              </div>
+              <div class="wizard-trend-chart-stage" id="wizTrendChartStagePropulsion"></div>
+            </div>
+          </details>
 
           <div class="input-row" data-power-basis>
             <div class="input-group"><label for="wiz_power_input_mode">Dobór mocy</label><select id="wiz_power_input_mode" data-basis-selector><option value="sized">Oblicz wymaganą moc</option><option value="fixed">Znam dostępną moc silnika</option></select></div>
@@ -2234,6 +2262,20 @@
             </button>
           </div>
           <div class="trend-provenance-box" id="wizTrendProvenanceGeometry" hidden></div>
+
+          <details class="wizard-trend-chart-box" id="wizTrendChartDetailsGeometry" open>
+            <summary class="wizard-trend-chart-summary">
+              <span>📈 Wykres z analizy trendów geometrii i usterzenia</span>
+              <small id="wizTrendSampleBadgeGeometry"></small>
+            </summary>
+            <div class="wizard-trend-chart-body">
+              <div class="wizard-trend-chart-toolbar">
+                <label for="wizTrendChartSelectGeometry">Wykres:</label>
+                <select id="wizTrendChartSelectGeometry" aria-label="Wybierz wykres z analizy trendów (Krok 4)"></select>
+              </div>
+              <div class="wizard-trend-chart-stage" id="wizTrendChartStageGeometry"></div>
+            </div>
+          </details>
 
           <div class="input-group"><label for="wiz_wing_planform">Obrys skrzydła</label><select id="wiz_wing_planform"><option value="trapezoidal">Trapezowy</option><option value="rectangular">Prostokątny</option><option value="compound_trapezoid">Prostokątno-trapezowy</option><option value="elliptical">Eliptyczny</option><option value="swept_trapezoidal">Skośny trapezowy</option></select></div>
           <div class="input-row">
@@ -2380,13 +2422,13 @@
   <script src="/static/js/charts.js?v=15"></script>
   <script src="/static/js/app.js?v=22"></script>
   <script src="/static/js/constraints-ui.js?v=5"></script>
-  <script src="/static/js/design-basis.js?v=4"></script>
+  <script src="/static/js/design-basis.js?v=5"></script>
   <script src="/static/js/parameter-report.js?v=1"></script>
   <script src="/static/js/studio.js?v=8"></script>
   <script src="/static/js/aircraft-project.js?v=1"></script>
   <script src="/static/js/aircraft-editor.js?v=1"></script>
   <script src="/static/js/trend-inputs.js?v=2"></script>
-  <script src="/static/js/trend-provenance.js?v=1"></script>
+  <script src="/static/js/trend-provenance.js?v=2"></script>
   <script src="/static/js/trends.js?v=9"></script>
   <script src="/static/js/bipol1.js?v=1"></script>
   <script src="/static/js/workspace.js?v=5"></script>

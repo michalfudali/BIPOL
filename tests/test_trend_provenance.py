@@ -133,3 +133,20 @@ def test_wizard_and_panel_offer_the_origin_of_values(client):
     for marker in ('wizTrendProvenanceBasis', 'wizTrendProvenanceGeometry', 'trend_variable_sweep',
                    '/static/js/trend-provenance.js'):
         assert marker in html
+
+
+def test_wizard_trend_charts_payload_and_dom_containers(client):
+    html = client.get('/').get_data(as_text=True)
+    for dom_id in ('wizTrendChartDetailsBasis', 'wizTrendChartSelectBasis', 'wizTrendChartStageBasis',
+                   'wizTrendChartDetailsMission', 'wizTrendChartStageMission',
+                   'wizTrendChartDetailsPropulsion', 'wizTrendChartStagePropulsion',
+                   'wizTrendChartDetailsGeometry', 'wizTrendChartStageGeometry'):
+        assert dom_id in html
+    ga = client.get('/api/trends/suggestions?aircraft_type=piston_ga').get_json()
+    charts = ga['charts']
+    assert charts['ar']['kind'] == 'time' and len(charts['ar']['points']) >= 20 and charts['ar']['fit'] is not None
+    assert charts['me_m0']['kind'] == 'mass' and charts['me_m0']['fit']['kind'] == 'power'
+    assert 'pw' in charts and 'tw' not in charts
+    assert charts['vh']['kind'] == 'mean' and len(charts['vh']['points']) >= 10
+    glider = client.get('/api/trends/suggestions?aircraft_type=glider').get_json()['charts']
+    assert 'pw' not in glider and 'tw' not in glider and len(glider['ar']['points']) >= 10

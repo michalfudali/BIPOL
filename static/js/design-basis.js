@@ -228,7 +228,8 @@
     }
     sync(prefix);
   }
-  window.BipolDesignBasis={sync,propulsion,restore,openWizard,seed,snapshot,collect,loadTopic,applyResult,classDefaults};
+  const wizardValue=key=>$('wiz_'+key)?Number($('wiz_'+key).value):wizardBase[key]!=null?Number(wizardBase[key]):formBaseParams[key]!=null?Number(formBaseParams[key]):$(key)?Number($(key).value):Number(window.currentResults?.params?.[key]??classPresets[value('wiz_','aircraft_type')]?.[key]);
+  window.BipolDesignBasis={sync,propulsion,restore,openWizard,seed,snapshot,collect,loadTopic,applyResult,classDefaults,wizardValue};
   document.addEventListener('DOMContentLoaded',async()=>{
     $('wiz_topic')?.addEventListener('change',chooseTopic);
     const syncAssumption = (basisId, step2Id, assumptionKey) => {
@@ -257,7 +258,7 @@
       ['ar', 'vh', 'v_v', 'b_ail_ratio', 'c_ail_ratio', 'c_e_ratio', 'c_r_ratio', 'dihedral_deg'], applyWizardTrend));
     document.addEventListener('input',event=>{
       const input=event.target;if(!input.matches('#designForm input, #projectWizardBackdrop input'))return;
-      const prefix=input.id.startsWith('wiz_')?'wiz_':'';sync(prefix);
+      const prefix=input.id.startsWith('wiz_')?'wiz_':'';sync(prefix);if(prefix)window.BipolTrendProvenance?.refreshWizardCharts?.();
     });
     document.addEventListener('change',event=>{
       const input=event.target;if(!input.matches('#designForm select, #projectWizardBackdrop select'))return;
@@ -265,7 +266,7 @@
       if(input.dataset.basisSelector!==undefined && value(prefix,'power_input_mode')==='fixed'&&number(prefix,'engine_power_kw')<=0)set(prefix,'engine_power_kw',73.5);
       if(prefix==='wiz_'&&['wiz_engine_type','wiz_wing_config'].includes(input.id))window.BipolTrendProvenance?.previewInWizard?.();
       if(input.id===prefix+'engine_location'&&value(prefix,'engine_type')!=='none'&&input.value==='wing'&&number(prefix,'n_engines')===1)set(prefix,'n_engines',2);
-      sync(prefix);
+      sync(prefix);if(prefix)window.BipolTrendProvenance?.refreshWizardCharts?.();
     });
     try {const response=await fetch('/api/presets');const presets=await response.json();for(const preset of Object.values(presets))classPresets[preset.aircraft_type]??=preset;} catch(_){}
   });

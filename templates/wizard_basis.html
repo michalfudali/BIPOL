@@ -6,13 +6,26 @@
 </div>
 {% with prefix='wiz_' %}{% include 'basis_selectors.html' %}{% endwith %}
 
-<div class="wizard-suggest-banner" style="margin: 8px 0; background:#f0f9ff; border:1px solid #bae6fd; padding:6px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-  <span style="font-size:0.78rem; color:#0369a1;">📊 <strong>Analiza trendów (BIPOL_1):</strong> przyjmij wydłużenie skrzydła AR z trendu podobnych samolotów<span id="wizTrendPreviewBasis"></span></span>
+<div class="wizard-suggest-banner" style="margin: 8px 0; background:#f0f9ff; border:1px solid #bae6fd; padding:6px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+  <span style="font-size:0.78rem; color:#0369a1; flex:1 1 260px;">📊 <strong>Analiza trendów (BIPOL_1):</strong> wydłużenie skrzydła z próby podobnych konstrukcji<span id="wizTrendPreviewBasis"></span></span>
   <button type="button" class="btn btn-outline" id="wizApplyTrendGeometryBtn" style="padding:2px 8px; font-size:0.75rem; background:#ffffff; font-weight:700; color:#0284c7;">
     Zastosuj z trendów
   </button>
 </div>
 <div class="trend-provenance-box" id="wizTrendProvenanceBasis" hidden></div>
+<details class="wizard-trend-chart-box" id="wizTrendChartDetailsBasis" open>
+  <summary class="wizard-trend-chart-summary">
+    <span>📈 Wykres z analizy trendów konstrukcji podobnych</span>
+    <small id="wizTrendSampleBadgeBasis"></small>
+  </summary>
+  <div class="wizard-trend-chart-body">
+    <div class="wizard-trend-chart-toolbar">
+      <label for="wizTrendChartSelectBasis">Wykres:</label>
+      <select id="wizTrendChartSelectBasis" aria-label="Wybierz wykres z analizy trendów (Krok 1)"></select>
+    </div>
+    <div class="wizard-trend-chart-stage" id="wizTrendChartStageBasis"></div>
+  </div>
+</details>
 
 <div class="input-row basis-dimensions">
   {% for key,label,unit,value,minimum,maximum in [('wingspan_m','Rozpiętość docelowa','m',15,0,100),('wing_area_m2','Powierzchnia skrzydła','m²',12,0,1000),('aspect_ratio','Wydłużenie skrzydła','—',18,2,35)] %}

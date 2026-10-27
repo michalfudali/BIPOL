@@ -869,4 +869,100 @@ def get_trend_suggestions(aircraft_type, m0=None, wing_configuration=None, engin
     return {'status': 'ok', 'aircraft_type': aircraft_type, 'class_name': CLASSES[aircraft_type],
             'engine_type': engine, 'm0': m0, 'sample': sample,
             'reference_year': reference_year, 'forecast_year': forecast_year,
-            'suggestions': trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample)}
+            'suggestions': (sugg := trend_suggestions(rows, params, m0, weights, mass_fit, forecast_year, sample)),
+            'charts': wizard_trend_charts(rows, params, weights, mass_fit, forecast_year, sugg)}
+
+
+def wizard_trend_charts(rows, params, weights, mass_fit, forecast_year, suggestions):
+    """Compact plot series for interactive BIPOL_1 trend charts inside the project wizard."""
+    engine = params.get('engine_type', 'prop')
+    date_basis = params.get('trend_year_basis', 'certification')
+    dated_rows = [r for r in rows if (r.get('year_basis') or 'certification') == date_basis]
+    date_label = 'Rok produkcji' if date_basis == 'production' else 'Rok certyfikacji'
+    charts = {}
+
+    def add_time(sugg_key, metric, title, y_label, unit, symbol):
+        subset, fit, forecast = time_trend(dated_rows, metric, weights, forecast_year)
+        s = suggestions.get(sugg_key)
+        lo, hi = PHYSICAL_BOUNDS.get(metric, (0.0, math.inf))
+        forecast_ok = bool(fit and forecast is not None and lo < forecast < hi)
+        accepted = bool(s and s.get('model_type') == 'time_trend')
+        charts[sugg_key] = {
+            'key': sugg_key, 'kind': 'time', 'title': title, 'symbol': symbol, 'unit': unit,
+            'x_label': date_label, 'y_label': y_label, 'n': len(subset),
+            'points': [{'x': r['year'], 'y': round(r[metric], 4), 'model': r['model']} for r in subset],
+            'fit': fit,
+            'forecast': {'x': forecast_year, 'y': round(forecast, 4), 'accepted': accepted} if forecast_ok else None,
+            'suggested_value': s['suggested_value'] if s else None,
+            'typical_range': s['typical_range'] if s else None,
+            'equation': s['equation'] if s else None,
+        }
+
+    add_time('ar', 'ar', 'Wydłużenie skrzydła AR w funkcji roku', 'Wydłużenie AR [−]', '−', 'AR')
+    add_time('ws', 'wing_loading_kg_m2', 'Obciążenie powierzchni m₀/S w funkcji roku', 'm₀/S [kg/m²]', 'kg/m²', 'm₀/S')
+    if engine == 'prop':
+        add_time('pw', 'power_loading_kg_kw', 'Obciążenie mocy m₀/P w funkcji roku', 'm₀/P [kg/kW]', 'kg/kW', 'm₀/P')
+    elif engine == 'jet':
+        add_time('tw', 'thrust_to_weight', 'Stosunek ciągu do ciężaru T/W w funkcji roku', 'T/W [−]', '−', 'T/W')
+
+    valid_mass = [r for r in rows if valid_value('empty_fraction', r)]
+    me_s = suggestions.get('me_m0', {})
+    charts['me_m0'] = {
+        'key': 'me_m0', 'kind': 'mass', 'title': 'Udział masy pustej mₑ/m₀ w funkcji MTOW',
+        'symbol': 'mₑ/m₀', 'unit': '−', 'x_label': 'Masa startowa MTOW m₀ [kg]', 'y_label': 'OEW / MTOW mₑ/m₀ [−]',
+        'n': len(valid_mass),
+        'points': [{'x': round(r['m0'], 1), 'y': round(r['empty_fraction'], 4), 'model': r['model']} for r in valid_mass],
+        'fit': mass_fit, 'forecast': None,
+        'suggested_value': me_s.get('suggested_value'), 'typical_range': me_s.get('typical_range'),
+        'equation': me_s.get('equation'),
+    }
+
+    speed_key = ('cruise_mach' if sum(r.get('cruise_mach') is not None for r in rows) >
+                 sum(r.get('v_cruise_kmh') is not None for r in rows) else 'v_cruise_kmh')
+    speed_sub = [r for r in rows if r.get('wing_loading_kg_m2') is not None and r.get(speed_key) is not None]
+    speed_fit = fit_regression([(r['wing_loading_kg_m2'], r[speed_key]) for r in speed_sub], weights(speed_sub))
+    is_mach = speed_key == 'cruise_mach'
+    charts['ws_speed'] = {
+        'key': 'ws_speed', 'kind': 'relation', 'speed_metric': speed_key,
+        'title': 'Liczba Macha przelotu a obciążenie powierzchni' if is_mach else 'Prędkość przelotowa a obciążenie powierzchni',
+        'symbol': 'Ma' if is_mach else 'V_cr', 'unit': 'Ma' if is_mach else 'km/h',
+        'x_label': 'Obciążenie powierzchni m₀/S [kg/m²]',
+        'y_label': 'Liczba Macha Ma [−]' if is_mach else 'Prędkość przelotowa V_cr [km/h]',
+        'n': len(speed_sub),
+        'points': [{'x': round(r['wing_loading_kg_m2'], 2), 'y': round(r[speed_key], 3), 'model': r['model']} for r in speed_sub],
+        'fit': speed_fit, 'forecast': None, 'suggested_value': None, 'typical_range': None, 'equation': None,
+    }
+
+    rng_sub = [r for r in rows if valid_value('ar', r) and r.get('range_km') is not None]
+    rng_fit = fit_regression([(r['ar'], r['range_km']) for r in rng_sub], weights(rng_sub))
+    charts['rng_ar'] = {
+        'key': 'rng_ar', 'kind': 'relation',
+        'title': 'Zasięg katalogowy R w funkcji wydłużenia AR',
+        'symbol': 'R', 'unit': 'km', 'x_label': 'Wydłużenie skrzydła AR [−]', 'y_label': 'Zasięg R [km]',
+        'n': len(rng_sub),
+        'points': [{'x': round(r['ar'], 2), 'y': round(r['range_km'], 1), 'model': r['model']} for r in rng_sub],
+        'fit': rng_fit, 'forecast': None, 'suggested_value': None, 'typical_range': None, 'equation': None,
+    }
+
+    for sugg_key, metric, label, symbol, unit in (
+        ('vh', 'v_h', 'Cecha objętościowa usterzenia poziomego V_H', 'V_H', '−'),
+        ('dihedral_deg', 'dihedral_deg', 'Kąt wzniosu skrzydła Γ', 'Γ', '°'),
+        ('b_ail_ratio', 'aileron_span_fraction', 'Część rozpiętości objęta lotkami b_ail/(b/2)', 'b_ail/(b/2)', '−'),
+        ('c_ail_ratio', 'aileron_chord_ratio', 'Względna cięciwa lotki c_ail/c', 'c_ail/c', '−'),
+        ('c_e_ratio', 'elevator_chord_ratio', 'Względna cięciwa steru wysokości c_e/c_H', 'c_e/c_H', '−'),
+        ('c_r_ratio', 'rudder_chord_ratio', 'Względna cięciwa steru kierunku c_r/c_V', 'c_r/c_V', '−'),
+        ('v_v', 'v_v', 'Cecha objętościowa usterzenia pionowego V_V', 'V_V', '−'),
+    ):
+        sub = [r for r in rows if r.get('m0') is not None and valid_value(metric, r)]
+        s = suggestions.get(sugg_key, {})
+        charts[sugg_key] = {
+            'key': sugg_key, 'kind': 'mean', 'title': f'{label} względem MTOW',
+            'symbol': symbol, 'unit': unit, 'x_label': 'Masa startowa MTOW m₀ [kg]',
+            'y_label': f'{symbol} [{unit}]', 'n': len(sub),
+            'points': [{'x': round(r['m0'], 1), 'y': round(r[metric], 4), 'model': r['model']} for r in sub],
+            'fit': None, 'forecast': None,
+            'suggested_value': s.get('suggested_value'), 'typical_range': s.get('typical_range'),
+            'equation': s.get('equation'),
+        }
+
+    return charts

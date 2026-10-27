@@ -3118,3 +3118,130 @@ html, body { line-height: 1.55; }
 sub.sym, sup.sym { position: relative; font-size: .72em; line-height: 0; vertical-align: baseline; }
 sub.sym { bottom: -.35em; }
 sup.sym { top: -.55em; }
+
+/* Interaktywny wykres z analizy trendów (BIPOL_1) wewnątrz kreatora */
+.wizard-trend-chart-box {
+  margin: 8px 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.wizard-trend-chart-box[hidden] {
+  display: none;
+}
+.wizard-trend-chart-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 12px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.wizard-trend-chart-summary small {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #0369a1;
+}
+.wizard-trend-chart-body {
+  padding: 8px 12px 10px;
+  border-top: 1px solid #e2e8f0;
+  min-width: 0;
+}
+.wizard-trend-chart-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+.wizard-trend-chart-toolbar label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+.wizard-trend-chart-toolbar select {
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+.wizard-trend-chart-stage {
+  min-width: 0;
+  max-width: 100%;
+}
+.wizard-trend-chart-stage svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+.wizard-trend-chart-stage svg text {
+  fill: #334155;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11.5px;
+}
+.wizard-trend-chart-stage svg circle:hover {
+  fill: #0f172a;
+  r: 6;
+}
+.wizard-trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  margin: 5px 0 0;
+  font-size: 0.74rem;
+  color: #475569;
+  line-height: 1.4;
+}
+.wizard-trend-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.wizard-trend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.wizard-trend-line-swatch {
+  width: 14px;
+  height: 2.5px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.wizard-trend-band-swatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  background: #bae6fd;
+  border: 1px solid #7dd3fc;
+  display: inline-block;
+  flex-shrink: 0;
+}
+@media (max-width: 520px) {
+  .wizard-trend-chart-summary, .wizard-trend-chart-body { padding: 6px 8px; }
+  .wizard-trend-chart-stage svg text { font-size: 13.5px; }
+}
