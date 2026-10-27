@@ -310,9 +310,9 @@ class AircraftDatabase:
         if not clean.get('family'):
             clean['family'] = clean['model'].split()[0] if clean.get('model') else aid
         if not clean.get('source_locator'):
-            clean['source_locator'] = 'bipol-requiem User Input'
+            clean['source_locator'] = 'BiPOL Requiem User Input'
         if not clean.get('source_references'):
-            clean['source_references'] = 'User input via bipol-requiem Database Editor'
+            clean['source_references'] = 'User input via BiPOL Requiem Database Editor'
         clean.setdefault('empty_mass_definition', 'OEW / operating empty weight')
         clean.setdefault('year_basis', 'certification')
         clean.setdefault('variable_sweep', False)

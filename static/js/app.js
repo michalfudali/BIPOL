@@ -1,5 +1,5 @@
 /**
- * bipol-requiem - Główna logika interaktywna i dydaktyczna
+ * BiPOL Requiem - Główna logika interaktywna i dydaktyczna
  * Obsługa:
  * - 110 tematów wydziałowych ZSiS MEiL PW
  * - Encyklopedii każdego parametru projektowego (PARAMETER_ENCYCLOPEDIA)

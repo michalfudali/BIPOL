@@ -132,7 +132,8 @@ def test_reports_include_six_plots_lecture_formulas_iterations_and_a4_reference_
     with app.test_client() as client:
         html=client.get('/report?sections=p1,p2,p3').get_data(as_text=True)
     assert html.count('data-course-chart=')==6
-    assert '0{,}94' in html and 'Pierwsze pięć iteracji' in html
+    assert '0{,}94' in html and 'data-mass-iteration="proportion"' in html
+    assert 'Iteracja 1 — pełny zapis punktów procedury' in html
     assert 'id="print-drawing-grid"' in html and 'id="millimeter"' in html
     assert 'dziób w lewo' in html and 'Mocowanie podwozia' in html
     assert 'Wzór do rysunku odręcznego' in html

@@ -1,8 +1,8 @@
 @echo off
-title bipol-requiem - Server (Python 3.11)
+title BiPOL Requiem - Server (Python 3.11)
 cd /d "%~dp0"
 echo ========================================================
-echo   Uruchamianie serwera bipol-requiem (MEiL PW)
+echo   Uruchamianie serwera BiPOL Requiem (MEiL PW)
 echo   Srodowisko: Python 3.11
 echo   Adres lokalny: http://127.0.0.1:5000
 echo   Zatrzymanie: Ctrl + C

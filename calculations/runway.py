@@ -44,7 +44,11 @@ def takeoff_distance(ws, cz_max, cx0, k, engine, loading, eta=.82, eta_to=.65, m
         transition = radius * math.sin(gamma)
         climb = (15 - height) / math.tan(gamma)
     t_air = gamma * radius / vtr + (climb / (v2 * math.cos(gamma)) if climb else 0.0)
-    return dict(available=True, ground_roll_m=ground, transition_m=transition,
+    terms = dict(ws=ws, cz_max=cz_max, cx0=cx0, k=k, loading=loading, eta=eta, eta_to=eta_to,
+                 mu_ground=mu_ground, vs=vs, vlof=vlof, v2=v2, vtr=vtr, vrms=vrms, q=q, phi=phi,
+                 thrust_roll=thrust_roll, net=net, q2=q2, thrust_climb=thrust_climb,
+                 gradient=gradient, gamma=gamma, radius=radius, height=height)
+    return dict(available=True, terms=terms, ground_roll_m=ground, transition_m=transition,
                 climb_to_15m_m=climb, air_distance_m=transition + climb,
                 climb_angle_deg=math.degrees(gamma), distance_to_15m=ground + transition + climb,
                 ground_roll_time_s=t_ground, time_to_15m_s=t_ground + t_air,

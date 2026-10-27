@@ -58,7 +58,7 @@
       name: String(name || result.params.name || 'Wariant').slice(0, 160), date: now,
       params: JSON.parse(JSON.stringify(result.params)),
       metrics: Object.fromEntries(metrics.map(([key, , , get]) => [key, get(result) ?? null])),
-      model: 'bipol-requiem / studio-1',
+      model: 'BiPOL Requiem / studio-1',
     };
   }
 

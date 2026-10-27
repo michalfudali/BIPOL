@@ -33,6 +33,7 @@ NUMERIC_LIMITS = {
     "elevator_chord_ratio": (0.05, 1), "rudder_chord_ratio": (0.05, 1),
     "ce_ch": (0.05, 1), "cr_cv": (0.05, 1),
     "mass_initial_guess": (1, 1000000), "payload_drop_kg": (0, 500000),
+    "mass_iteration_start_kg": (1, 1000000),
     "return_range_km": (0, 30000), "outbound_range_km": (0, 30000), "max_power_time_min": (0, 1440),
     "max_power_kw": (0, 1000000), "max_thrust_kn": (0, 10000), "max_power_sfc": (0.001, 1000),
     "loiter_speed_kmh": (1, 1200), "climb_start_speed_kmh": (1, 1200),

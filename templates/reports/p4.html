@@ -1,32 +1,40 @@
-{% set a=res.aerodynamics %}{% set cs=res.geometry.control_surfaces %}
-<p>Charakterystyki aerodynamiczne określono dla konfiguracji gładkiej, startowej i do lądowania. W modelu rozdzielono opór zerowy i indukowany, a wpływ mechanizacji uwzględniono przez zmianę biegunowej oraz maksymalnego współczynnika siły nośnej [2, 4].</p>
-<h3>Biegunowa i doskonałość</h3>
-<div class="equation"><div class="formula">\[C_x=C_{x0}+kC_z^2,\qquad K=\frac{C_z}{C_x}.\]</div></div>
-<table><caption>Współczynniki przyjętych biegunowych</caption><thead><tr><th>Konfiguracja</th><th class="number">Cx₀</th><th class="number">k</th><th class="number">Cz,max</th><th class="number">VS [km/h]</th></tr></thead><tbody>{% for key,label,k in [('clean','Gładka',a.k_clean),('takeoff','Startowa',a.k_to),('landing','Do lądowania',a.k_lnd)] %}{% set h=p_data.high_lift[key] %}<tr><td>{{ label }} ({{ h.flap_deflection_deg|reportnum(0) }}°)</td><td class="number">{{ h.cx0|reportnum(4) }}</td><td class="number">{{ k|reportnum(5) }}</td><td class="number">{{ h.cz_max|reportnum(2) }}</td><td class="number">{{ h.vs_kmh|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>
-<figure><div id="repPolar"></div><figcaption>Porównanie biegunowych aerodynamicznych dla trzech konfiguracji.</figcaption></figure>
-<p>Dla konfiguracji gładkiej otrzymano maksymalną doskonałość {{ a.k_max|reportnum(1) }} przy \(C_z={{ a.cz_opt|texnum(3) }}\). Zmniejszenie prędkości poniżej tej wartości zwiększa udział oporu indukowanego, natomiast wzrost prędkości zwiększa znaczenie oporu zerowego.</p>
-<h3>Charakterystyki aerodynamiczne samolotu</h3>
-{% set cc=p_data.cg_characteristics %}{% set cm=cc.cm_model %}<p>Charakterystyki samolotu wyznaczono metodą Tabeli 2.2 Paturskiego. Do płata dodano opór szkodliwy zespołów, siłę nośną i opór usterzenia poziomego potrzebne do równowagi oraz poprawkę interferencji. Tabelę sporządzono dla średniego położenia środka ciężkości \(\bar x={{ ((cm.x_fwd_pct+cm.x_aft_pct)/2)|texnum(1) }}\%\) ŚCA. Funkcja energetyczna \(E=C_z^3/C_x^2\) osiąga maksimum przy najmniejszym opadaniu.</p>
-<p>Współczynnik momentu \(C_m(\alpha)\) przedstawiono w przybliżeniu liniowym przy ustalonym sterze wysokości. Ster ustawiono tak, aby samolot był wyważony w przelocie (\(C_z={{ cm.cz_ref|texnum(3) }}\)) przy średnim położeniu środka ciężkości. Punkt neutralny przyjęto z analizy wyważenia: \(\bar x_N={{ cm.x_n_pct|texnum(1) }}\%\) ŚCA. Pominięto moment od ciągu i oporu oraz nieliniowość w pobliżu przeciągnięcia.</p>
-<div class="equation"><div class="formula">\[C_m=C_{m0}+(\bar x-\bar x_N)\,C_z,\qquad C_{m0}=(\bar x_N-\bar x_{śr})\,C_{z,przel}={{ cm.cm0|texnum(4) }}.\]</div></div>
-<p>Dla przedniego położenia środka ciężkości (\({{ cm.x_fwd_pct|texnum(1) }}\%\) ŚCA) \(\mathrm dC_m/\mathrm dC_z={{ cm.dcm_dcz_fwd|texnum(3) }}\){% if cm.cz_trim_fwd is not none %}, a samolot z ustalonym sterem równoważy się przy \(C_z={{ cm.cz_trim_fwd|texnum(3) }}\){% endif %}. Dla tylnego (\({{ cm.x_aft_pct|texnum(1) }}\%\) ŚCA) \(\mathrm dC_m/\mathrm dC_z={{ cm.dcm_dcz_aft|texnum(3) }}\){% if cm.cz_trim_aft is not none %} i \(C_z={{ cm.cz_trim_aft|texnum(3) }}\){% endif %}.</p>
+{% import 'reports/calc.html' as c %}
+{% set a=res.aerodynamics %}{% set cs=res.geometry.control_surfaces %}{% set p3a=a.paturski_p3 %}
+<p>Charakterystyki aerodynamiczne określono dla konfiguracji gładkiej, startowej i do lądowania. Biegunową samolotu złożono z charakterystyk płata (P3), oporu zespołów nienośnych i oporu wyważenia usterzeniem poziomym (Paturski, Projekt 3), a następnie przybliżono biegunową analityczną [2, 4].</p>
+<h3>Opór szkodliwy zespołów nienośnych</h3>
+<p>Opór kadłuba obliczono wzorem (3.1) z oporu tarcia płyty turbulentnej, współczynnika kształtu i poprawki ściśliwości. Pozostałe zespoły ujęto iloczynami \(C_{x,j}S_j\) z danych tunelowych i statystyki Tabeli C.</p>
+{{ c.section(sheet, 'p4.parasite') }}
+<table class="compact-table"><caption>Opory szkodliwe zespołów (tab. 3.1)</caption><thead><tr><th>Zespół</th><th class="number">\(C_{x,j}\)</th><th class="number">\(S_j\) [m²]</th><th class="number">\(C_{x,j}S_j\) [m²]</th><th>Podstawa oszacowania</th></tr></thead><tbody>{% for row in p3a.table_3_1_parasite %}<tr><td>{{ row.component }}</td><td class="number">{{ row.cx_j|reportnum(4) }}</td><td class="number">{{ row.s_j_m2|reportnum(3) }}</td><td class="number">{{ row.cx_s_m2|reportnum(4) }}</td><td>{{ row.source }}</td></tr>{% endfor %}</tbody></table>
+<h3>Biegunowa samolotu wyważonego</h3>
+<p>Dla kolejnych wartości \(C_{z\infty}\) obliczono kąt natarcia płata, opór płata z oporem indukowanym, siłę nośną usterzenia potrzebną do równowagi i jego opór oraz opór zespołów. Wzory wspólne dla wszystkich wierszy tabeli:</p>
+{{ c.section(sheet, 'p4.trim') }}
+{% set cc=p_data.cg_characteristics %}{% set cm=cc.cm_model %}
 <table class="compact-table"><caption>Charakterystyki aerodynamiczne samolotu wyważonego</caption><thead><tr><th class="number">α [°]</th><th class="number">Cz [—]</th><th class="number">Cx [—]</th><th class="number">K [—]</th><th class="number">E [—]</th><th class="number">Cm, ŚC przedni</th><th class="number">Cm, ŚC tylny</th></tr></thead><tbody>{% for row in cc.alpha_table %}<tr><td class="number">{{ row.alpha_deg|reportnum(2) }}</td><td class="number">{{ row.cz|reportnum(3) }}</td><td class="number">{{ row.cx|reportnum(5) }}</td><td class="number">{{ row.k|reportnum(2) }}</td><td class="number">{{ row.e|reportnum(1) }}</td><td class="number">{{ row.cm_fwd|reportnum(4) }}</td><td class="number">{{ row.cm_aft|reportnum(4) }}</td></tr>{% endfor %}</tbody></table>
 <figure><div class="figure-pair"><div id="repAcCzAlpha"></div><div id="repAcCmAlpha"></div></div><figcaption>Charakterystyki samolotu \(C_z(\alpha)\) i \(C_m(\alpha)\) dla skrajnych położeń środka ciężkości.</figcaption></figure>
 <figure><div class="figure-pair"><div id="repKAlpha"></div><div id="repKCz"></div></div><figcaption>Doskonałość aerodynamiczna \(K\) w funkcji kąta natarcia i współczynnika siły nośnej.</figcaption></figure>
 <figure><div class="figure-pair"><div id="repEAlpha"></div><div id="repECz"></div></div><figcaption>Funkcja energetyczna \(E=C_z^3/C_x^2\) w funkcji kąta natarcia i współczynnika siły nośnej.</figcaption></figure>
+<h3>Biegunowa analityczna samolotu</h3>
+<p>Punkty tabeli dla \(0\le C_{z\infty}\le 0{,}85\,C_{z\,max}\) przybliżono prostą \(C_x=C_{x0}+k\,C_z^2\) metodą najmniejszych kwadratów (zmienna \(x=C_z^2\), \(y=C_x\)).</p>
+{{ c.section(sheet, 'p4.fit') }}
+<h3>Punkty charakterystyczne biegunowej</h3>
+{{ c.section(sheet, 'p4.optimum') }}
+<p>Zmniejszenie prędkości poniżej prędkości największej doskonałości zwiększa udział oporu indukowanego, a jej wzrost — oporu zerowego. Funkcja energetyczna osiąga maksimum przy najmniejszym opadaniu.</p>
+<h3>Mechanizacja płata</h3>
+<p>Zgodnie z wytycznymi prowadzącego przyjęto wychylenie klap 20° do startu i 40° do lądowania. Przyrosty profilowe (wartości wstępne z tabeli mechanizacji) pomnożono przez udział powierzchni płata objętej klapami (BIPOL_2, s. 4). {{ a.high_lift_model.note }}</p>
+{{ c.section(sheet, 'p4.highlift') }}
+<table><caption>Współczynniki przyjętych biegunowych</caption><thead><tr><th>Konfiguracja</th><th class="number">Cx₀</th><th class="number">k</th><th class="number">Cz,max</th><th class="number">VS [km/h]</th></tr></thead><tbody>{% for key,label,k in [('clean','Gładka',a.k_clean),('takeoff','Startowa',a.k_to),('landing','Do lądowania',a.k_lnd)] %}{% set h=p_data.high_lift[key] %}<tr><td>{{ label }} ({{ h.flap_deflection_deg|reportnum(0) }}°)</td><td class="number">{{ h.cx0|reportnum(4) }}</td><td class="number">{{ k|reportnum(5) }}</td><td class="number">{{ h.cz_max|reportnum(2) }}</td><td class="number">{{ h.vs_kmh|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>
+<figure><div id="repPolar"></div><figcaption>Porównanie biegunowych aerodynamicznych dla trzech konfiguracji.</figcaption></figure>
+<h3>Moment pochylający i wyważenie</h3>
+<p>Współczynnik momentu \(C_m(\alpha)\) przedstawiono w przybliżeniu liniowym przy ustalonym sterze wysokości, ustawionym do równowagi w przelocie przy średnim położeniu środka ciężkości. Punkt neutralny przyjęto z analizy wyważenia (P3). Pominięto moment od ciągu i oporu oraz nieliniowość w pobliżu przeciągnięcia.</p>
+{{ c.section(sheet, 'p4.cm') }}
 <h3>Biegunowa prędkości dla skrajnych położeń środka ciężkości</h3>
-{% set sp=cc.speed_polars %}<p>Biegunową prędkości \(w(V)\) lotu ślizgowego sporządzono dla masy {{ cc.mass_kg|reportnum(1) }} kg i gęstości powietrza \(\rho={{ cc.rho|texnum(4) }}\) kg/m³. Wykorzystano biegunowe wyważone dla obu skrajnych położeń środka ciężkości:</p>
-<div class="equation"><div class="formula">\[V=\sqrt{\frac{2mg}{\rho S\sqrt{C_z^2+C_x^2}}},\qquad w=V\frac{C_x}{\sqrt{C_z^2+C_x^2}}.\]</div></div>
+{% set sp=cc.speed_polars %}<p>Biegunową prędkości \(w(V)\) lotu ślizgowego sporządzono dla masy {{ cc.mass_kg|reportnum(1) }} kg i gęstości \(\rho={{ cc.rho|texnum(4) }}\) kg/m³, z biegunowych wyważonych dla obu skrajnych położeń środka ciężkości (wzory w poprzedniej sekcji). Prędkość ekonomiczna \(V_{ek}\) odpowiada najmniejszemu opadaniu, a optymalna \(V_{opt}\) — największej doskonałości.</p>
 <table><caption>Prędkości charakterystyczne lotu ślizgowego</caption><thead><tr><th>Położenie środka ciężkości</th><th class="number">x̄ [% ŚCA]</th><th class="number">V_ek [km/h]</th><th class="number">w_min [m/s]</th><th class="number">V_opt [km/h]</th><th class="number">K_max [—]</th></tr></thead><tbody>{% for key,label in [('forward','Przednie'),('aft','Tylne')] %}{% set q=sp[key] %}<tr><td>{{ label }}</td><td class="number">{{ q.x_cg_pct|reportnum(1) }}</td><td class="number">{{ q.v_ek_kmh|reportnum(1) }}</td><td class="number">{{ q.w_min_ms|reportnum(3) }}</td><td class="number">{{ q.v_opt_kmh|reportnum(1) }}</td><td class="number">{{ q.k_max|reportnum(2) }}</td></tr>{% endfor %}</tbody></table>
 <figure><div id="repSpeedPolarCg"></div><figcaption>Biegunowa prędkości dla przedniego i tylnego położenia środka ciężkości.</figcaption></figure>
-<p>Przesunięcie środka ciężkości do przodu zwiększa ujemną siłę nośną usterzenia potrzebną do równowagi. Rośnie wtedy opór wyważenia, a doskonałość maleje. Prędkość ekonomiczna \(V_{ek}\) odpowiada najmniejszemu opadaniu, a prędkość optymalna \(V_{opt}\) największej doskonałości.</p>
-<h3>Składniki oporu</h3>
-<table><caption>Oszacowane składowe oporu zespołów nienośnych</caption><thead><tr><th>Zespół</th><th class="number">ΔCx₀</th><th>Podstawa oszacowania</th></tr></thead><tbody>{% for row in p_data.drag_breakdown %}<tr><td>{{ row.component }}</td><td class="number">{{ row.cx0_i|reportnum(4) }}</td><td>{{ row.source }}</td></tr>{% endfor %}</tbody></table>
-<p class="table-note">Tabela przedstawia składniki zespołów nienośnych. Całkowity współczynnik biegunowej uwzględnia również opór płata i korekty modelu.</p>
-<h3>Mechanizacja i powierzchnie sterowe</h3>
-<p>Zgodnie z wytycznymi prowadzącego przyjęto wychylenie klap 20° do startu i 40° do lądowania. Przyrosty Cz i Cx w modelu odpowiadają tym dwóm konfiguracjom; są oszacowaniem wstępnym wymagającym sprawdzenia z biegunowymi zastosowanego profilu i mechanizacji.</p>
-<p>{{ a.high_lift_model.note }} Udział powierzchni z klapami: {{ (100*a.high_lift_model.flap_area_fraction)|reportnum(1) }}%; ze slotami: {{ (100*a.high_lift_model.slat_area_fraction)|reportnum(1) }}%.</p>
-<p>Przyjęta mechanizacja: {{ cs.flaps.name|lower }}. Lotki: {{ cs.ailerons.name|lower }}. Powierzchnie sterowe dobrano z uwzględnieniem podziału krawędzi spływu pomiędzy klapy i lotki.</p>
+<p>Przesunięcie środka ciężkości do przodu zwiększa ujemną siłę nośną usterzenia potrzebną do równowagi. Rośnie wtedy opór wyważenia, a doskonałość maleje.</p>
+<h3>Powierzchnie sterowe i skuteczność lotek</h3>
+<p>Przyjęta mechanizacja: {{ cs.flaps.name|lower }}. Lotki: {{ cs.ailerons.name|lower }}. Skuteczność lotek oceniono wskaźnikiem \(pb/(2V)\) z pochodnych momentu przechylającego, całkując obrys skrzydła.</p>
+{{ c.section(sheet, 'p4.roll') }}
 <table><caption>Proporcje powierzchni sterowych</caption><thead><tr><th>Parametr</th><th class="number">Wartość</th></tr></thead><tbody>
 <tr><td>Względna rozpiętość klap</td><td class="number">{{ cs.flaps.bf_over_b|reportnum(3) }}</td></tr>
 <tr><td>Względna cięciwa klap</td><td class="number">{{ cs.flaps.cf_over_c|reportnum(3) }}</td></tr>
@@ -35,6 +43,4 @@
 <tr><td>Cięciwa steru wysokości / cięciwa usterzenia</td><td class="number">{{ cs.elevator.ce_over_ch|reportnum(3) }}</td></tr>
 <tr><td>Cięciwa steru kierunku / cięciwa usterzenia</td><td class="number">{{ cs.rudder.cr_over_cv|reportnum(3) }}</td></tr>
 </tbody></table>
-<p>Wskaźnik skuteczności lotek \(pb/(2V)\) wynosi {{ cs.ailerons.roll_helix_pb_2v|reportnum(3) }}, przy przyjętym kryterium {{ cs.ailerons.min_pb_2v_req|reportnum(3) }}. {% if cs.ailerons.roll_authority_ok %}Kryterium jest spełnione.{% else %}Kryterium nie jest spełnione.{% endif %} Jest to oszacowanie wstępne, zależne od wymiarów lotek i dopuszczalnego wychylenia.</p>
-
-<p>Przy doborze mechanizacji uwzględniono kompromis między nośnością i oporem; samo zwiększanie Cz,max nie jest celem projektu. Slot oznacza szczelinę lub przedskrzydło krawędzi natarcia, nie instalację odlodzeniową. Względna rozpiętość lotki odnosi się do jednej półrozpiętości skrzydła; względna cięciwa — do lokalnej cięciwy płata.</p>
+<p>Wskaźnik \(pb/(2V)\) wynosi {{ cs.ailerons.roll_helix_pb_2v|reportnum(3) }}, przy przyjętym kryterium {{ cs.ailerons.min_pb_2v_req|reportnum(3) }}: {% if cs.ailerons.roll_authority_ok %}kryterium jest spełnione{% else %}kryterium nie jest spełnione{% endif %}. Slot oznacza szczelinę lub przedskrzydło krawędzi natarcia, nie instalację odlodzeniową.</p>

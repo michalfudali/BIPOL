@@ -81,13 +81,16 @@ def calculate_costs(params, m_empty_kg, v_max_kmh, thrust_kn=None, power_kw=None
     avionics = float(params.get("avionics_price_usd", AVIONICS_USD.get(params.get("aircraft_type"), DEFAULT_AVIONICS_USD)))
 
     def phase(n, rate, rdte):
-        hours = {}
+        hours, by_year = {}, {}
         for key, name in (("E", "H_E"), ("ML", "H_ML"), ("T", "H_T")):
             h = [_cer(name, y, w_lb, v_kt, n, rate) for y in (1970, 1986)]
+            by_year[name] = h
             hours[key] = max(0.0, _extrapolate(h[0], h[1], year))
         hours["QC"] = QC_FACTOR * hours["ML"]
-        usd = {name: max(0.0, _extrapolate(*(_cer(name, y, w_lb, v_kt, n) for y in (1970, 1986)), year))
-               for name in (("C_MM", "C_D", "C_FT") if rdte else ("C_MM",))}
+        usd = {}
+        for name in (("C_MM", "C_D", "C_FT") if rdte else ("C_MM",)):
+            by_year[name] = [_cer(name, y, w_lb, v_kt, n) for y in (1970, 1986)]
+            usd[name] = max(0.0, _extrapolate(*by_year[name], year))
         items = {
             "C_E": hours["E"] * rates["E"],
             "C_D": usd.get("C_D", 0.0),
@@ -99,7 +102,8 @@ def calculate_costs(params, m_empty_kg, v_max_kmh, thrust_kn=None, power_kw=None
             "C_EN": n * (n_engines * c_en_one + avionics),
         }
         total = sum(items.values())
-        return {"n": n, "rate_per_month": round(rate, 3),
+        return {"n": n, "rate_per_month": round(rate, 3), "by_year": by_year,
+                "hours_raw": hours, "items_raw": items, "total_raw": total,
                 "hours": {k: round(v) for k, v in hours.items()},
                 "items_usd": {k: round(v) for k, v in items.items()},
                 "total_usd": round(total), "profit_usd": round(profit * total)}
@@ -120,6 +124,9 @@ def calculate_costs(params, m_empty_kg, v_max_kmh, thrust_kn=None, power_kw=None
         "engine_price_usd": round(c_en_one),
         "engine_basis": engine_basis,
         "avionics_price_usd": round(avionics),
+        "terms": {"w_lb": w_lb, "v_kt": v_kt, "n_engines": n_engines, "engine_price_raw": c_en_one,
+                  "avionics_raw": avionics, "qc_factor": QC_FACTOR, "profit": profit,
+                  "rates_raw": rates, "min_price_raw": min_price, "price_raw": price},
         "rdte": rdte,
         "production": prod,
         "rdte_hours": rdte["hours"]["E"],

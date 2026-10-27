@@ -82,4 +82,9 @@ def calculate_mass_sizing(params: dict):
             phases=dict(m0=r['m0'],m1_takeoff=phases['takeoff'],m2_climb=phases['climb'],
                 m3_outbound=out,m3_post_task=task,m4_post_drop=drop,m5_return=phases.get('return',drop),
                 m6_loiter=phases['loiter'],m7_landing=phases['landing']))
+    # BIPOL_1, s. 4: the same balance written out iteration by iteration for the report.
+    from calculations.mass_iteration import guideline_trace
+    result['guideline_traces'] = {
+        method: guideline_trace(p, payload, crew, method, params.get('mass_iteration_start_kg'))
+        for method, info in result['sizing_methods'].items() if info['applicable']}
     return result

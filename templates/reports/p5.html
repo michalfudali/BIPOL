@@ -1,29 +1,39 @@
+{% import 'reports/calc.html' as c %}
 {% set perf=res.performance %}{% set glide=perf.glide %}
-<p>Osiągi obliczono dla masy startowej {{ res.mass.m0|reportnum(1) }} kg, w atmosferze ISA. Wykorzystano geometrię oraz biegunową uzyskane w poprzednich etapach [2, 4]. Prędkości lotu ślizgowego podano jako TAS.</p>
+<p>Osiągi obliczono dla masy startowej {{ res.mass.m0|reportnum(1) }} kg w atmosferze ISA, z geometrią i biegunową uzyskanymi w poprzednich etapach [2, 4]. Prędkości lotu ślizgowego podano jako TAS.</p>
 <h3>Prędkości charakterystyczne</h3>
-<div class="equation"><div class="formula">\[V_S=\sqrt{\frac{2m_0g}{\rho SC_{z,max}}},\qquad V_{app}=1{,}3V_{S0}.\]</div></div>
+{{ c.section(sheet, 'p5.speeds') }}
 <table><caption>Prędkości charakterystyczne na poziomie morza</caption><thead><tr><th>Wielkość</th><th class="number">Prędkość [km/h]</th></tr></thead><tbody>{% for label,value in [('Przeciągnięcie — konfiguracja gładka',perf.speeds.vs_clean_kmh),('Przeciągnięcie — konfiguracja do lądowania',perf.speeds.vs_lnd_kmh),('Podejście do lądowania',perf.speeds.v_app_kmh)] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(1) }}</td></tr>{% endfor %}{% if doc.powered %}<tr><td>Prędkość maksymalna</td><td class="number">{{ perf.speeds.v_max_sl_kmh|reportnum(1) }}</td></tr>{% endif %}</tbody></table>
 {% if doc.powered %}
 <h3>Wznoszenie i pułap</h3>
-<p>Wznoszenie wyznaczono z nadmiaru mocy użytecznej nad mocą niezbędną. Na poziomie morza maksymalna prędkość wznoszenia wynosi {{ perf.climb.wy_max_ms|reportnum(2) }} m/s, przy prędkości {{ perf.climb.v_wy_max_kmh|reportnum(1) }} km/h.</p>
-<div class="equation"><div class="formula">\[w_y=\frac{P_{rozp}-P_{niezb}}{m_0g}.\]</div></div>
+<p>Wznoszenie wyznaczono metodą mocy: z nadmiaru mocy rozporządzalnej nad niezbędną. Pełny tok obliczeń pokazano dla prędkości największego wznoszenia przy ziemi; pozostałe prędkości i wysokości zawierają tabela i wykres.</p>
+{{ c.section(sheet, 'p5.climb') }}
 <figure><div id="repClimb"></div><figcaption>Prędkość wznoszenia w funkcji prędkości lotu na poziomie morza.</figcaption></figure>
 <table><caption>Zmiana osiągów wraz z wysokością</caption><thead><tr><th class="number">H [m]</th><th class="number">w_y,max [m/s]</th><th class="number">Vmin [km/h]</th><th class="number">Vmax [km/h]</th><th class="number">Czas wzn. [min]</th></tr></thead><tbody>{% for row in p_data.offer_chart %}<tr><td class="number">{{ row.h_m|reportnum(0) }}</td><td class="number">{{ row.wy_max_ms|reportnum(2) }}</td><td class="number">{{ row.v_min_kmh|reportnum(1) }}</td><td class="number">{{ row.v_max_kmh|reportnum(1) }}</td><td class="number">{{ row.time_to_climb_min|reportnum(1) if row.wy_max_ms > 0 else '—' }}</td></tr>{% endfor %}</tbody></table>
-<p>Pułap praktyczny, określony warunkiem \(w_y={{ p_data.paturski_p6.table_6_2_climb_and_ceilings.ceilings.w_crit_ceiling_ms|texnum(1) }}\) m/s, wynosi {{ perf.ceiling.service_ceiling_m|reportnum(0) }} m. Wynik ograniczają przyjęta charakterystyka napędu i zakres wysokości modelu.</p>
-<p>{{ p_data.paturski_p6.table_6_2_climb_and_ceilings.time_method }}</p>
-<h3>Start, lądowanie i zasięg</h3>
+<p>{{ p_data.paturski_p6.table_6_2_climb_and_ceilings.time_method }} Wynik ograniczają przyjęta charakterystyka napędu i zakres wysokości modelu.</p>
+<h3>Start</h3>
+<p>Start obejmuje rozbieg ze stałym średnim przyspieszeniem, łuk przejściowy przy \(V_{tr}\) i wznoszenie przy \(V_2\) do wysokości 15 m (ISA, poziom morza, bez współczynników operacyjnych).</p>
+{{ c.section(sheet, 'p5.takeoff') }}
+{% endif %}
+<h3>Lądowanie</h3>
+<p>Lądowanie obliczono dla masy na końcu misji: odcinek powietrzny (podejście pod kątem 3,5° i wyrównanie), dobieg swobodny przez 1,5 s i hamowanie.</p>
+{{ c.section(sheet, 'p5.landing') }}
 <table><caption>Obliczeniowe długości i czas startu oraz lądowania</caption><thead><tr><th>Wielkość</th><th class="number">Droga [m]</th><th class="number">Czas [s]</th></tr></thead><tbody>{% for label,value,time in [('Rozbieg',perf.takeoff.ground_roll_m,perf.takeoff.ground_roll_time_s),('Start nad przeszkodę 15 m',perf.takeoff.distance_to_15m,perf.takeoff.time_to_15m_s),('Dobieg',perf.landing.ground_roll_m,none),('Lądowanie znad przeszkody 15 m',perf.landing.distance_from_15m,none)] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(1) }}</td><td class="number">{{ time|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>
-{% if perf.takeoff.time_to_15m_s is not none %}<p>Czas startu do wysokości 15 m wynosi {{ perf.takeoff.time_to_15m_s|reportnum(1) }} s, w tym rozbieg {{ perf.takeoff.ground_roll_time_s|reportnum(1) }} s (stałe średnie przyspieszenie na rozbiegu, łuk przejściowy przy \(V_{tr}\) i wznoszenie przy \(V_2\)).</p>{% endif %}
-{% set ra = p_data.paturski_p6.range_endurance_6_5 %}{% if ra.by_altitude %}<table><caption>Zasięg i długotrwałość na trzech wysokościach</caption><thead><tr><th>Wysokość</th><th class="number">h [m]</th><th class="number">Zakres V [km/h]</th><th class="number">T max [h]</th><th class="number">przy V [km/h]</th><th class="number">L max [km]</th><th class="number">przy V [km/h]</th></tr></thead><tbody>{% for row in ra.by_altitude %}<tr><td>{{ row.label }}</td><td class="number">{{ row.h_m|reportnum(0) }}</td><td class="number">{{ row.v_min_kmh|reportnum(0) }}–{{ row.v_max_kmh|reportnum(0) }}</td><td class="number">{{ row.t_max_h|reportnum(2) }}</td><td class="number">{{ row.v_t_max_kmh|reportnum(0) }}</td><td class="number">{{ row.l_max_km|reportnum(0) }}</td><td class="number">{{ row.v_l_max_kmh|reportnum(0) }}</td></tr>{% endfor %}</tbody></table>
+{% if doc.powered %}
+<h3>Zasięg i długotrwałość</h3>
+<p>Zasięg przy wymaganej prędkości i wysokości przelotu obliczono metodą stałej wysokości i prędkości (całka arctan, Paturski, Projekt 6) dla paliwa fazy przelotu z bilansu P2. Rezerwy nie spala się po raz drugi.</p>
+{{ c.section(sheet, 'p5.range') }}
+{% set ra = p_data.paturski_p6.range_endurance_6_5 %}{% if ra.by_altitude %}<table class="compact-table"><caption>Zasięg i długotrwałość na trzech wysokościach</caption><thead><tr><th>Wysokość</th><th class="number">h [m]</th><th class="number">Zakres V [km/h]</th><th class="number">T max [h]</th><th class="number">przy V [km/h]</th><th class="number">L max [km]</th><th class="number">przy V [km/h]</th></tr></thead><tbody>{% for row in ra.by_altitude %}<tr><td>{{ row.label }}</td><td class="number">{{ row.h_m|reportnum(0) }}</td><td class="number">{{ row.v_min_kmh|reportnum(0) }}–{{ row.v_max_kmh|reportnum(0) }}</td><td class="number">{{ row.t_max_h|reportnum(2) }}</td><td class="number">{{ row.v_t_max_kmh|reportnum(0) }}</td><td class="number">{{ row.l_max_km|reportnum(0) }}</td><td class="number">{{ row.v_l_max_kmh|reportnum(0) }}</td></tr>{% endfor %}</tbody></table>
 <p>{{ ra.by_altitude_method }} Masa na początku i końcu przelotu: {{ ra.m0_start_cr_kg|reportnum(0) }} i {{ ra.mk_end_cr_kg|reportnum(0) }} kg.</p>{% endif %}
 <table><caption>Porównanie modeli zasięgu i długotrwałości</caption><thead><tr><th>Założenia metody</th><th class="number">Zasięg [km]</th><th class="number">Czas [h]</th></tr></thead><tbody>{% for row in p_data.range_endurance_comparison %}<tr><td>{{ row.method }}</td><td class="number">{{ row.range_km|reportnum(1) }}</td><td class="number">{{ row.endurance_h|reportnum(2) }}</td></tr>{% endfor %}</tbody></table>
 {% endif %}
 <h3>Lot ślizgowy</h3>
-<p>Przy wysokości {{ glide.altitude_m|reportnum(0) }} m najlepszą doskonałość uzyskano przy {{ glide.best_glide.v_kmh|reportnum(1) }} km/h TAS. Minimalne opadanie wynosi {{ glide.minimum_sink.sink_ms|reportnum(2) }} m/s. Wyznaczono je z równowagi sił wzdłuż i prostopadle do toru lotu, bez założenia małego kąta ślizgu.</p>
-<div class="equation"><div class="formula">\[L=mg\cos\gamma,\qquad D=mg\sin\gamma,\qquad w=V\sin\gamma.\]</div></div>
+<p>Prędkość i opadanie wyznaczono z równowagi sił wzdłuż i prostopadle do toru lotu (\(L=mg\cos\gamma\), \(D=mg\sin\gamma\)), bez założenia małego kąta ślizgu, na wysokości {{ glide.altitude_m|reportnum(0) }} m.</p>
+{{ c.section(sheet, 'p5.glide') }}
 <figure><div id="repGlideChart"></div><figcaption>Biegunowa opadania dla masy startowej, na wysokości {{ glide.altitude_m|reportnum(0) }} m ISA.</figcaption></figure>
-{% if doc.powered %}<h3>Zakręt ustalony</h3><p>{{ perf.turn.note }}{% if perf.turn.level_sustained %} Dla prędkości {{ perf.turn.v_turn_kmh|reportnum(1) }} km/h uzyskano przeciążenie {{ perf.turn.n_sustained|reportnum(2) }}, przechylenie {{ perf.turn.bank_angle_deg|reportnum(1) }}° i promień {{ perf.turn.r_min_m|reportnum(1) }} m.{% endif %}</p>{% endif %}
+{% if doc.powered %}<h3>Zakręt ustalony</h3><p>{{ perf.turn.note }}</p>
+{{ c.section(sheet, 'p5.turn') }}{% endif %}
 <h3>Ocena osiągów</h3>
-<p>Osiągi założone w studium wykonalności porównano z wynikami obliczeń dla projektu wstępnego. Wymagania sprawdzono biegunową z Projektu 4 i charakterystyką napędu z Projektu 5.</p>
+<p>Osiągi założone w studium wykonalności porównano z wynikami obliczeń dla projektu wstępnego, z biegunową z Projektu 4 i charakterystyką napędu z Projektu 5.</p>
 <table><caption>Porównanie osiągów założonych i obliczonych</caption><thead><tr><th>Parametr</th><th class="number">Założenie</th><th class="number">Obliczenia</th><th>Ocena</th></tr></thead><tbody>{% for row in p_data.critical_evaluation_table_5_1 %}<tr><td>{{ row.param }}</td><td class="number">{{ row.project_assumed|reportnum(1) if row.project_assumed is not none else '—' }}</td><td class="number">{{ row.actual_calc|reportnum(1) if row.actual_calc is not none else '—' }}</td><td>{{ row.comment }}</td></tr>{% endfor %}</tbody></table>
 <p>{{ p_data.recommendations }}</p>{% if p_data.performance_findings %}<ul>{% for item in p_data.performance_findings %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}

@@ -114,3 +114,23 @@ svg .axis-label { font: 12px Arial, sans-serif; fill: #222; }
 sub.sym, sup.sym { position: relative; font-size: .72em; line-height: 0; vertical-align: baseline; }
 sub.sym { bottom: -.35em; }
 sup.sym { top: -.55em; }
+
+/* Zapis obliczeń jak w Mathcadzie: opis, wzór z podstawieniem i wynik w jednym bloku. */
+.calc { margin: 2.5mm 0 3mm; break-inside: avoid; }
+.calc-label { margin: 0; font: 9.5pt/1.35 Arial, sans-serif; color: #333; }
+.calc-source { color: #6a6a66; font-size: 8.5pt; }
+.calc .equation { margin: .5mm 0 0; }
+.calc .formula { text-align: left; padding-left: 4mm; overflow-x: auto; }
+.calc-note { margin: 0 0 0 4mm; font-size: 9pt; color: #444; }
+.calc-table .formula { text-align: left; }
+.calc-section + .calc-section { margin-top: 4mm; }
+.data-table td:nth-child(2) { white-space: nowrap; }
+.data-table caption { font-size: 9.5pt; }
+.guideline-steps { margin: 0 0 3mm; padding-left: 7mm; font-size: 10pt; }
+.guideline-steps li { margin-bottom: .8mm; }
+.iteration-heading { margin-top: 5mm; }
+.iteration-table td, .iteration-table th { padding: 1.4mm 1.2mm; }
+figure.flow svg { max-height: 200mm; }
+figure svg.report-chart { max-height: 92mm; }
+.parameter-project { margin-top: 8mm; border-bottom: 1px solid #aaa; padding-bottom: 1mm; }
+@media print { .calc .formula { overflow: visible; } }

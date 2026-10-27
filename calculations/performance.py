@@ -165,6 +165,8 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
     t_turn_360_s = (2.0 * math.pi) / psi_dot_rad_s if psi_dot_rad_s > 0 else None
 
     return {
+        "terms": dict(ws=ws, W=W, vs_clean=vs_clean_ms, vs_to=vs_to_ms, vs_lnd=vs_lnd_ms,
+                      v_max_sl=v_max_sl_ms, p_avail_w=P0_avail, t_avail_n=T0_avail),
         "cruise_check": dict(flight_point(params, sizing, m0, S, cx0, k_clean, h_cr, v_cr_req_ms),
             altitude_m=h_cr, tas_kmh=v_cr_req_kmh, cl_max=cz_max_clean),
         "level_flight_available_sl": sl_flight['available'] and not is_glider,
@@ -194,6 +196,10 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
         },
         "takeoff": takeoff,
         "landing": {
+            "terms": dict(ws_lnd=ws_lnd, vs=vs_landing, v_app=v_app_ms, v_td=v_td_ms, cx0_lnd=cx0_lnd,
+                          k_lnd=aero["k_lnd"], cz_max_lnd=cz_max_lnd, gamma_app_deg=3.5, r_flare=r_flare,
+                          h_flare=h_flare, mu_brake=mu_brake, v_rms=v_rms_lnd, q_rms=q_rms_lnd,
+                          phi_ge=phi_ge, cz_roll=cz_lnd_roll, cx_roll=cx_lnd_roll, a_mean=a_mean_brake),
             "mass_kg": landing_mass,
             "vs_landing_mass_kmh": vs_landing * 3.6,
             "air_approach_m": round(s_air_lnd, 1),
@@ -203,6 +209,10 @@ def calculate_performance(m0: float, geom: dict, aero: dict, sizing: dict, param
             "distance_from_15m": round(s_lnd_15, 1)
         },
         "turn": {
+            "terms": dict(v=v_turn_ms, q=q_turn, n_aero_max=n_aero_max, ws=ws, vs_clean=vs_clean_ms,
+                          v_cr=v_cr_req_ms, v_max=v_max_sl_ms,
+                          t_avail=None if is_glider else t_avail_turn,
+                          n_thrust_sq=None if is_glider else n_thrust_sq, n=n_sustained),
             "mode": turn_mode,
             "level_sustained": turn_mode == 'level',
             "note": 'Kinematyka zakrętu szybowego 45° z utratą energii/wysokości.' if turn_mode == 'gliding' else ('Brak nadmiaru ciągu do zakrętu poziomego przy tej prędkości.' if turn_mode == 'unavailable' else 'Ograniczenie aerodynamiczne i napędowe; sprawdź osobno obwiednię konstrukcyjną.'),

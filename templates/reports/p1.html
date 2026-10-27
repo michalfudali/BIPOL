@@ -1,4 +1,5 @@
-<p>Celem tej części projektu jest określenie konfiguracji płatowca i parametrów wyjściowych do wymiarowania. Podstawę stanowią wymagania misji, zestawienie podobnych konstrukcji oraz oszacowanie własności aerodynamicznych [1, 2].</p>
+{% import 'reports/calc.html' as c %}
+<p>Celem tej części projektu jest określenie konfiguracji płatowca i parametrów wyjściowych do wymiarowania. Podstawę stanowią wymagania misji, zestawienie podobnych konstrukcji oraz oszacowanie własności aerodynamicznych [1, 2]. Każdą obliczoną wielkość zapisano jako wzór, podstawienie danych i wynik; dane wejściowe zestawiono w tabelach z podaniem źródła.</p>
 <h3>Koncepcja i wymagania misji</h3>
 <p>{{ doc.concept }}</p>
 <table><caption>Założenia wyjściowe projektu</caption><thead><tr><th>Parametr</th><th class="number">Wartość</th><th>Jednostka</th></tr></thead><tbody>
@@ -9,17 +10,30 @@
 <tr><td>Załoga / pasażerowie</td><td class="number">{{ res.mass.n_crew }} / {{ res.mass.n_pax }}</td><td>os.</td></tr>
 </tbody></table>
 <figure>{{ report_sketch(res) }}<figcaption>Schemat konfiguracji w trzech rzutach. Wymiary w milimetrach.</figcaption></figure>
-<h3>Wstępna ocena aerodynamiczna</h3>
-<p>Powierzchnię omywaną oszacowano z geometrii głównych zespołów. Otrzymano \(S_{wet} = {{ p_data.s_wet_m2|texnum(2) }}\) m² oraz \(S_{wet}/S = {{ p_data.swet_over_s|texnum(2) }}\). Doskonałość obliczono z tej samej biegunowej, która służy do wyznaczania osiągów:</p>
-<div class="equation"><div class="formula">\[C_x=C_{x0}+kC_z^2,\qquad K_{\max}=\frac{1}{2\sqrt{C_{x0}k}}={{ res.aerodynamics.k_max|texnum(1) }}.\]</div></div>
-<p>Przyjęto \(C_{x0}={{ res.aerodynamics.cx0_clean|texnum(4) }}\) i \(k={{ res.aerodynamics.k_clean|texnum(5) }}\). Współczynnik indukowany uwzględnia efektywne wydłużenie i kształt obrysu skrzydła. {% if doc.powered %}Dla prędkości przelotowej oszacowanie daje {% if params.engine_type == 'jet' %}ciąg niezbędny {{ p_data.t_req_est_kn|reportnum(2) }} kN{% else %}moc niezbędną {{ p_data.p_req_est_kw|reportnum(1) }} kW{% endif %}.{% endif %}</p>
+<h3>Masa załogi i masa płatna</h3>
+{{ c.section(sheet, 'p1.load') }}
+<h3>Atmosfera wzorcowa na wysokości przelotu</h3>
+<p>Parametry atmosfery obliczono ze wzorów ISA. Służą do wyznaczenia ciśnienia dynamicznego, liczby Macha i liczby Reynoldsa w kolejnych częściach.</p>
+{{ c.section(sheet, 'p1.atm') }}
 {% include 'trend_report.html' %}
+{% if sheet.section_entries('p1.trend') %}
+<h3>Współczynniki równania (1) z dwóch punktów linii trendu</h3>
+<p>Współczynniki A i C wyznaczono wzorami BIPOL_1 z dwóch punktów odczytanych z linii regresji \(m_e/m_0=f(m_0)\).</p>
+{{ c.section(sheet, 'p1.trend') }}
+{% endif %}
+<h3>Szacunkowa biegunowa analityczna</h3>
 {% set bp=res.mass.preliminary_polar %}
-<h3>Biegunowa do bilansu masy BIPOL 1</h3>
-<p>Metoda: {{ bp.mode }}. Kmax = {{ bp.kmax|reportnum(3) }},
-  Cx₀ = {{ bp.cx0|reportnum(5) }}{% if bp.swet_ratio %}, Swet/S ze szkicu = {{ bp.swet_ratio|reportnum(3) }}{% endif %}.
-  {{ bp.source }}. {{ bp.reading_note }}. Ten model wstępny jest porównywany z biegunową szczegółową P4.</p>
+<p>Biegunową analityczną przyjęto w postaci wzoru (2) BIPOL_1. {% if bp.mode == 'input' %}Opór zerowy przyjęto z tabeli przedziałów \(C_{x0}\) dla klasy samolotu, a maksymalną doskonałość obliczono ze wzoru (3).{% else %}Stosunek \(S_{wet}/S\) określono ze szkicu odręcznego, maksymalną doskonałość odczytano z rys. 2 (Raymer), a opór zerowy obliczono ze wzoru (3).{% endif %} {{ bp.reading_note }} Kontrolny przedział \(C_{x0}\) dla tej klasy: {{ bp.cx0_bounds[0]|reportnum(3) }}–{{ bp.cx0_bounds[1]|reportnum(3) }}{% if not bp.cx0_in_range %} — przyjęta wartość leży poza przedziałem i wymaga uzasadnienia{% endif %}. Ta biegunowa służy do bilansu masy (P2); biegunową szczegółową wyznaczono w P4.</p>
+{{ c.section(sheet, 'p1.polar') }}
+<h3>Powierzchnia omywana</h3>
+<p>Powierzchnię omywaną oszacowano z geometrii głównych zespołów (Raymer). Wynik porównuje się ze stosunkiem \(S_{wet}/S\) z rys. 1 BIPOL_1 dla podobnych układów.</p>
+{{ c.section(sheet, 'p1.wetted') }}
+{% if doc.powered %}
+<h3>Wstępne zapotrzebowanie {{ 'ciągu' if params.engine_type == 'jet' else 'mocy' }} w przelocie</h3>
+<p>Dla prędkości i wysokości przelotowej obliczono opór samolotu z biegunowej P4 przy masie startowej. {{ 'Ciąg niezbędny jest równy oporowi.' if params.engine_type == 'jet' else 'Moc niezbędną na wale silnika obliczono ze sprawnością śmigła.' }}</p>
+{{ c.section(sheet, 'p1.power') }}
+{% endif %}
 <h3>Kompletność BIPOL 1</h3>
 <p>{{ res.bipol1_review.basis }}</p>
-<ul>{% for c in res.bipol1_review.checks %}<li>{{ 'Spełnione' if c.passed else 'Do uzupełnienia' }}:
-  <strong>{{ c.label }}</strong> — {{ c.detail }}</li>{% endfor %}</ul>
+<ul>{% for c_ in res.bipol1_review.checks %}<li>{{ 'Spełnione' if c_.passed else 'Do uzupełnienia' }}:
+  <strong>{{ c_.label }}</strong> — {{ c_.detail }}</li>{% endfor %}</ul>

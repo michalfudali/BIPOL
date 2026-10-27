@@ -1,5 +1,5 @@
 """
-Aplikacja Webowa bipol-requiem - Wstępne Projektowanie Samolotów
+Aplikacja Webowa BiPOL Requiem - Wstępne Projektowanie Samolotów
 Wydział Mechaniczny Energetyki i Lotnictwa Politechniki Warszawskiej (MEiL PW)
 Zakład Samolotów i Śmigłowców (ZSiS)
 """
@@ -25,6 +25,8 @@ from calculations.report_assets import math_assets
 from calculations.report_document import report_document, report_number, report_metadata, tex_number
 from calculations.report_sketch import report_sketch
 from calculations.drawing_sheet import drawing_sheet
+from calculations import report_figures
+from calculations.calc_sheet import build_sheet, worked_iteration
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -36,6 +38,11 @@ app.jinja_env.filters['trendnum'] = lambda v, digits=3: f'{v:.{digits}f}' if isi
 app.jinja_env.globals['report_metadata'] = report_metadata
 app.jinja_env.globals['report_sketch'] = report_sketch
 app.jinja_env.globals['drawing_sheet'] = drawing_sheet
+app.jinja_env.globals['figs'] = report_figures
+app.jinja_env.globals['worked_iteration'] = worked_iteration
+PROJECT_TITLES = {'const': 'Stałe fizyczne', 'p1': 'P1 · Projekt koncepcyjny', 'p2': 'P2 · Studium wykonalności',
+                  'p3': 'P3 · Projekt wstępny i analiza masowa', 'p4': 'P4 · Charakterystyki aerodynamiczne',
+                  'p5': 'P5 · Osiągi', 'p6': 'P6 · Obwiednia obciążeń'}
 
 
 @app.context_processor
@@ -333,11 +340,57 @@ def document_context(results, sections, folder_cover=False):
         'document': 'static/js/report.js',
     }
     return dict(res=results, params=results['params'], selected_sections=sections,
+                sheet=build_sheet(results),
                 doc=report_document(results, sections, request.args, folder_cover),
                 figure_results={key: results[key] for key in
                                 ('sizing', 'aerodynamics', 'envelope', 'geometry', 'performance', 'bipol_projects')},
                 report_assets={name: (Path(app.root_path) / path).read_text(encoding='utf-8')
                                .replace('</script', '<\\/script') for name, path in assets.items()})
+
+@app.post('/api/report/catalog')
+def report_catalog():
+    """Wielkości i procedury dostępne w raporcie parametrów dla bieżącego projektu."""
+    sheet = build_sheet(run_bipol_project(report_parameters()))
+    catalog = sheet.catalog()
+    return jsonify(status='ok', projects=PROJECT_TITLES, **catalog)
+
+
+@app.route('/report/parameters', methods=['GET', 'POST'])
+def parameter_report():
+    """Raport wybranych parametrów: wzory, podstawienia i (opcjonalnie) cały tok obliczeń."""
+    keys = [k for k in dict.fromkeys((request.args.get('keys') or '').split(',')) if k]
+    if not keys or len(keys) > 400:
+        raise ValueError('Wybierz od 1 do 400 parametrów raportu.')
+    chain = request.args.get('chain', '1') != '0'
+    full_iterations = request.args.get('iterations', 'all') != 'first'
+    results = run_bipol_project(report_parameters())
+    context = document_context(results, [])
+    sheet = context['sheet']
+    unknown = [k for k in keys if (k[1:] not in sheet.blocks if k.startswith('@') else k not in sheet.entries)]
+    if unknown:
+        raise ValueError('Nieznane parametry raportu: ' + ', '.join(unknown[:5]) + '.')
+    ordered, blocks = sheet.chain(keys, follow=chain)
+    if not chain:
+        ordered = [k for k in sheet.order if k in keys]
+        blocks = [k[1:] for k in keys if k.startswith('@')]
+    selected = [sheet.entries[k] for k in keys if not k.startswith('@')]
+    # Sekcje w kolejności części projektu (stałe, P1…P6); bloki przed sekcją, która z nich korzysta.
+    members = {}
+    for key in ordered:
+        members.setdefault(sheet.entries[key]['section'], []).append(key)
+    sections = [s for s in sheet.sections if s in members]
+    placed, plan = set(), []
+    for section in sections:
+        for block in blocks:
+            if block not in placed and any('@' + block in sheet.entries[k]['deps'] for k in members[section]):
+                plan.append(('block', block))
+                placed.add(block)
+        plan.append(('section', section))
+    plan += [('block', b) for b in blocks if b not in placed]
+    return render_template('parameter_report.html', **context, plan=plan, members=members, chain=chain,
+                           selected=selected, selected_blocks=[sheet.blocks[b] for b in blocks if '@' + b in keys],
+                           full_iterations=full_iterations, project_titles=PROJECT_TITLES)
+
 
 @app.route('/holistic')
 def holistic_portal():
@@ -373,5 +426,5 @@ if __name__ == '__main__':
     # Local only by default: the Werkzeug debugger allows code execution.
     host = os.environ.get('HOST', '127.0.0.1')
     debug = os.environ.get('FLASK_DEBUG') == '1'
-    print(f"Startowanie serwera bipol-requiem: http://{host}:{port} (debug={'tak' if debug else 'nie'})...")
+    print(f"Startowanie serwera BiPOL Requiem: http://{host}:{port} (debug={'tak' if debug else 'nie'})...")
     app.run(host=host, port=port, debug=debug)

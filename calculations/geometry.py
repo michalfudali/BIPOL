@@ -408,6 +408,10 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "roll_helix_pb_2v": round(roll_helix_pb_2v, 3),
             "cl_p": round(cl_p, 5),
             "cl_delta_a": round(cl_delta_a, 5),
+            "tau_a": tau_a,
+            "a_w_est": aw_est,
+            "int_y_c": geom_roll_integral,
+            "int_y2_c": roll_moment,
             "roll_authority_ok": roll_authority_ok,
             "min_pb_2v_req": min_pb_2v_req,
             "delta_a_max_deg": delta_a_max_deg,
@@ -437,6 +441,9 @@ def calculate_geometry(m0: float, ws: float, params: dict):
 
     return {
         "wing": {
+            # Input mode as used here; parameter states later copy S and b back into params.
+            "span_fixed": req_span_val > 0.5,
+            "area_fixed": bool(params.get("wing_area_m2")),
             "S": round(S, 2),
             "S_exposed": round(s_exposed, 2),
             "S_wet": round(s_wet_wing, 2),
@@ -457,7 +464,8 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "tc_ratio": tc_wing
         },
         "fuselage": {
-            "sizing_note": "Kabina: rozstaw rzędów 0,80 m, fotel 0,48 m; przejście i poszycie oraz 4 średnice na nos i ogon. Układ roboczy, wymaga projektu kabiny." if ac_type in ('turboprop_regional','jet_business','jet_transport') else "Wstępna proporcja zależna od rozpiętości; wymaga sprawdzenia zabudowy.",
+            "seats_abreast": seats_abreast if ac_type in ('turboprop_regional', 'jet_business', 'jet_transport') else None,
+            "sizing_note":"Kabina: rozstaw rzędów 0,80 m, fotel 0,48 m; przejście i poszycie oraz 4 średnice na nos i ogon. Układ roboczy, wymaga projektu kabiny." if ac_type in ('turboprop_regional','jet_business','jet_transport') else "Wstępna proporcja zależna od rozpiętości; wymaga sprawdzenia zabudowy.",
             "length": round(fuselage_len, 2),
             "diameter": round(fuselage_diam, 2),
             "fineness": round(fuselage_fineness, 2),

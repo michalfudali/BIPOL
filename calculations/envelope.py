@@ -90,6 +90,7 @@ def calculate_vn_envelope(m0: float, geom: dict, aero: dict, perf: dict, params:
         vd_rule_kmh = (18.0 * (ws_dan / cd_min) ** (1.0 / 3.0) if load_basis == 'cs22_utility'
                        else 3.5 * ws_dan + 200.0)
         v_d_ms = max(vd_rule_kmh / 3.6, 1.35 * v_h_ms if powered else 0.0, v_a_ms)
+        rule_terms = dict(cd_min=cd_min, ws_dan=ws_dan, vd_rule_kmh=vd_rule_kmh)
         v_b_ms = v_a_ms               # CS 22.335(c): VB nie mniejsza niż VA
         v_c_ms = None                 # CS-22 nie definiuje VC
         v_f_ms = max(1.4 * vs_clean_ms, 2.0 * vs_lnd_ms)   # CS 22.335(b)(1)
@@ -118,6 +119,8 @@ def calculate_vn_envelope(m0: float, geom: dict, aero: dict, perf: dict, params:
             v_d_ms = max(1.25 * v_c_ms, vd_factor * v_c_min_ms)
             speed_rule = (f"CS-23 Amdt 4 §23.335: VC,min = {vc_factor_kts:.1f}·√(W/S) kt, VD ≥ max(1,25 VC; "
                           f"{vd_factor:.3f} VC,min); W/S = {ws_psf:.1f} lbf/ft².")
+        rule_terms = dict(ws_psf=ws_psf, vc_factor_kts=vc_factor_kts, vd_factor=vd_factor,
+                          v_c_min_ms=v_c_min_ms)
         n1, n4 = n_max, n_min
         # Ujemna gałąź CS-23 zamyka się w n = 0 przy VD (Danilecki, rys. 3.2)
         n2, n3 = n_max, 0.0
@@ -129,6 +132,7 @@ def calculate_vn_envelope(m0: float, geom: dict, aero: dict, perf: dict, params:
         b_quad = gust_dn(1.0, 20.12)
         v_b_intersect_ms = (b_quad + math.sqrt((b_quad ** 2) + 4.0 * a_quad)) / (2.0 * a_quad)
         v_b_ms = min(v_c_ms, max(v_a_ms * 0.85, v_b_intersect_ms))
+        rule_terms.update(v_b_intersect_ms=v_b_intersect_ms)
         # CS-23 Amdt 4 §23.345: VF = max(1.4 Vs1, 1.8 Vs0), n = +2,0
         v_f_ms = max(1.4 * vs_clean_ms, 1.8 * vs_lnd_ms)
         n_flap, u_flap = 2.0, 7.62
@@ -242,7 +246,14 @@ def calculate_vn_envelope(m0: float, geom: dict, aero: dict, perf: dict, params:
         composite_pts_neg.append({"v_kmh": round(v * 3.6, 1), "n": round(n_comp_n, 2)})
     composite_polygon = composite_pts_pos + list(reversed(composite_pts_neg))
 
+    from calculations.polish_law import LB_PER_KG
+    terms = dict(W=W, ws=ws, m0=m0, S=S, b=b, mac=mac, vs_clean_ms=vs_clean_ms, vs_lnd_ms=vs_lnd_ms,
+                 v_cr_eas_ms=v_cr_ms, v_h_ms=v_h_ms, cz_max=cz_max, cz_min=cz_min, a_w=a_w, chord=chord,
+                 mu_g=mu_g, k_g=k_g, v_a_ms=v_a_ms, v_g_ms=v_g_ms, v_c_ms=v_c_ms, v_d_ms=v_d_ms,
+                 v_b_ms=v_b_ms, v_f_ms=v_f_ms, w_lb=max(1.0, m0) * LB_PER_KG, load_basis=load_basis,
+                 sigma_cr=isa_atmosphere(params.get('cruise_altitude_m', 0))['sigma'], **rule_terms)
     return {
+        "terms": terms,
         "limits": {
             "n_max": n_max,
             "n_min": n_min,

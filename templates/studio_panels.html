@@ -47,7 +47,34 @@
 <section id="tab-reports" class="tab-content studio-panel">
   <div class="studio-heading"><div><p class="studio-eyebrow">DOKUMENTACJA / EKSPORT</p><h1>Raport z Twojego projektu</h1><p>Wybierz zakres i dodaj własną interpretację wyników.</p></div></div>
   <div class="studio-two-col"><section class="studio-card"><h2>Dane autora</h2><div class="studio-metadata-grid">{% for key, label in [('student_name','Imię i nazwisko'),('album_no','Numer albumu'),('group_no','Grupa'),('supervisor','Prowadzący'),('submission_date','Data oddania'),('academic_year','Rok akademicki')] %}<label class="studio-field" for="studioMeta_{{ key }}">{{ label }}<input type="text" id="studioMeta_{{ key }}" data-studio-metadata="{{ key }}" maxlength="160"></label>{% endfor %}</div><h2>Zakres raportu</h2><fieldset class="studio-report-options"><legend>Etapy do uwzględnienia</legend>{% for id, title in [('p1','P1 · Koncepcja i wymagania'),('p2','P2 · Bilans mas i dobór napędu'),('p3','P3 · Geometria i rysunek'),('p4','P4 · Aerodynamika'),('p5','P5 · Osiągi i lot szybowy'),('p6','P6 · Obwiednia i wyważenie')] %}<label><input type="checkbox" name="studio-report-section" value="{{ id }}" checked>{{ title }}</label>{% endfor %}</fieldset><div class="studio-stack-actions"><button class="btn btn-primary" data-studio-action="preview-report">Otwórz raport / drukuj PDF</button><button class="btn btn-outline" data-studio-action="download-report">Pobierz samodzielny HTML</button><button class="btn btn-outline" data-studio-action="export-csv">Pobierz wyniki CSV</button><button class="btn btn-outline" data-studio-action="export-json">Pobierz projekt JSON</button></div><p class="studio-fine-print">Strona tytułowa, podsumowanie i ograniczenia modelu są zawsze dołączane. PDF zapiszesz w oknie drukowania. HTML zawiera również style, wykresy i dane, więc działa bez połączenia z aplikacją.</p></section>
-  <section class="studio-card"><h2>Wnioski autora i źródła</h2><label class="studio-field" for="studioNotes">Wnioski i proponowane zmiany<textarea id="studioNotes" rows="7" maxlength="15000" placeholder="Interpretacja wyników, kompromisy projektowe, dalsze kroki…"></textarea></label><label class="studio-field" for="studioSources">Własne źródła i uzasadnienie danych<textarea id="studioSources" rows="5" maxlength="15000" placeholder="Autor, tytuł, wersja, strona, adres źródła…"></textarea></label><p class="studio-fine-print">Notatki są przypisane do aktywnego projektu i trafiają do raportu oraz kopii JSON.</p></section></div><div id="studioReportStatus" class="studio-note" role="status" aria-live="polite"></div>
+  <section class="studio-card"><h2>Wnioski autora i źródła</h2><label class="studio-field" for="studioNotes">Wnioski i proponowane zmiany<textarea id="studioNotes" rows="7" maxlength="15000" placeholder="Interpretacja wyników, kompromisy projektowe, dalsze kroki…"></textarea></label><label class="studio-field" for="studioSources">Własne źródła i uzasadnienie danych<textarea id="studioSources" rows="5" maxlength="15000" placeholder="Autor, tytuł, wersja, strona, adres źródła…"></textarea></label><p class="studio-fine-print">Notatki są przypisane do aktywnego projektu i trafiają do raportu oraz kopii JSON.</p></section></div>
+  <section class="studio-card studio-param-report" id="studioParamReport" aria-labelledby="studioParamReportTitle">
+    <div class="studio-card-heading"><div><h2 id="studioParamReportTitle">Raport wybranych parametrów</h2><p>Karta obliczeń dla dowolnych wielkości: wzór, podstawienie liczb i wynik, jak w Mathcadzie. Wybierz np. wydłużenie albo schemat iteracji masy z BIPOL_1.</p></div></div>
+    <div class="param-quick" role="group" aria-label="Szybki wybór parametrów">
+      <button type="button" class="btn btn-outline-sm" data-param-quick="aspect">Wydłużenie Λ</button>
+      <button type="button" class="btn btn-outline-sm" data-param-quick="mass">Schemat iteracji masy</button>
+      <button type="button" class="btn btn-outline-sm" data-param-quick="m0">Masa startowa</button>
+      <button type="button" class="btn btn-outline-sm" data-param-quick="area">Powierzchnia nośna</button>
+      <button type="button" class="btn btn-outline-sm" data-param-quick="polar">Biegunowa samolotu</button>
+      <button type="button" class="btn btn-outline-sm" data-param-quick="loads">Przeciążenia niszczące</button>
+    </div>
+    <label class="studio-field" for="paramSearch">Szukaj parametru<input id="paramSearch" type="search" autocomplete="off" placeholder="np. wydłużenie, prędkość manewrowa, masa pustego"></label>
+    <div id="paramCatalog" class="param-catalog"><p class="studio-fine-print">Lista parametrów pojawi się po obliczeniu projektu.</p></div>
+    <p id="paramSelectionStatus" class="studio-fine-print" role="status" aria-live="polite">Nie wybrano parametrów.</p>
+    <div class="studio-two-col param-options">
+      <fieldset class="studio-report-options"><legend>Zakres obliczeń</legend>
+        <label><input type="radio" name="param-chain" value="1" checked>Pełny tok — dane i wszystkie wielkości pośrednie</label>
+        <label><input type="radio" name="param-chain" value="0">Tylko wybrane wzory; wielkości pośrednie w tabeli danych</label>
+      </fieldset>
+      <fieldset class="studio-report-options"><legend>Schemat iteracji masy</legend>
+        <label><input type="radio" name="param-iterations" value="all" checked>Każda iteracja w pełnym zapisie</label>
+        <label><input type="radio" name="param-iterations" value="first">Pierwsza iteracja w pełnym zapisie, kolejne w tabeli</label>
+        <label class="studio-field" for="paramIterStart">Masa startowa w 1. iteracji [kg]<input id="paramIterStart" type="number" min="1" max="1000000" step="any" placeholder="puste: 3·(m_zał + m_ład)"></label>
+      </fieldset>
+    </div>
+    <div class="studio-stack-actions"><button class="btn btn-primary" data-studio-action="preview-param-report">Otwórz raport parametrów</button><button class="btn btn-outline" data-studio-action="download-param-report">Pobierz samodzielny HTML</button><button type="button" class="btn btn-outline" id="paramClear">Wyczyść wybór</button></div>
+  </section>
+  <div id="studioReportStatus" class="studio-note" role="status" aria-live="polite"></div>
 </section>
 
 <section id="tab-glide" class="tab-content studio-panel">

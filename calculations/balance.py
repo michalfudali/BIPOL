@@ -68,9 +68,9 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         mom_wing_offset = (bd["m_wing"] * 0.38 + bd["m_gear"] * 0.45 - bd["m_propulsion"] * 0.15) * mac
 
     denom_m = max(1.0, m_empty - m_wing_group)
-    x_lemac_initial = (mom_fus_fixed + mom_wing_offset - target_oew_mac * mac * m_empty) / denom_m
+    x_lemac_raw = (mom_fus_fixed + mom_wing_offset - target_oew_mac * mac * m_empty) / denom_m
     x_lemac_bounds = (0.28 * l_f, 0.56 * l_f)
-    x_lemac_initial = max(x_lemac_bounds[0], min(x_lemac_bounds[1], x_lemac_initial))
+    x_lemac_initial = max(x_lemac_bounds[0], min(x_lemac_bounds[1], x_lemac_raw))
 
     unmanned = bool(m_sizing.get("unmanned", False)) or params.get("aircraft_type") == "uav"
     n_crew = int(m_sizing.get("n_crew") or 0)
@@ -225,6 +225,7 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
 
     # Aktualizacja rzeczywistego ramienia usterzenia i punktu neutralnego po ustaleniu x_lemac
     x_ac_h = geom["horizontal_tail"].get("x_ac_m")
+    l_h_actual = None
     if x_ac_h is not None and mac > 0 and S > 0:
         l_h_actual = max(0.1, x_ac_h - (x_lemac + 0.25 * mac))
         s_h = float(geom["horizontal_tail"].get("S_h", 0.0))
@@ -270,8 +271,17 @@ def calculate_balance_and_stability(m_sizing: dict, geom: dict, aero: dict, para
         "cg_check": cg_check,
         "neutral_point": {
             "x_n_m": neutral_point_m,
-            "x_n_mac_pct": neutral_point_pct
+            "x_n_mac_pct": neutral_point_pct,
+            # Unrounded terms of x_N = x_ac,wbn + eta_H V_H (a_H/a_w)(1 - d eps/d alpha), for reports.
+            "terms": {"a_w": a_w, "a_h": a_h, "de_da": de_da, "eta_h": eta_h_eff,
+                      "delta_xac_fus": delta_xac_fus, "delta_xac_prop": delta_xac_prop,
+                      "x_ac_wbn_pct": x_ac_wbn_pct, "v_h": vh, "l_h": l_h_actual, "x_ac_h": x_ac_h,
+                      "delta_xn_tail_pct": delta_xn_tail_pct, "ar_h": ar_h},
         },
+        "wing_placement": {"x_fus": x_fus, "x_tail": x_tail, "x_sys": x_sys, "target_oew_mac": target_oew_mac,
+                           "moment_fuselage_group": mom_fus_fixed, "moment_wing_offset": mom_wing_offset,
+                           "m_wing_group": m_wing_group, "x_lemac_raw": x_lemac_raw, "x_lemac_initial": x_lemac_initial,
+                           "x_lemac_bounds": list(x_lemac_bounds), "fuel_reserve_kg": m_fuel_res},
         "stability": {
             "static_margin_forward_pct": static_margin_forward,
             "static_margin_aft_pct": static_margin_aft,

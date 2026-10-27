@@ -1,0 +1,68 @@
+{% import 'reports/calc.html' as c %}
+{% macro meta(key) -%}
+{%- set field = doc.metadata|selectattr('key','equalto',key)|first -%}
+<span data-report-meta="{{ key }}"{% if not field.value %} class="empty-metadata"{% endif %}>{{ field.value }}</span>
+{%- endmacro %}
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ params.name }} — karta obliczeń — BIPOL I</title>
+  {% include 'math_assets.html' %}
+  <style>{{ report_assets.css|safe }}</style>
+</head>
+<body>
+  <aside class="report-toolbar no-print" aria-label="Ustawienia wydruku">
+    <div class="toolbar-row"><strong>Karta obliczeń wybranych parametrów</strong><a href="/" class="back-link">Wróć do projektu</a><button id="print-report">Drukuj / zapisz PDF</button></div>
+    <details{% if doc.metadata|rejectattr('value')|list %} open{% endif %}>
+      <summary>Dane na stronie tytułowej</summary>
+      <div class="metadata-grid">{% for field in doc.metadata %}<label>{{ field.label }}<input data-report-meta-input="{{ field.key }}" data-label="{{ field.label }}" value="{{ field.value }}" maxlength="160"></label>{% endfor %}</div>
+    </details>
+    <p class="metadata-status" id="metadata-status" role="status"></p>
+  </aside>
+  <main class="document parameter-document">
+    <header class="cover">
+      <div class="cover-frame">
+        <div class="cover-author"><div>{{ meta('student_name') }}</div><div>Nr albumu: {{ meta('album_no') }}</div><div>Grupa: {{ meta('group_no') }}</div><div>Prowadzący: {{ meta('supervisor') }}</div></div>
+        <div class="cover-project"><h1>Karta obliczeń</h1><p class="aircraft-name">{{ params.name }}</p>
+          <p class="small">{% for e in selected[:8] %}{{ e.label }}{% if not loop.last %}; {% endif %}{% endfor %}{% if selected|length > 8 %}; …{% endif %}{% for b in selected_blocks %}{% if selected or not loop.first %}; {% endif %}{{ b.title }}{% endfor %}</p></div>
+        <div class="cover-date">Data: {{ meta('submission_date') }}</div>
+      </div>
+    </header>
+    <section class="report-part" data-parameter-report>
+      <h2>Zakres karty obliczeń</h2>
+      <p>Karta zawiera {{ 'pełny tok obliczeń wybranych wielkości — od danych wejściowych, przez wszystkie wielkości pośrednie, do wyniku' if chain else 'wzory wybranych wielkości z podstawieniem danych; wartości wielkości pośrednich podano w tabelach danych ze wskazaniem miejsca ich obliczenia' }}. Każdy wynik zapisano jako wzór ogólny, podstawienie liczb i wynik z jednostką. Obliczenia wykonano dla wariantu „{{ params.name }}” w atmosferze ISA; wzory i oznaczenia odpowiadają materiałom BIPOL I i Mechaniki Lotu I.</p>
+      {% if selected %}
+      <table><caption>Wybrane wielkości i ich wartości</caption><thead><tr><th>Wielkość</th><th>Symbol i wartość</th><th>Część projektu</th></tr></thead><tbody>
+      {% for e in selected %}<tr><td><a href="#q-{{ e.key }}">{{ e.label }}</a></td><td>{% if e.kind == 'table' %}wzór tabelaryczny{% else %}\({{ e.sym }} = {{ e.value_tex }}\){% endif %}</td><td>{{ sheet.where(e.key) }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% endif %}
+      {% set ns = namespace(project=None) %}
+      {% for kind, key in plan %}
+        {% if kind == 'block' %}
+          {% set block = sheet.blocks[key] %}
+          {% set trace = res.mass.guideline_traces[key.replace('mass_iteration_', '')] %}
+          {% if ns.project != block.project %}{% set ns.project = block.project %}<h2 class="parameter-project">{{ project_titles[block.project] }}</h2>{% endif %}
+          <h3 id="block-{{ key }}">{{ block.title }}</h3>
+          {% with full = full_iterations %}{% include 'reports/mass_iteration.html' %}{% endwith %}
+        {% else %}
+          {% set section = sheet.sections[key] %}
+          {% if ns.project != section.project %}{% set ns.project = section.project %}<h2 class="parameter-project">{{ project_titles[section.project] }}</h2>{% endif %}
+          {{ c.section(sheet, key, only=members[key], chain=chain, heading='h3') }}
+        {% endif %}
+      {% endfor %}
+      <h3>Źródła wzorów</h3>
+      <ol class="bibliography">
+        <li>Galiński, C., <em>BIPOL_1 — Analizy wstępne</em>; Galiński, C., Grabowski, T., <em>BIPOL_1 — Wyprowadzenie wzorów</em>. Materiały dydaktyczne BIPOL I, PW.</li>
+        <li><em>BIPOL_2 — Studium wykonalności</em> oraz <em>BIPOL_3 — Analiza masowa</em>, materiały dydaktyczne BIPOL I, PW.</li>
+        <li>Paturski, Z., <em>Przewodnik po projektach z Mechaniki Lotu</em>, PW.</li>
+        <li>Danilecki, S., <em>Konstruowanie samolotów</em>; Raymer, D. P., <em>Aircraft Design: A Conceptual Approach</em>, AIAA.</li>
+        <li>EASA CS-23 Amdt 4 (metoda obwiedni), CS-22 Amdt 2, CS-25.</li>
+      </ol>
+      <p class="small">Model służy do obliczeń dydaktycznych wstępnego projektu i nie stanowi potwierdzenia zdatności do lotu.</p>
+    </section>
+  </main>
+  <script>{{ report_assets.document|safe }}</script>
+</body>
+</html>

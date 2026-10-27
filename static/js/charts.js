@@ -1,5 +1,5 @@
 /**
- * bipol-requiem - Standalone Aerospace Chart & Blueprint Graphics Engine
+ * BiPOL Requiem - Standalone Aerospace Chart & Blueprint Graphics Engine
  * Wydział MEiL PW - Zakład Samolotów i Śmigłowców
  */
 
@@ -1384,7 +1384,7 @@ function render3ViewBlueprint(containerId, geom, fullResults = null) {
           <text x="84" y="60">${todayStr}</text>
           <text x="136" y="60">${studentName.slice(0, 24)}</text>
           <text x="84" y="75">${todayStr}</text>
-          <text x="136" y="75">bipol-requiem CAD</text>
+          <text x="136" y="75">BiPOL Requiem CAD</text>
           <text x="136" y="90">dr inż. / Zakład Samolotów MEiL</text>
           <text x="136" y="105">prof. dr hab. inż. / MEiL PW</text>
         </g>

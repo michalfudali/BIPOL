@@ -41,7 +41,7 @@ with sync_playwright() as p:
         assert not page.locator('.report-toolbar').is_visible()
         pdf = out / (part + '.pdf')
         page.pdf(path=str(pdf), prefer_css_page_size=True, print_background=True)
-        text = subprocess.check_output(['pdftotext','-layout',str(pdf),'-']).decode()
+        text = subprocess.check_output(['pdftotext','-enc','UTF-8','-layout',str(pdf),'-']).decode()
         pages = [s.strip() for s in text.split('\f') if s.strip()]
         assert 'Jan Nowak' in pages[0]
         assert 'Drukuj / zapisz PDF' not in text and 'Przed oddaniem uzupełnij' not in text

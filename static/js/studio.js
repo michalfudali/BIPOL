@@ -280,11 +280,41 @@
     } catch (error) { popup?.close(); throw error; }
   }
 
+  async function parameterReport(downloadReport = false) {
+    const {keys, chain, iterations, start} = BipolParamReport.options();
+    if (!keys.length) throw new Error('Wybierz co najmniej jeden parametr raportu.');
+    const popup = downloadReport ? null : window.open('', '_blank');
+    if (!downloadReport && !popup) throw new Error('Zezwól na otwarcie okna raportu lub pobierz HTML.');
+    try {
+      if (popup) popup.document.body.textContent = 'Przygotowywanie karty obliczeń…';
+      const result = await calculated();
+      const params = {...result.params};
+      if (start) params.mass_iteration_start_kg = Number(start); else delete params.mass_iteration_start_kg;
+      const query = new URLSearchParams({keys: keys.join(','), chain, iterations});
+      const response = await fetch(`/report/parameters?${query}`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(params)
+      });
+      if (!response.ok) throw new Error((await response.json()).message || 'Nie udało się przygotować raportu parametrów.');
+      const html = await response.text();
+      if (downloadReport) download(`${filename(result.params.name)}-karta-obliczen.html`, html, 'text/html;charset=utf-8');
+      else { popup.document.open(); popup.document.write(html); popup.document.close(); }
+      $('studioReportStatus').textContent = `Karta obliczeń przygotowana: ${keys.length} ${keys.length === 1 ? 'pozycja' : 'pozycje'}.`;
+    } catch (error) { popup?.close(); throw error; }
+  }
+
+  async function loadParameterCatalog() {
+    if (document.querySelector('.tab-content.active')?.id !== 'tab-reports') return;
+    try { await BipolParamReport.load(await calculated()); }
+    catch (error) { $('paramCatalog').innerHTML = `<p class="studio-fine-print">${esc(error.message)}</p>`; }
+  }
+
   async function action(name) {
     if (name === 'recalculate') { await performCalculation(); return; }
     if (name === 'reports') return navigate('tab-reports');
     if (name === 'preview-report') return report(false);
     if (name === 'download-report') return report(true);
+    if (name === 'preview-param-report') return parameterReport(false);
+    if (name === 'download-param-report') return parameterReport(true);
     if (name === 'export-json') { saveEditorial(); exportActiveProjectJSON(); return; }
     if (name === 'compare-csv') {
       const {rows} = comparisonRows();
@@ -376,6 +406,8 @@
     });
     document.addEventListener('bipol:project', () => { fresh = false; loadEditorial(); renderComparison(); $('studioResultStatus').textContent = 'Oczekiwanie na obliczenia'; renderProjectGuidance(); });
     document.addEventListener('bipol:tab', syncNavigation);
+    document.addEventListener('bipol:tab', loadParameterCatalog);
+    document.addEventListener('bipol:results', loadParameterCatalog);
     document.addEventListener('bipol:mode', syncNavigation);
     document.addEventListener('bipol:storage', () => {
       $('studioStorageStatus').textContent = projectStore.persistent ? 'Zapis w przeglądarce' : 'Tylko pamięć karty — pobierz JSON';

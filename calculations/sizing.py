@@ -179,6 +179,7 @@ def calculate_matching_chart(params: dict, m0: float = None, mass: dict = None):
     climb_min = None
     tw_design = pw_design = None
     governing = None
+    at_design = {}
     if engine_type != "none":
         climb_min = tw_climb_min if engine_type == "jet" else tw_climb_min * v_climb_ms / eta_p
         at_design = dict(zip(("start", "wznoszenie", "przelot"), requirements(ws_design)))
@@ -215,6 +216,20 @@ def calculate_matching_chart(params: dict, m0: float = None, mass: dict = None):
         "curve_cruise": curve_cruise,
         "climb_min": round(climb_min, 4) if climb_min is not None else None,
         "takeoff_basis": "15m" if s_to else "ground_roll",
+        # Unrounded intermediate values of the design point, shown step by step in reports.
+        "terms": {
+            "cx0": cx0, "cx0_base": cx0_base, "k_ind": k_ind, "aspect_ratio": AR, "oswald_e": e,
+            "v_min_ms": v_min_ms, "ws_min_speed": ws_min_speed, "ws_landing_l": ws_landing_l,
+            "ws_landing": ws_landing, "ws_limit": ws_limit, "m_landing": m_landing,
+            "m_mid_cruise": m_mid_cruise, "v_climb_ms": v_climb_ms, "q_climb": q_climb,
+            "gradient": gradient, "tw_climb_min": tw_climb_min, "v_cr_ms": v_cr_ms, "rho_cr": rho_cr,
+            "q_cr": q_cr, "lapse_cr": propulsion_lapse(params, h_cr, v_cr_ms) if engine_type != "none" else None,
+            "ws_max_range_cruise": ws_range_cr if ws_max_range is not None else None,
+            "v_mean_to": takeoff_mean_speed(ws_design, cz_max_to), "eta_p": eta_p, "eta_to": eta_to,
+            "s_to": s_to, "s_run": s_run, "s_l": s_l, "climb_rate_ms": wy_req,
+            "cz_max_to": cz_max_to, "cz_max_lnd": cz_max_lnd,
+            "at_design": at_design, "margin": 1.06 if engine_type == "jet" else 1.08,
+        },
         "assumptions": {
             "source": "BIPOL_2.pdf (C. Galiński, Studium wykonalności), wzory (1)–(12)",
             "sigma": SIGMA_AIRFIELD,

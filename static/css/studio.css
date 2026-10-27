@@ -1,4 +1,4 @@
-/* Układ pracowni i paleta zaadaptowane z bipol-requiem. */
+/* Układ pracowni i paleta zaadaptowane z BiPOL Requiem. */
 :root { --primary:#168c83; --primary-dark:#10796f; --primary-light:#edf8f6; --bg-main:#f4f7f8; }
 body.studio-layout { background:#f4f7f8; color:#203b47; padding-left:240px; }
 .studio-sidebar { position:fixed; inset:0 auto 0 0; width:240px; z-index:1500; display:flex; flex-direction:column; padding:28px 17px 18px; background:#102d39; color:#b9cbd0; overflow-y:auto; }
@@ -216,3 +216,27 @@ body.studio-layout { background:#f4f7f8; color:#203b47; padding-left:240px; }
 .studio-field input { display:block; width:100%; min-width:0; padding:10px; margin-top:8px; font:inherit; border:1px solid #d9e4e8; border-radius:6px; color:#284b58; background:#fcfdfd; }
 .studio-layout .btn-primary { background:#168c83; }
 .studio-layout .btn-primary:hover { background:#10796f; }
+
+/* Raport wybranych parametrów (karta obliczeń). */
+.studio-param-report { margin-top: 20px; }
+.param-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.param-catalog { max-height: 460px; overflow: auto; border: 1px solid #d9e3e7; border-radius: 6px; padding: 4px 12px; background: #fbfcfc; }
+.param-project { border-bottom: 1px solid #e3eaed; padding: 6px 0; }
+.param-project:last-child { border-bottom: 0; }
+.param-project > summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 6px 0; }
+.param-count { font-weight: 400; font-size: 12px; color: #168c83; margin-left: 6px; }
+.param-section h4 { margin: 10px 0 4px; font-size: 12px; color: #3e5562; }
+.param-section h4 label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.param-item { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 5px 0 5px 4px; font-size: 13px; cursor: pointer; border-radius: 4px; }
+.param-item:hover { background: #eef5f6; }
+.param-item input, .param-section h4 input { accent-color: #168c83; width: 15px; height: 15px; }
+.param-value { font-size: 12px; color: #26333a; white-space: nowrap; }
+.param-value .katex { font-size: 1em; }
+.param-kind { font-size: 11px; color: #5c7380; }
+.param-block { background: #f1f7f4; margin: 6px 0; padding: 8px 6px; }
+.param-options { margin-top: 8px; }
+.param-options .studio-field input { max-width: 260px; }
+#tab-reports > .studio-param-report { max-width: 900px; margin: 20px auto 0; }
+#tab-reports .param-options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 760px) { #tab-reports .param-options { grid-template-columns: 1fr; } .param-item { grid-template-columns: 18px minmax(0, 1fr); } .param-value, .param-kind { grid-column: 2; } }
+#tab-reports .param-options label.studio-field { display: grid; gap: 6px; align-items: start; }

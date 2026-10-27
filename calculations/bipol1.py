@@ -104,7 +104,7 @@ def preliminary_polar(p):
     inferred_class = classify_bipol_cx0(p)
     inferred_class = {'combat':'military','large_transport':'transport'}.get(inferred_class,inferred_class)
     bounds = CX0_RANGES[p.get('cx0_reference_class', inferred_class)]
-    return dict(mode=mode, kmax=kmax, cx0=cx0, swet_ratio=ratio,
+    return dict(mode=mode, kmax=kmax, cx0=cx0, swet_ratio=ratio, aspect_ratio=ar, oswald_e=e,
                 wetted_aspect_ratio=ar/ratio if ratio else None,
                 cx0_bounds=list(bounds), cx0_in_range=bounds[0] <= cx0 <= bounds[1],
                 source='BIPOL_1.pdf, s. 2–3, rys. 1–2 i wzór (3)',

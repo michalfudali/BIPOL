@@ -1,29 +1,41 @@
+{% import 'reports/calc.html' as c %}
 {% set w=res.geometry.wing %}{% set ht=res.geometry.horizontal_tail %}{% set vt=res.geometry.vertical_tail %}{% set bal=res.balance %}
 <p>Geometrię płatowca wyznaczono z powierzchni nośnej i proporcji przyjętych w studium wykonalności. Następnie oszacowano rozmieszczenie mas oraz skrajne położenia środka masy w rozpatrzonych stanach załadowania [1, 4, 5].</p>
-<h3>Geometria głównych zespołów</h3>
+<h3>Geometria skrzydła</h3>
+<p>Przyjęto obrys: {{ w.planform_name_pl|lower }}. {% if w.span_fixed %}Rozpiętość jest zadana, więc wydłużenie wynika z \(\Lambda=b^2/S\).{% else %}Rozpiętość wynika z powierzchni i wydłużenia: \(b=\sqrt{S\Lambda}\).{% endif %}</p>
+{{ c.section(sheet, 'p3.wing') }}
+<h3>Kadłub</h3>
+<p>{{ res.geometry.fuselage.sizing_note }}</p>
+{{ c.section(sheet, 'p3.fuselage') }}
+<h3>Usterzenia</h3>
+<p>Powierzchnie usterzeń obliczono metodą cech objętościowych. Ramiona usterzeń mierzono od 25% ŚCA skrzydła do środków aerodynamicznych usterzeń; położenie skrzydła ustalono w analizie wyważenia, a obie wielkości uzgodniono iteracyjnie.</p>
+{{ c.section(sheet, 'p3.tail') }}
 <table><caption>Podstawowe wymiary płatowca</caption><thead><tr><th>Zespół i parametr</th><th class="number">Wartość</th><th>Jednostka</th></tr></thead><tbody>
 {% for label,value,unit in [('Skrzydło — powierzchnia S',w.S,'m²'),('Skrzydło — rozpiętość b',w.b,'m'),('Skrzydło — wydłużenie Λ',w.AR,'—'),('Skrzydło — zbieżność',w.eta,'—'),('Cięciwa przykadłubowa',w.cr,'m'),('Cięciwa końcowa',w.ct,'m'),('Średnia cięciwa aerodynamiczna',w.mac,'m'),('Kadłub — długość',res.geometry.fuselage.length,'m'),('Kadłub — średnica',res.geometry.fuselage.diameter,'m'),('Usterzenie poziome — powierzchnia',ht.S_h,'m²'),('Usterzenie poziome — ramię',ht.l_h,'m'),('Usterzenie pionowe — powierzchnia',vt.S_v,'m²'),('Usterzenie pionowe — ramię',vt.l_v,'m')] %}<tr><td>{{ label }}</td><td class="number">{{ value|reportnum(3) }}</td><td>{{ unit }}</td></tr>{% endfor %}</tbody></table>
-<p>Przyjęto obrys: {{ w.planform_name_pl|lower }}. Rozpiętość wynika z zależności \(b=\sqrt{S\Lambda}\). Powierzchnie usterzeń obliczono metodą współczynników objętościowych:</p>
-<div class="equation"><div class="formula">\[S_H=\frac{V_HS\bar c}{l_H},\qquad S_V=\frac{V_VSb}{l_V}.\]</div></div>
-<p>Współczynniki wynoszą \(V_H={{ ht.vh_coeff|texnum(3) }}\) oraz \(V_V={{ vt.vv_coeff|texnum(3) }}\). Ich dobór określa geometrię wyjściową; stateczność oceniono oddzielnie na podstawie położenia punktu neutralnego.</p>
 <figure class="blueprint"><div id="repBlueprint">{{ report_sketch(res) }}</div><figcaption>Schemat płatowca w trzech rzutach. Wymiary podano w milimetrach; przedstawienie nie zastępuje arkusza konstrukcyjnego.</figcaption></figure>
+<h3>Klapy i lotki</h3>
+<p>Krawędź spływu podzielono między klapy (przy kadłubie) i lotki (przy końcówkach), ze szczeliną 1,5% półrozpiętości. Względne rozpiętości odnoszą się do półrozpiętości skrzydła, względne cięciwy — do lokalnej cięciwy płata.</p>
+{{ c.section(sheet, 'p3.controls') }}
 <h3>Rozmieszczenie mas i wyważenie</h3>
-<p>Współrzędne podłużne odniesiono do początku układu modelu na kadłubie. Położenie środka masy obliczono jako średnią ważoną ramion poszczególnych składników:</p>
-<div class="equation"><div class="formula">\[x_{CG}=\frac{\sum_i m_ix_i}{\sum_i m_i},\qquad \bar x_{CG}=\frac{x_{CG}-x_{LE,\bar c}}{\bar c}.\]</div></div>
+<p>Masy zespołów oszacowano z udziałów w masie własnej, a ramiona — z położeń zespołów na kadłubie i skrzydle. Współrzędne podłużne odniesiono do nosa kadłuba. Położenie skrzydła dobrano tak, by środek masy samolotu pustego leżał w zadanym punkcie ŚCA; pełny tok obliczeń pokazano dla masy startowej, a pozostałe stany załadowania — w tabeli.</p>
+{{ c.section(sheet, 'p3.balance') }}
 <table class="compact-table long-table"><caption>Szacunkowy rozkład mas i ich ramion</caption><thead><tr><th>Składnik</th><th class="number">m [kg]</th><th class="number">x [m]</th><th class="number">y [m]</th><th class="number">z [m]</th></tr></thead><tbody>{% for row in p_data.table_3_1_components %}<tr><td>{{ row.item }}</td><td class="number">{{ row.mass_kg|reportnum(1) }}</td><td class="number">{{ row.x_m|reportnum(2) }}</td><td class="number">{{ row.y_m|reportnum(2) }}</td><td class="number">{{ row.z_m|reportnum(2) }}</td></tr>{% endfor %}</tbody></table>
 <table><caption>Rozpatrzone stany załadowania</caption><thead><tr><th>Stan</th><th class="number">Masa [kg]</th><th class="number">xCG [m]</th><th class="number">xCG [% ŚDA]</th></tr></thead><tbody>{% for row in bal.loading_states %}<tr><td>{{ row.name }}</td><td class="number">{{ row.mass_kg|reportnum(1) }}</td><td class="number">{{ row.xcg_m|reportnum(3) }}</td><td class="number">{{ row.xcg_mac_pct|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>
 {% if bal.pilot_variants %}<table><caption>Położenie środka masy z lekkim (55 kg) i ciężkim (110 kg) pilotem</caption><thead><tr><th>Stan</th><th class="number">pilot 55 kg [% ŚDA]</th><th class="number">pilot 110 kg [% ŚDA]</th></tr></thead><tbody>{% for row in bal.pilot_variants %}<tr><td>{{ row.name }}</td><td class="number">{{ row.light_pct|reportnum(1) }}</td><td class="number">{{ row.heavy_pct|reportnum(1) }}</td></tr>{% endfor %}</tbody></table>{% endif %}
 <p>Skrajne położenia środka masy w locie, wyznaczone bez samolotu pustego{% if bal.pilot_variants %} i z obu wariantami masy pilota{% endif %}, wynoszą {{ bal.cg_range.forward_pct|reportnum(1) }}–{{ bal.cg_range.aft_pct|reportnum(1) }}% ŚDA. Materiały pomocnicze wymagają zakresu {{ bal.cg_check.required }}: kryterium {{ 'jest spełnione' if bal.cg_check.passed else 'nie jest spełnione' }}. {{ bal.cg_check.note }}{% if bal.cg_check.wing_shift_m %} Skrzydło przesunięto o {{ bal.cg_check.wing_shift_m|reportnum(3) }} m względem położenia wstępnego (dodatnio do tyłu).{% endif %}</p>
-<p>Punkt neutralny oszacowano na {{ bal.neutral_point.x_n_mac_pct|reportnum(1) }}% ŚDA. Zapas stateczności wyznaczono jako różnicę położenia punktu neutralnego i środka masy. Dla tylnego położenia środka masy otrzymano {{ bal.stability.static_margin_aft_pct|reportnum(1) }}% ŚDA.</p>
-{% set inertia=p_data.inertia_moments %}
-<table><caption>Przybliżenie punktowymi masami zespołów; pominięto własną bezwładność zespołów</caption><thead><tr><th>Jx [kg·m²]</th><th>Jy [kg·m²]</th><th>Jz [kg·m²]</th><th>Jxz [kg·m²]</th></tr></thead><tbody><tr><td>{{ inertia.jx_cg_kgm2|reportnum(1) }}</td><td>{{ inertia.jy_cg_kgm2|reportnum(1) }}</td><td>{{ inertia.jz_cg_kgm2|reportnum(1) }}</td><td>{{ inertia.jxz_cg_kgm2|reportnum(1) }}</td></tr></tbody></table>
-<h3>Obciążenie aerodynamiczne płata</h3>
-<p>Rozkład Schrenka wyznaczono dla \(C_z=1\), uśredniając rozkład geometryczny i eliptyczny. Metoda służy do wstępnego oszacowania obciążenia wzdłuż rozpiętości; nie uwzględnia pełnej trójwymiarowej struktury przepływu.</p>
+<h3>Punkt neutralny i zapas stateczności</h3>
+<p>Punkt neutralny wyznaczono z równania stateczności podłużnej: środek aerodynamiczny układu płat–kadłub–gondole przesunięty o udział usterzenia poziomego. Zapas stateczności jest różnicą położeń punktu neutralnego i środka masy.</p>
+{{ c.section(sheet, 'p3.neutral') }}
+<h3>Momenty bezwładności</h3>
+<p>Momenty bezwładności oszacowano z mas skupionych zespołów (tabela mas), bez własnych momentów bezwładności zespołów. Sumy obejmują wszystkie wiersze tabeli.</p>
+{{ c.section(sheet, 'p3.inertia') }}
+<h3>Obciążenie aerodynamiczne płata — rozkład Schrenka</h3>
+<p>Rozkład Schrenka wyznaczono dla \(C_z=1\), uśredniając rozkład geometryczny i eliptyczny. Metoda służy do wstępnego oszacowania obciążenia wzdłuż rozpiętości i przekroju, w którym najwcześniej zostanie osiągnięte lokalne \(c_{z\,max}\).</p>
+{{ c.section(sheet, 'p3.schrenk') }}
 <figure><div id="repSchrenk"></div><figcaption>Rozkład geometryczny, eliptyczny i rozkład Schrenka na połówce skrzydła.</figcaption></figure>
-<p>Współczynnik nachylenia charakterystyki nośnej płata wynosi {{ p_data.isolated_wing_aero.cz_alpha_deg|reportnum(4) }} na stopień. {{ p_data.airfoil_coordinates_note }}</p>
 <h3>Charakterystyki aerodynamiczne płata</h3>
-{% set iw=p_data.isolated_wing_aero %}{% set p2=res.aerodynamics.paturski_p2 %}<p>Charakterystyki \(C_z(\alpha)\), \(C_m(\alpha)\) i \(C_x(C_z)\) płata wyznaczono klasyczną metodą Mechaniki Lotu (Paturski, Projekt 2). Charakterystyki profilu przeliczono na płat o wydłużeniu \(\Lambda={{ w.AR|texnum(2) }}\) z poprawkami Glauerta \(\tau={{ iw.tau_glauert|texnum(3) }}\) i \(\delta={{ iw.delta_glauert|texnum(3) }}\). Kąt natarcia \(\alpha\) odniesiono do cięciwy płata. Współczynnik momentu podano względem noska ŚCA. Przyjęto stały \(C_{m,SA}={{ p2.cm_sa_profile|texnum(3) }}\) względem środka aerodynamicznego profilu, położonego w \(\bar x_{SA}={{ p2.x_sa_bar|texnum(3) }}\):</p>
-<div class="equation"><div class="formula">\[\alpha=\alpha_\infty+\frac{C_z}{\pi\Lambda}(1+\tau),\qquad C_x=C_{x\infty}+\Delta C_{x,tech}+\frac{C_z^2}{\pi\Lambda}(1+\delta),\qquad C_m=C_{m,SA}-\bar x_{SA}C_z.\]</div></div>
+{% set iw=p_data.isolated_wing_aero %}{% set p2=res.aerodynamics.paturski_p2 %}<p>Charakterystyki \(C_z(\alpha)\), \(C_m(\alpha)\) i \(C_x(C_z)\) płata wyznaczono klasyczną metodą Mechaniki Lotu (Paturski, Projekt 2): charakterystyki profilu przeliczono na płat o wydłużeniu \(\Lambda\) z poprawkami Glauerta. Kąt natarcia odniesiono do cięciwy płata, współczynnik momentu — do noska ŚCA, przy \(C_{m,SA}={{ p2.cm_sa_profile|texnum(3) }}\) i \(\bar x_{SA}={{ p2.x_sa_bar|texnum(3) }}\).</p>
+{{ c.section(sheet, 'p3.wing_aero') }}
 <table class="compact-table"><caption>Charakterystyki aerodynamiczne płata</caption><thead><tr><th class="number">α [°]</th><th class="number">Cz [—]</th><th class="number">Cx [—]</th><th class="number">Cm [—]</th></tr></thead><tbody>{% for row in p_data.wing_alpha_table %}<tr><td class="number">{{ row.alpha_deg|reportnum(2) }}</td><td class="number">{{ row.cz|reportnum(3) }}</td><td class="number">{{ row.cx|reportnum(5) }}</td><td class="number">{{ row.cm_le|reportnum(4) }}</td></tr>{% endfor %}</tbody></table>
 <figure><div class="figure-pair"><div id="repWingAlpha"></div><div id="repWingPolar"></div></div><figcaption>Charakterystyki płata: \(C_z(\alpha)\) i \(C_m(\alpha)\) oraz biegunowa \(C_z(C_x)\).</figcaption></figure>
-<p class="table-note">Charakterystyki są liniowe do około 75% \(C_{z,max}\). W pobliżu przeciągnięcia przyrost oporu oszacowano poprawką statystyczną; nieliniowości \(C_z(\alpha)\) i \(C_m(\alpha)\) nie modelowano. Dokładniejsze charakterystyki można uzyskać programem PANUKL lub AVL.</p>
+<p class="table-note">Charakterystyki są liniowe do około 75% \(C_{z,max}\). W pobliżu przeciągnięcia przyrost oporu oszacowano poprawką statystyczną; nieliniowości \(C_z(\alpha)\) i \(C_m(\alpha)\) nie modelowano. Dokładniejsze charakterystyki można uzyskać programem PANUKL lub AVL. {{ p_data.airfoil_coordinates_note }}</p>

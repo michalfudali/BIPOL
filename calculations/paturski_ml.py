@@ -308,6 +308,11 @@ def paturski_project_2_wing(geom_res: dict, params: dict, m0: float = None) -> d
         "x_sa_bar": x_sa_bar,
         "z_sa_bar": z_sa_bar,
         "cz_max_clean": cz_max_clean,
+        # Unrounded intermediate values (wzory 2.6–2.27) for step-by-step reports.
+        "terms": {"m0": m0, "v_s1_ms": v_s1_ms, "re_1": re_1, "nu0": NU0, "ca_m": ca_paturski,
+                  "u_ratio": u_ratio, "tau_1": tau_1, "tau_2": tau_2, "delta_1": delta_1,
+                  "delta_2": delta_2, "delta_3": delta_3, "taper": lam, "sweep_deg": beta25_deg,
+                  "aspect_ratio": AR, "tech_factor": tech_factor},
     }
 
 
@@ -816,6 +821,14 @@ def paturski_project_3_aircraft_aero(geom_res: dict, params: dict, m0: float = N
 
     return {
         "fuselage": {
+            "terms": {"l_k": l_k, "d_k": d_k, "s_k": s_k, "s_ck": s_ck, "lambda_k": lambda_k,
+                      "v_cr_ms": v_cr_ms, "mach_cr": mach_cr, "mu_cr": mu_cr, "rho_cr": isa_cr["rho"],
+                      "re_k": re_k, "cf_k": cf_k, "eta_k": eta_k, "eta_ma": eta_ma,
+                      "cx_k_frontal_raw": cf_k * eta_k * eta_ma * (s_ck / max(0.05, s_k)),
+                      "cx_k_frontal": cx_k_frontal, "cx_k_eff": cx_k_eff,
+                      "s_h": s_h, "l_h": l_h, "S": S, "ca": ca_paturski, "vh_vinf_sq": vh_vinf_sq,
+                      "kappa_h_prime": kappa_h_prime, "ar_h": ar_h, "e_h": e_h, "lambda_eh": lambda_eh,
+                      "sum_cxj_sj": sum_cxj_sj, "cx_szk_min_raw": cx_szk_min_raw},
             "sk_frontal_m2": round(s_k, 3),
             "sck_wetted_m2": round(s_ck, 2),
             "lambda_k": round(lambda_k, 2),
@@ -836,6 +849,8 @@ def paturski_project_3_aircraft_aero(geom_res: dict, params: dict, m0: float = N
         "table_2_2_complete": table_2_2,
         "trim_model": trim_model,
         "analytical_polar_fit": {
+            "n_fit": n_fit, "sum_x": sum_x, "sum_y": sum_y, "sum_xx": sum_xx, "sum_xy": sum_xy,
+            "cz_fit_max": 0.85 * cz_max_clean, "slope_raw": slope_k, "cx0_raw": cx0_approx,
             "cx0_approx": round(cx0_approx, 4),
             "slope_d_cx_d_cz2": round(slope_k, 5),
             "lambda_e_approx": round(lambda_e_approx, 2),
