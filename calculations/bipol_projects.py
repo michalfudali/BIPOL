@@ -4,7 +4,7 @@ zgodnie z oficjalnym programem przedmiotu LK000-ISP-5003 BIPOL I (MEiL PW)
 Autorzy metodyki: dr inż. Marcin Figat, dr inż. Tomasz Grabowski, prof. dr hab. inż. Cezary Galiński
 """
 import math
-from calculations.atmosphere import isa_atmosphere, G0, RHO0
+from calculations.atmosphere import isa_atmosphere, G0
 from calculations.official_topics import ALL_TOPICS
 from calculations.paturski_ml import run_paturski_mechanika_lotu, aircraft_characteristics_for_cg
 from calculations.trends import analyze_trends
