@@ -10,7 +10,8 @@ import sqlite3
 from pathlib import Path
 from flask import Flask, Response, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
-from calculations import run_bipol_project, AIRCRAFT_PRESETS
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.aircraft_store import export_source
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
 from calculations.polish_law import catalog_for_frontend

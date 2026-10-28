@@ -11,7 +11,6 @@ from calculations.performance import calculate_performance
 from calculations.envelope import calculate_vn_envelope
 from calculations.balance import calculate_balance_and_stability
 from calculations.bipol_projects import calculate_all_bipol_projects
-from calculations.presets import AIRCRAFT_PRESETS
 from calculations.polish_law import normalize_occupants, check_compliance
 from calculations.validation import validate_parameters
 from calculations.glide import calculate_glide_polar

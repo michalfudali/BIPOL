@@ -2,7 +2,8 @@
 import json
 import pytest
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.atmosphere import G0
 from calculations.official_topics import ALL_TOPICS
 

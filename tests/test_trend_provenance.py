@@ -5,7 +5,8 @@ from datetime import date
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.mass import calculate_mass_sizing
 from calculations.trends import analyze_trends, get_trend_suggestions, predict, two_point_coefficients
 from calculations.validation import validate_parameters

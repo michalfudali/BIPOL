@@ -3,7 +3,8 @@ from copy import deepcopy
 
 import pytest
 
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.coursework import PROJECT_MAX, RUBRIC, grade_plan, review_submission
 
 

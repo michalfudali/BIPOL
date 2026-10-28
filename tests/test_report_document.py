@@ -3,7 +3,8 @@ from datetime import date
 from copy import deepcopy
 import pytest
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.report_document import report_document, report_metadata, report_number, tex_number
 
 

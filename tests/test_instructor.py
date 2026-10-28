@@ -5,7 +5,8 @@ import math
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.runway import takeoff_distance
 from calculations.trends import analyze_trends, load_aircraft
 from calculations.trend_observations import import_observations

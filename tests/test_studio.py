@@ -3,7 +3,8 @@ import math
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.atmosphere import G0
 from calculations.glide import calculate_glide_polar
 

@@ -17,7 +17,8 @@ import time
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.trends import CLASSES, get_trend_suggestions
 
 ALL_CLASSES = list(CLASSES.keys())
