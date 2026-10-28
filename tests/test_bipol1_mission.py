@@ -1,7 +1,8 @@
 """Independent balances and graph anchors for BIPOL_1, not snapshots of outputs."""
 import math
 import pytest
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.mass import calculate_mass_sizing
 from calculations.bipol1 import interpolate, RAYMER, CORKE, preliminary_polar, empty_mass_law
 from calculations.validation import validate_parameters

@@ -4,7 +4,8 @@ import math
 
 import pytest
 
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.atmosphere import G0, isa_atmosphere
 from calculations.envelope import calculate_vn_envelope
 from calculations.geometry import calculate_geometry

@@ -5,7 +5,8 @@ import re
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.calc_sheet import REF, build_sheet, tex_value, worked_iteration
 from calculations.mass_iteration import TOLERANCE, auto_start, guideline_masses
 

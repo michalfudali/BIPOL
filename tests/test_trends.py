@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 from app import app
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.atmosphere import G0
 from calculations.performance import calculate_performance
 from calculations.trends import analyze_trends, fit_regression, load_aircraft, predict, select_references

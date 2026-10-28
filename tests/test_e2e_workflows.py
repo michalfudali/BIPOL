@@ -8,7 +8,7 @@ Covers:
 import copy
 import json
 import pytest
-from calculations import AIRCRAFT_PRESETS
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.trends import DATA, load_aircraft
 
 

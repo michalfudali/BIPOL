@@ -4,7 +4,8 @@ import math
 
 import pytest
 
-from calculations import AIRCRAFT_PRESETS, run_bipol_project
+from calculations import run_bipol_project
+from calculations.presets import AIRCRAFT_PRESETS
 from calculations.atmosphere import RHO0
 from calculations.sizing import calculate_matching_chart, landing_ws, takeoff_tw
 
