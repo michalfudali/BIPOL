@@ -1,7 +1,6 @@
 """
 Główny moduł integrujący obliczenia wstępnego projektowania samolotu BIPOL I
 """
-from calculations.atmosphere import G0
 from calculations.high_lift import high_lift
 from calculations.mass import calculate_mass_sizing
 from calculations.sizing import calculate_matching_chart
