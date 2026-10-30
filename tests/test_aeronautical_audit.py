@@ -45,6 +45,66 @@ def test_regional_stol_is_not_seeded_as_a_light_bush_plane():
     assert r['params']['n_engines'] == 2
     assert r['geometry']['fuselage']['length'] < 35
     assert r['geometry']['wing']['b'] < 50
+    assert (r['params']['takeoff_distance_m'], r['params']['landing_distance_m']) == (800, 700)
+
+
+def topic(num):
+    return next(t['parameters'] for t in ALL_TOPICS if t['num'] == num)
+
+
+def test_topic_engine_count_is_explicit_and_follows_the_title():
+    # The wizard copies topic parameters; a missing count kept the previous project's single engine.
+    assert all('n_engines' in t['parameters'] for t in ALL_TOPICS)
+    assert [topic(n)['n_engines'] for n in (37, 38, 40, 44, 45, 20, 103, 76)] == [1, 2, 1, 2, 2, 1, 2, 2]
+
+
+def test_jet_topics_are_not_seeded_with_piston_stall_speeds():
+    for num, low, high in ((20, 100, 120), (37, 140, 170), (49, 130, 160), (61, 130, 160), (100, 160, 190)):
+        p = topic(num)
+        assert low <= p['v_stall_kmh'] <= high, num
+    r = run_bipol_project(topic(61))
+    # A 10-seat business jet: CJ3/Phenom 300 have 27–29 m² and 16 m, not 70 m² and 24 m.
+    assert r['geometry']['wing']['S'] < 35 and r['geometry']['wing']['b'] < 18
+    assert r['mass']['m0'] / r['geometry']['wing']['S'] > 150
+
+
+def test_ultralight_topics_meet_the_ul_stall_limit_without_an_invented_span():
+    for num in range(15, 20):
+        assert topic(num)['v_stall_kmh'] <= 45 * 1.852 and topic(num)['wing_input_mode'] == 'loading'
+    r = run_bipol_project(topic(15))
+    assert next(c for c in r['easa_compliance']['checks'] if 'VS0' in c['name'])['ok']
+
+
+def test_aerobatic_topics_use_aerobatic_loads():
+    assert [topic(n)['category'] for n in (27, 28, 29)] == ['cs23_aerobatic'] * 3
+    assert topic(23)['category'] == 'cs23_level1'
+    assert run_bipol_project(topic(28))['envelope']['limits']['n_max'] >= 6
+
+
+def test_heavy_payload_topics_are_transport_category_with_two_pilots():
+    for num in (67, 71, 91, 98):
+        p = topic(num)
+        assert (p['category'], p['n_crew']) == ('cs25_transport', 2), num
+    assert topic(66)['category'] == 'cs23_level1'
+    r = run_bipol_project(topic(68))
+    assert r['mass']['m0'] > 8618 and all(c['ok'] for c in r['easa_compliance']['checks'] if 'MTOM' in c['name'])
+    # The mass, not the seat count, puts a freighter in CS-25.
+    assert not any('pasażerów' in c['name'] for c in r['easa_compliance']['checks'])
+
+
+def test_low_design_cruising_speed_proves_the_low_speed_level():
+    level = lambda num: run_bipol_project(topic(num))['easa_compliance']['easa_performance_level']
+    assert level(40).startswith('Low Speed')  # VNO ≤ VC ≈ 125 KEAS
+    assert level(49).startswith('Nie określono')  # VC > 250 KEAS: the designer must state VMO/MMO
+    r = run_bipol_project(dict(topic(49), vmo_kcas=240, mmo=.55))
+    assert r['easa_compliance']['easa_performance_level'] == 'Low Speed'
+
+
+def test_topic_specific_payloads():
+    boat = topic(95)  # four-seat touring flying boat carries people, not a ton of cargo
+    assert (boat['aircraft_type'], boat['n_pax'], boat['m_cargo']) == ('piston_ga', 3, 0)
+    assert topic(31)['n_pax'] == 0  # single-seat glider tug
+    assert topic(30)['n_pax'] == 5
 
 
 def test_known_empty_mass_fraction_changes_the_closed_mass_balance():

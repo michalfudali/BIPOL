@@ -8,12 +8,16 @@ Przyjęte obciążenia i uproszczona obwiednia są założeniami dydaktycznymi.
 Źródła: https://www.easa.europa.eu/en/downloads/22283/en
 https://www.easa.europa.eu/en/domains/drones-air-mobility/operating-drone
 """
+import math
+
+from calculations.atmosphere import isa_atmosphere
 
 KT_TO_KMH = 1.852
 KMH_TO_KT = 1.0 / 1.852
 LB_PER_KG = 2.20462
 AVGAS_DENSITY_KG_L = 0.72
 JETA1_DENSITY_KG_L = 0.80
+CS23_MTOM_MAX_KG = 8618.0
 LAW_REF = "t.j. Dz. U. z 2025 r. poz. 1137"
 EASA_REF = "Rozporządzenie Parlamentu Europejskiego i Rady (UE) 2018/1139 oraz CS-23/25/VLA/LSA/22"
 
@@ -632,7 +636,8 @@ def _chk(name, limit, value, ok, source, severity="error"):
     }
 
 
-def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_res: dict = None) -> dict:
+def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_res: dict = None,
+                     envelope_res: dict = None) -> dict:
     """
     Weryfikacja pełnej zgodności projektu ze specyfikacjami EASA
     oraz polskim prawem lotniczym (t.j. Dz. U. z 2025 r. poz. 1137).
@@ -732,7 +737,8 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
                 f"EASA CS 23.2005 ({sub['easa_code']})"
             ))
 
-        if sub.get("pax_min") is not None and sub.get("pax_min") > 0:
+        # Above the CS-23 mass limit CS-25 applies whatever the seat count (e.g. freighters).
+        if sub.get("pax_min") and not (cat_key == "cs25_transport" and m0 > CS23_MTOM_MAX_KG):
             checks.append(_chk(
                 f"Zalecany przedział pasażerów dla {sub['easa_code']}",
                 f"≥ {sub['pax_min']} pax",
@@ -757,15 +763,24 @@ def check_compliance(params: dict, mass_res: dict, geom_res: dict = None, perf_r
     # Vcr jest TAS; nie wolno używać jej zamiast granicznych VMO/VNO (KCAS).
     perf_lvl = "Nie określono – wymagane VMO/VNO (KCAS) i MMO"
     if cat_key.startswith("cs23_"):
-        if params.get("vmo_kcas") is not None and params.get("mmo") is not None:
+        known = params.get("vmo_kcas") is not None and params.get("mmo") is not None
+        if known:
             high_speed = float(params["vmo_kcas"]) > 250 or float(params["mmo"]) > 0.6
             perf_lvl = "High Speed" if high_speed else "Low Speed"
+        elif (envelope_res or {}).get("terms", {}).get("v_c_ms"):
+            # VNO/VMO may not exceed VC (CS 23.1505), so a low VC proves the Low Speed level.
+            terms = envelope_res["terms"]
+            vc_kt = terms["v_c_ms"] * 3.6 * KMH_TO_KT
+            mc = terms["v_c_ms"] / math.sqrt(terms["sigma_cr"]) / isa_atmosphere(params.get("cruise_altitude_m", 0))["a"]
+            if vc_kt <= 250 and mc <= 0.6:
+                known = True
+                perf_lvl = f"Low Speed (VNO/VMO ≤ VC = {vc_kt:.0f} KEAS, MC = {mc:.2f})"
         checks.append(_chk(
             "Poziom osiągów CS 23.2005(c)",
             "VMO/VNO ≤ 250 KCAS i MMO ≤ 0,6 dla Low Speed",
             perf_lvl,
-            params.get("vmo_kcas") is not None and params.get("mmo") is not None,
-            "EASA CS 23.2005(c); Vcr (TAS) nie określa poziomu osiągów", "warning"
+            known,
+            "EASA CS 23.2005(c), CS 23.1505; Vcr (TAS) nie określa poziomu osiągów", "warning"
         ))
     if sub["unmanned"]:
         checks.append(_chk(
