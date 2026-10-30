@@ -365,7 +365,81 @@ def perform_engineering_audit(result: dict) -> dict:
     })
 
     # =========================================================================
-    # 9. SYMULATOR PYTAŃ NA ZEJSZCIÓWKĘ / OBRONĘ (Defense Quiz Simulator)
+    # 9. MARGINES BEZPIECZEŃSTWA PRZED FLATTEREM (CS-23.629 / CS-25.629)
+    # =========================================================================
+    aeroel = result.get("aeroelastics") or {}
+    v_flutter = float(aeroel.get("flutter_speed_kmh", 0.0) or 0.0)
+    v_d_val = float(aeroel.get("dive_speed_vd_kmh", 0.0) or 0.0)
+    flutter_margin = float(aeroel.get("margin_flutter", 1.5) or 1.5)
+    flutter_ok = aeroel.get("flutter_safe", True)
+
+    metrics["flutter_speed_kmh"] = v_flutter
+    metrics["flutter_margin"] = flutter_margin
+    metrics["divergence_speed_kmh"] = aeroel.get("divergence_speed_kmh")
+    metrics["aileron_reversal_speed_kmh"] = aeroel.get("aileron_reversal_speed_kmh")
+    metrics["dive_speed_vd_kmh"] = v_d_val
+
+    if v_flutter > 0.0 and v_d_val > 0.0:
+        checks.append({
+            "id": "flutter_safety_margin",
+            "category": "Aeroelastyczność i sztywność konstrukcji",
+            "title": "Margines bezpieczeństwa flatteru (V_flater vs 1.20 VD)",
+            "value": f"V_flater = {v_flutter:.0f} km/h ({flutter_margin:.2f} VD)",
+            "required": "≥ 1.20 VD (wymóg CS-23.629 / CS-25.629)",
+            "passed": flutter_ok,
+            "severity": "ok" if flutter_ok else "warning",
+            "didactic_simple": (
+                "Flater to gwałtowne, samowzbudne trzepotanie skrzydła, które potrafi urwać skrzydło w ułamku sekundy. "
+                "Skrzydło musi być na tyle sztywne na skręcanie i zginanie, by flater pojawił się dopiero daleko powyżej "
+                "największej dopuszczalnej prędkości nurkowania (co najmniej 20% powyżej VD)."
+            ),
+            "engineering_note": (
+                f"Szacowana prędkość flatteru giętno-skrętnego wynosi V_flater = {v_flutter:.0f} km/h (VD = {v_d_val:.0f} km/h, zapas: {flutter_margin:.2f} VD). "
+                + ("Skrzydło spełnia wymóg przepisów zdatności CS-23/25 (margines ≥ 1.20 VD)." if flutter_ok else
+                   "Niewystarczający margines flatteru (< 1.20 VD)! Zwiększ grubość poszycia kesonu skrzydła (t_skin) lub zastosuj sztywniejszy dźwigar.")
+            )
+        })
+
+    # =========================================================================
+    # 10. ZDATNOŚĆ AKUSTYCZNA I HAŁAS ZEWNĘTRZNY (ICAO Annex 16 / CS-36)
+    # =========================================================================
+    acoustics = result.get("acoustics") or {}
+    noise_flyover = float(acoustics.get("noise_flyover", 0.0) or 0.0)
+    noise_limit = float(acoustics.get("limit_flyover", 0.0) or 0.0)
+    noise_margin = float(acoustics.get("margin_flyover", 0.0) or 0.0)
+    noise_unit = acoustics.get("metric_unit", "dBA")
+    noise_compliant = acoustics.get("compliant", True)
+    m_tip_val = acoustics.get("propeller_tip_mach")
+
+    metrics["noise_flyover"] = noise_flyover
+    metrics["noise_limit"] = noise_limit
+    metrics["noise_margin"] = noise_margin
+    metrics["noise_unit"] = noise_unit
+    metrics["propeller_tip_mach"] = m_tip_val
+
+    if noise_flyover > 0.0:
+        checks.append({
+            "id": "noise_compliance_check",
+            "category": "Ochrona środowiska i zdatność akustyczna",
+            "title": f"Certyfikacja hałasu ({acoustics.get('icao_standard', 'ICAO Annex 16')})",
+            "value": f"{noise_flyover:.1f} {noise_unit} (zapas: {noise_margin:+.1f} {noise_unit})",
+            "required": f"≤ {noise_limit:.1f} {noise_unit} (limit przelotu)",
+            "passed": noise_compliant,
+            "severity": "ok" if noise_compliant else "warning",
+            "didactic_simple": (
+                "Samolot nie może być zbyt głośny dla ludzi mieszkających wokół lotniska. "
+                "W samolotach śmigłowych głównym źródłem ryku jest końcówka śmigła tnąca powietrze (zwłaszcza gdy M_tip > 0.75), "
+                "a w odrzutowcach — gwałtowny strumień gorących gazów wylotowych."
+            ),
+            "engineering_note": (
+                f"Obliczony poziom hałasu przelotu wynosi {noise_flyover:.1f} {noise_unit} przy limicie {noise_limit:.1f} {noise_unit}. "
+                + (f"Spełnia normy hałasowe ICAO/EASA z marginesem {noise_margin:.1f} {noise_unit}. {acoustics.get('didactic_advice', '')}" if noise_compliant else
+                   f"Przekroczenie limitu hałasu o {abs(noise_margin):.1f} {noise_unit}! {acoustics.get('didactic_advice', '')}")
+            )
+        })
+
+    # =========================================================================
+    # 11. SYMULATOR PYTAŃ NA ZEJSZCIÓWKĘ / OBRONĘ (Defense Quiz Simulator)
     # =========================================================================
     defense_questions = generate_defense_questions(result, metrics)
 
@@ -444,6 +518,16 @@ def generate_defense_questions(result: dict, metrics: dict) -> list:
                 "Dla skrzydła o umiarkowanej zbieżności maksimum wypada w części przykadłubowej, co chroni lotki przed wczesnym oderwaniem strug."
             ),
             "faculty_tip": "Prowadzący sprawdza, czy student wie, jak zbieżność i zwichrzenie wpływają na bezpieczeństwo lotu."
+        },
+        {
+            "id": "q_aeroelastics",
+            "topic": "Aeroelastyczność i sztywność (P4/P6)",
+            "question": f"Prędkość nurkowania Twojego samolotu wynosi VD = {metrics.get('dive_speed_vd_kmh', 300):.0f} km/h. Dlaczego przepisy CS-23 wymagają, by prędkość flatteru przekraczała 1.20 VD i czym grozi rewers lotek?",
+            "expected_answer": (
+                "Współczynnik 1.20 (20% margines w prędkości) zabezpiecza samolot przed nieprzewidzianym przekroczeniem VD w turbulencji i niedokładnościami obliczeniowymi. "
+                "Rewers lotek grozi utratą sterowania poprzecznego: przy dużej prędkości ugięcie lotki skręca całe skrzydło przeciwnie do zamierzonego przechylenia."
+            ),
+            "faculty_tip": "Klasyczne pytanie na 5.0 z Mechaniki Lotu i Konstruowania Samolotów: student musi powiązać aerodynamikę z odkształceniami sprężystymi struktury."
         }
     ]
 

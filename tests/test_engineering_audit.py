@@ -83,3 +83,26 @@ def test_engineering_audit_wing_loading_and_jet_compressibility():
     comp_check = next(c for c in audit['checks'] if c['id'] == 'compressibility_drag_divergence')
     assert 'M =' in comp_check['value']
     assert audit['metrics']['mach_cruise'] > 0.4
+
+def test_engineering_audit_flutter_safety_and_defense_question():
+    params = dict(AIRCRAFT_PRESETS['pzl_kos'])
+    result = run_bipol_project(params)
+    audit = perform_engineering_audit(result)
+
+    flutter_check = next((chk for chk in audit['checks'] if chk['id'] == 'flutter_safety_margin'), None)
+    assert flutter_check is not None
+    assert 'V_flater =' in flutter_check['value']
+    assert audit['metrics']['flutter_speed_kmh'] > 0.0
+
+    questions_ids = {q['id'] for q in audit['defense_questions']}
+    assert 'q_aeroelastics' in questions_ids
+
+def test_engineering_audit_noise_check():
+    params = dict(AIRCRAFT_PRESETS['pzl_kos'])
+    result = run_bipol_project(params)
+    audit = perform_engineering_audit(result)
+
+    noise_check = next((chk for chk in audit['checks'] if chk['id'] == 'noise_compliance_check'), None)
+    assert noise_check is not None
+    assert 'dBA' in noise_check['value']
+    assert audit['metrics']['noise_flyover'] > 0.0

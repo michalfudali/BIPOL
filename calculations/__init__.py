@@ -251,6 +251,10 @@ def run_bipol_project(params: dict):
     result['bipol1_review'] = review_bipol1(result)
     from calculations.coursework import review_submission
     result['submission_review'] = review_submission(result)
+    from calculations.aeroelastics import estimate_aeroelastics
+    result['aeroelastics'] = estimate_aeroelastics(geom_res, aero_res, mass_res, envelope_res, params)
+    from calculations.acoustics import estimate_aircraft_noise
+    result['acoustics'] = estimate_aircraft_noise(params, sizing_res, perf_res, geom_res, mass_res)
     from calculations.engineering_audit import perform_engineering_audit
     result['engineering_audit'] = perform_engineering_audit(result)
     return result
