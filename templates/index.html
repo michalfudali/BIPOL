@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BiPOL Requiem - Dydaktyczne Środowisko Projektowania Samolotów | MEiL PW</title>
   <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="/static/css/style.css?v=17">
+  <link rel="stylesheet" href="/static/css/style.css?v=18">
   <link rel="stylesheet" href="/static/css/studio.css?v=3">
   <link rel="stylesheet" href="/static/css/trends.css?v=2">
   <link rel="stylesheet" href="/static/css/aircraft-editor.css?v=1">
-  <link rel="stylesheet" href="/static/css/workspace.css?v=1">
+  <link rel="stylesheet" href="/static/css/workspace.css?v=2">
   <link rel="stylesheet" href="/static/css/calculation-tree.css?v=1">
   <link rel="stylesheet" href="/static/css/experience.css?v=3">
-  <link rel="stylesheet" href="/static/css/coursework.css?v=1">
+  <link rel="stylesheet" href="/static/css/coursework.css?v=2">
 </head>
 <body class="studio-layout">
   <a class="studio-skip-link" href="#studioMainWorkspace">Przejdź do treści</a>
@@ -2043,8 +2043,8 @@
               <label for="wiz_category">Przepisy zdatności EASA:</label>
               <select id="wiz_category">
                 <optgroup label="EASA CS-23 Amdt 5 (Normal Category ≤ 19 pax / 8618 kg)">
-                  <option value="cs23_level1">EASA CS-23 Level 1 (Normal • 0–1 pasażer • Szkolny / Treningowy)</option>
-                  <option value="cs23_level2" selected>EASA CS-23 Level 2 (Normal • 2–6 pasażerów • Turystyczny / GA)</option>
+                  <option value="cs23_level1" selected>EASA CS-23 Level 1 (Normal • 0–1 pasażer • Szkolny / Treningowy)</option>
+                  <option value="cs23_level2">EASA CS-23 Level 2 (Normal • 2–6 pasażerów • Turystyczny / GA)</option>
                   <option value="cs23_level3">EASA CS-23 Level 3 (Normal • 7–9 pasażerów • Użytkowy / Dyspozycyjny)</option>
                   <option value="cs23_commuter">EASA CS-23 Level 4 / Commuter (10–19 pasażerów • MTOM ≤ 8618 kg)</option>
                   <option value="cs23_aerobatic">EASA CS-23 Akrobacyjny (Certified for Aerobatics • n = +6.0 / -3.0)</option>
@@ -2387,23 +2387,14 @@
   </div>
 
   <!-- Floating Didactic Popover (wyświetlany po najechaniu na okrągłą ikonkę informacyjną 'i' przy nazwie parametru) -->
-  <div id="didacticPopover" class="didactic-popover" role="tooltip" aria-hidden="true">
+  <div id="didacticPopover" class="didactic-popover" role="dialog" aria-labelledby="popTitle" aria-hidden="true">
     <div class="didactic-popover-header">
       <span class="badge" style="background:#3b82f6; color:#fff;">📖 KARTOTEKA PARAMETRU</span>
       <span id="popSymbol" class="didactic-popover-symbol">---</span>
+      <button type="button" class="didactic-popover-close" aria-label="Zamknij kartotekę">×</button>
     </div>
     <div id="popTitle" class="didactic-popover-title">---</div>
-    <div id="popDesc" class="didactic-popover-desc">---</div>
-    <div id="popFormula" class="didactic-popover-formula">---</div>
-    <div class="didactic-popover-section green">
-      <strong>📈 Wpływ zmiany parametru:</strong> <span id="popEffect">---</span>
-    </div>
-    <div class="didactic-popover-section blue">
-      <strong>📏 Typowe wartości w lotnictwie:</strong> <span id="popRanges">---</span>
-    </div>
-    <div class="didactic-popover-section amber">
-      <strong>💡 Wskazówka Konstrukcyjna MEiL PW (prof. C. Galiński):</strong> <span id="popGalinski">---</span>
-    </div>
+    <div id="popBody"></div>
   </div>
 
   <script>
@@ -2422,22 +2413,22 @@
   <script src="/static/js/studio-core.js?v=3"></script>
   <script src="/static/js/aircraft-preview.js?v=4"></script>
   <script src="/static/js/studio-visuals.js?v=2"></script>
-  <script src="/static/js/didactic_data.js?v=13"></script>
-  <script src="/static/js/charts.js?v=16"></script>
-  <script src="/static/js/app.js?v=23"></script>
-<script src="/static/js/didactic_modes.js?v=1"></script>
+  <script src="/static/js/didactic_data.js?v=14"></script>
+  <script src="/static/js/charts.js?v=17"></script>
+  <script src="/static/js/app.js?v=25"></script>
+<script src="/static/js/didactic_modes.js?v=2"></script>
   <script src="/static/js/constraints-ui.js?v=5"></script>
   <script src="/static/js/design-basis.js?v=5"></script>
   <script src="/static/js/parameter-report.js?v=1"></script>
-  <script src="/static/js/studio.js?v=9"></script>
+  <script src="/static/js/studio.js?v=10"></script>
   <script src="/static/js/aircraft-project.js?v=1"></script>
   <script src="/static/js/aircraft-editor.js?v=2"></script>
   <script src="/static/js/trend-inputs.js?v=2"></script>
   <script src="/static/js/trend-provenance.js?v=2"></script>
   <script src="/static/js/trends.js?v=9"></script>
   <script src="/static/js/bipol1.js?v=1"></script>
-  <script src="/static/js/workspace.js?v=5"></script>
+  <script src="/static/js/workspace.js?v=6"></script>
   <script src="/static/js/calculation-tree.js?v=2"></script>
-  <script src="/static/js/coursework.js?v=2"></script>
+  <script src="/static/js/coursework.js?v=3"></script>
 </body>
 </html>

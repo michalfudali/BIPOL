@@ -157,6 +157,13 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   }
 }
 
+// CS 23.2005: poziom certyfikacji wynika z liczby miejsc pasażerskich, nie jest osobnym wyborem.
+const CS23_SEAT_LEVELS = [[1, 'cs23_level1'], [6, 'cs23_level2'], [9, 'cs23_level3'], [19, 'cs23_commuter']];
+function cs23LevelForPax(nPax) {
+  const n = Math.max(0, Math.round(Number(nPax) || 0));
+  return CS23_SEAT_LEVELS.find(([max]) => n <= max)?.[1] || null;
+}
+
 function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
   const pfx = isWizard ? 'wiz_' : '';
   const acEl = document.getElementById(pfx + 'aircraft_type');
@@ -181,8 +188,13 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
       if (isWizard) syncWizardPropulsionUI(true);
       else syncFormPropulsionUI(true);
     } else if (acEl?.value !== 'uav' && (categoryIsUas() || catEl?.value.startsWith('cs22_'))) {
-      catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
+      catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : (cs23LevelForPax(paxEl?.value) || 'cs23_commuter');
     }
+  }
+  // Zmiana liczby pasażerów przestawia poziom CS-23 (L1–L4); kategorii akrobacyjnej, VLA, LSA itp. nie rusza.
+  if (source === 'pax' && catEl && CS23_SEAT_LEVELS.some(([, level]) => level === catEl.value)) {
+    const level = cs23LevelForPax(paxEl?.value);
+    if (level) catEl.value = level;
   }
   if (source === 'category') {
     if (catEl?.value === 'cs22_glider') {
@@ -221,7 +233,7 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
     }
   } else {
     if (catEl && catEl.value.startsWith('easa_uas_')) {
-      catEl.value = (ac === 'jet_transport') ? 'cs25_transport' : (ac === 'turboprop_regional' ? 'cs23_commuter' : 'cs23_level2');
+      catEl.value = (ac === 'jet_transport') ? 'cs25_transport' : (ac === 'turboprop_regional' ? 'cs23_commuter' : (cs23LevelForPax(paxEl?.value) || 'cs23_commuter'));
     }
   }
 
@@ -354,6 +366,7 @@ function initSidebarModularity() {
       performCalculation();
     });
   }
+  document.getElementById('n_pax')?.addEventListener('change', () => syncAircraftClassAndEASAUI(false, 'pax'));
 
   if (form) {
     form.addEventListener('input', updateAccordionPills);
@@ -626,20 +639,28 @@ function showDidacticPopover(paramKey, anchorEl) {
   const info = PARAMETER_ENCYCLOPEDIA[paramKey];
   const popover = document.getElementById('didacticPopover');
   if (!info || !popover) return;
+  clearTimeout(popoverHideTimer);
 
   if (activeIconEl && activeIconEl !== anchorEl) {
     activeIconEl.classList.remove('active');
+    activeIconEl.setAttribute('aria-expanded', 'false');
   }
   activeIconEl = anchorEl;
   anchorEl.classList.add('active');
+  anchorEl.setAttribute('aria-expanded', 'true');
+  anchorEl.setAttribute('aria-controls', 'didacticPopover');
+
+  // Okno modalne leży w warstwie górnej; kartoteka musi być w nim, żeby nie zniknęła pod spodem.
+  const host = anchorEl.closest('dialog[open]') || document.body;
+  if (popover.parentElement !== host) host.appendChild(popover);
 
   document.getElementById('popSymbol').textContent = info.symbol;
   document.getElementById('popTitle').textContent = info.title;
-  document.getElementById('popDesc').innerHTML = `<strong>Co to jest:</strong> ${info.short_desc}<br><span style="color:#475569;">${info.full_definition}</span>`;
-  document.getElementById('popFormula').textContent = `Wzór BIPOL I:  ${info.formula}`;
-  document.getElementById('popEffect').textContent = info.effect_increase;
-  document.getElementById('popRanges').textContent = info.typical_ranges;
-  document.getElementById('popGalinski').textContent = info.galinski_note;
+  // Treść karty i objaśnienia pod polem pochodzi z jednego miejsca (didactic_modes.js).
+  document.getElementById('popBody').innerHTML = window.BipolDidactic
+    ? window.BipolDidactic.cardHtml(paramKey, anchorEl)
+    : `<div class="didactic-popover-section green">${info.short_desc}</div>`;
+  popover.scrollTop = 0;
 
   popover.classList.add('visible');
   popover.setAttribute('aria-hidden', 'false');
@@ -674,19 +695,25 @@ function positionPopoverNearIcon(popover, anchorEl) {
   popover.style.top = `${Math.round(top)}px`;
 }
 
+// Jawne zamknięcie (×, Escape, dotknięcie obok) działa od razu; zjechanie kursorem — z opóźnieniem,
+// żeby dało się przejść z ikonki na kartę.
+function hideDidacticPopover() {
+  clearTimeout(popoverHideTimer);
+  const popover = document.getElementById('didacticPopover');
+  if (popover) {
+    popover.classList.remove('visible');
+    popover.setAttribute('aria-hidden', 'true');
+  }
+  if (activeIconEl) {
+    activeIconEl.classList.remove('active');
+    activeIconEl.setAttribute('aria-expanded', 'false');
+    activeIconEl = null;
+  }
+}
+
 function scheduleHideDidacticPopover() {
   clearTimeout(popoverHideTimer);
-  popoverHideTimer = setTimeout(() => {
-    const popover = document.getElementById('didacticPopover');
-    if (popover) {
-      popover.classList.remove('visible');
-      popover.setAttribute('aria-hidden', 'true');
-    }
-    if (activeIconEl) {
-      activeIconEl.classList.remove('active');
-      activeIconEl = null;
-    }
-  }, 140);
+  popoverHideTimer = setTimeout(hideDidacticPopover, 140);
 }
 
 // Renderowanie Karty Plusów i Minusów wybranej Klapy, Lotki oraz Slotu (wg Rozdz. 16 i 17 prof. C. Galińskiego)
@@ -1067,7 +1094,6 @@ function updateUI(res) {
           : `Weryfikacja Założeń Taktyczno-Technicznych (wszystkie ${passedCount}/${res.compliance_checks.length} spełnione ✓)`;
       }
       checksTbody.innerHTML = sortedChecks.map(c => {
-        const fixParam = !c.passed ? getComplianceFixParam(c) : '';
         return `
         <tr>
           <td><b>${c.parameter}</b><br><small style="color:#64748b;">${c.note}</small></td>
@@ -1077,7 +1103,7 @@ function updateUI(res) {
             <span class="badge ${c.passed ? 'badge-success' : (c.severity === 'warning' ? 'badge-warning' : 'badge-danger')}">
               ${c.passed ? '✓ Zgodne' : (c.severity === 'warning' ? 'Do oceny' : '✗ Niespełnione')}
             </span>
-            ${fixParam ? `<button type="button" class="compliance-fix-btn" data-focus-param="${escapeHtml(fixParam)}">Popraw →</button>` : ''}
+            ${complianceFixButton(c)}
           </td>
         </tr>`;
       }).join('');
@@ -1646,10 +1672,12 @@ const AIRCRAFT_CLASS_LABELS_PL = {
 
 function getComplianceFixParam(check) {
   const param = String(check?.parameter || '').toLowerCase();
+  // Zasięg i lot poziomy przy wymaganej prędkości poprawia bilans uściślony, nie obniżanie wymagań.
+  if (param.includes('zasięg') || param.includes('lot poziomy')) return 'refine';
+  if (param.includes('szybowc') || param.includes('prędkość maksymalna') || param.includes('moc silnika')) return 'engine_power_kw';
   if (param.includes('przeciągnięcia') || param.includes('vs0')) return 'v_stall_kmh';
   if (param.includes('wznoszenia') || param.includes('wy_max')) return 'climb_rate_ms';
-  if (param.includes('lot poziomy') || param.includes('dużej prędkości')) return 'cruise_speed_kmh';
-  if (param.includes('zasięg')) return 'range_km';
+  if (param.includes('dużej prędkości')) return 'cruise_speed_kmh';
   if (param.includes('długość startu')) return 'takeoff_distance_m';
   if (param.includes('długość lądowania')) return 'landing_distance_m';
   if (param.includes('stateczności') || param.includes('śc w locie')) return 'wing_config';
@@ -1659,6 +1687,18 @@ function getComplianceFixParam(check) {
   return 'aircraft_type';
 }
 window.getComplianceFixParam = getComplianceFixParam;
+
+function complianceFixButton(check) {
+  if (check?.passed) return '';
+  const param = getComplianceFixParam(check);
+  if (param === 'refine') {
+    return '<button type="button" class="compliance-fix-btn" data-studio-target="tab-coursework" data-reveal="courseworkIterate"'
+      + ' title="Pierwszy bilans liczy paliwo przy K = 0,94·Kmax. Bilans uściślony bierze biegunową z P4 i doskonałość przy wymaganej prędkości.">'
+      + 'Bilans uściślony P2←P4 →</button>';
+  }
+  return param ? `<button type="button" class="compliance-fix-btn" data-focus-param="${escapeHtml(param)}">Popraw →</button>` : '';
+}
+window.complianceFixButton = complianceFixButton;
 
 // Asystent Dydaktyczny wykrywający błędy koncepcyjne w projekcie studenta
 function updateDidacticAdvisor(res) {
@@ -2599,6 +2639,7 @@ function initWizardSystem() {
       syncAircraftClassAndEASAUI(true, 'category');
     });
   }
+  document.getElementById('wiz_n_pax')?.addEventListener('change', () => syncAircraftClassAndEASAUI(true, 'pax'));
 
   // Live change listeners dla mechanizacji w kroku 4
   const flapSel = document.getElementById('wiz_flap_type');
