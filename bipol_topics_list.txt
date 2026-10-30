@@ -46,11 +46,11 @@ Dwumiejscowy odrzutowy samolot rekreacyjny, miejsca w tandem
 23
 Samolot wyścigowy, jednomiejscowy, formuły 1 (regulamin na stronie www.airrace.org/indexJS.php)
 24
-Samolot wyścigowy , jednomiejscowy, bez ograniczeń                                        S||S
+Samolot wyścigowy, jednomiejscowy, bez ograniczeń
 25
-Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca w tandem,                   S||S
+Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca w tandem
 26
-Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca obok siebie,                S||S
+Samolot wyścigowy, dwumiejscowy klasy Sport, miejsca obok siebie
 27
 Samolot wyścigowo – akrobacyjny, jednomiejscowy (do zawodów Red Bull)
 28
@@ -58,7 +58,7 @@ Samolot akrobacyjny, jednomiejscowy
 29
 Samolot akrobacyjny dwumiejscowy
 30
-Samolot klubowy, 6Smiejscowy (5spadochroniarzy), STOL, holowanie szybowców
+Samolot klubowy, 6-miejscowy (5 spadochroniarzy), STOL, holowanie szybowców
 31
 Samolot do holowania szybowców (1 miejscowy)
 32
@@ -66,15 +66,15 @@ Samolot szkolny, dwumiejscowy, miejsca w tandem, moc silnika do 100 kW
 33
 Samolot szkolny, dwumiejscowy, miejsca obok siebie, moc silnika do 100 kW
 34
-Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, moc silnika do 200 kW
+Samolot szkolno-treningowy, dwumiejscowy, miejsca w tandem, moc silnika do 200 kW
 35
-Samolot szkolnoStreningowy, dwumiejscowy, miejsca obok siebie, moc silnika do 200 kW
+Samolot szkolno-treningowy, dwumiejscowy, miejsca obok siebie, moc silnika do 200 kW
 36
-Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd śmigłowy, moc b/o
+Samolot szkolno-treningowy, dwumiejscowy, miejsca w tandem, napęd śmigłowy, moc b/o
 37
-Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (1 silnik)
+Samolot szkolno-treningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (1 silnik)
 38
-Samolot szkolnoStreningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (2 silniki)
+Samolot szkolno-treningowy, dwumiejscowy, miejsca w tandem, napęd odrzutowy (2 silniki)
 39
 Samolot dwumiejscowy do dalekiej turystyki
 40
@@ -88,65 +88,65 @@ Samolot medyczny (pilot, lekarz, 1 leżący chory), STOL, jednosilnikowy
 44
 Samolot medyczny (pilot, lekarz, 1 leżący chory), dwusilnikowy
 45
-Samolot dyspozycyjny, 4Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500km
+Samolot dyspozycyjny, 4-miejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500 km
 46
-Samolot dyspozycyjny, 4Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000km
+Samolot dyspozycyjny, 4-miejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000 km
 47
-Samolot dyspozycyjny, 4Smiejscowy, napęd turbośmigłowy, zasięg do 500km
+Samolot dyspozycyjny, 4-miejscowy, napęd turbośmigłowy, zasięg do 500 km
 48
-Samolot dyspozycyjny, 4Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+Samolot dyspozycyjny, 4-miejscowy, napęd turbośmigłowy, zasięg do 1000 km
 49
-Samolot dyspozycyjny, 4Smiejscowy, napęd odrzutowy, zasięg do 500km
+Samolot dyspozycyjny, 4-miejscowy, napęd odrzutowy, zasięg do 500 km
 50
-Samolot dyspozycyjny, 4Smiejscowy, napęd odrzutowy, zasięg do 1000km
+Samolot dyspozycyjny, 4-miejscowy, napęd odrzutowy, zasięg do 1000 km
 51
-Samolot dyspozycyjny, 6Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500km
+Samolot dyspozycyjny, 6-miejscowy, dwusilnikowy, napęd tłokowy, zasięg do 500 km
 52
-Samolot dyspozycyjny, 6Smiejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000km
+Samolot dyspozycyjny, 6-miejscowy, dwusilnikowy, napęd tłokowy, zasięg do 1000 km
 53
-Samolot dyspozycyjny, 6Smiejscowy, napęd odrzutowy, zasięg do 500km
+Samolot dyspozycyjny, 6-miejscowy, napęd odrzutowy, zasięg do 500 km
 54
-Samolot dyspozycyjny, 6Smiejscowy, napęd odrzutowy, zasięg do 1000km
+Samolot dyspozycyjny, 6-miejscowy, napęd odrzutowy, zasięg do 1000 km
 55
-Samolot dyspozycyjny, 8Smiejscowy, napęd tłokowy, zasięg do 1000km
+Samolot dyspozycyjny, 8-miejscowy, napęd tłokowy, zasięg do 1000 km
 56
-Samolot dyspozycyjny, 8Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+Samolot dyspozycyjny, 8-miejscowy, napęd turbośmigłowy, zasięg do 1000 km
 57
-Samolot dyspozycyjny, 8Smiejscowy, napęd odrzutowy, zasięg do 500km
+Samolot dyspozycyjny, 8-miejscowy, napęd odrzutowy, zasięg do 500 km
 58
-Samolot dyspozycyjny, 8Smiejscowy, napęd odrzutowy, zasięg do 1000km
+Samolot dyspozycyjny, 8-miejscowy, napęd odrzutowy, zasięg do 1000 km
 59
-Samolot dyspozycyjny, 10Smiejscowy, napęd turbośmigłowy, zasięg do 1000km
+Samolot dyspozycyjny, 10-miejscowy, napęd turbośmigłowy, zasięg do 1000 km
 60
-Samolot dyspozycyjny, 10Smiejscowy, napęd turbośmigłowy, zasięg do 1500km
+Samolot dyspozycyjny, 10-miejscowy, napęd turbośmigłowy, zasięg do 1500 km
 61
-Samolot dyspozycyjny, 10Smiejscowy, napęd odrzutowy
+Samolot dyspozycyjny, 10-miejscowy, napęd odrzutowy
 62
-Samolot dyspozycyjny, 15Smiejscowy, napęd turbośmigłowy, zasięg do 2000km
+Samolot dyspozycyjny, 15-miejscowy, napęd turbośmigłowy, zasięg do 2000 km
 63
-Samolot dyspozycyjny, 15Smiejscowy, napęd turbośmigłowy, zasięg do 3000km
+Samolot dyspozycyjny, 15-miejscowy, napęd turbośmigłowy, zasięg do 3000 km
 64
-Samolot dyspozycyjny, 15Smiejscowy, napęd odrzutowy, zasięg do 2000km
+Samolot dyspozycyjny, 15-miejscowy, napęd odrzutowy, zasięg do 2000 km
 65
-Samolot dyspozycyjny, 20Smiejscowy, napęd turbośmigłowy, zasięg do 3000km
+Samolot dyspozycyjny, 20-miejscowy, napęd turbośmigłowy, zasięg do 3000 km
 66
-Samolot transportowy, STOL, ładunek użyteczny 1300kg (kontener LDS2)
+Samolot transportowy, STOL, ładunek użyteczny 1300 kg (kontener LD-2)
 67
-Samolot transportowy, STOL, ładunek użyteczny 1800kg (kontener LDS3)
+Samolot transportowy, STOL, ładunek użyteczny 1800 kg (kontener LD-3)
 68
-Samolot transportowy, STOL, ładunek użyteczny 2300kg (Honker), z rampą z tyłu kadłuba
+Samolot transportowy, STOL, ładunek użyteczny 2300 kg (Honker), z rampą z tyłu kadłuba
 69
-Samolot transportowy, STOL, ładunek użyteczny 5500kg (Honker+LDS4), z rampą z tyłu kadłuba
+Samolot transportowy, STOL, ładunek użyteczny 5500 kg (Honker + LD-4), z rampą z tyłu kadłuba
 70
-Samolot transportowy, STOL, ładunek użyteczny 11000kg (BRDM2+2*LDS4), z rampą z tyłu kadłuba
+Samolot transportowy, STOL, ładunek użyteczny 11000 kg (BRDM-2 + 2×LD-4), z rampą z tyłu kadłuba
 71
-Samolot transportowy, STOL, ładunek użyteczny 23000kg (BWPS1 lub Rosomak), z rampą z tyłu kadłuba
+Samolot transportowy, STOL, ładunek użyteczny 23000 kg (BWP-1 lub Rosomak), z rampą z tyłu kadłuba
 72
-Samolot transportowy, ładunek użyteczny 5500kg (Honker+LDS4), z rampą z tyłu kadłuba
+Samolot transportowy, ładunek użyteczny 5500 kg (Honker + LD-4), z rampą z tyłu kadłuba
 73
-Samolot transportowy, ładunek użyteczny 11000kg (BRDM2+2*LDS4), z rampą z tyłu kadłuba
+Samolot transportowy, ładunek użyteczny 11000 kg (BRDM-2 + 2×LD-4), z rampą z tyłu kadłuba
 74
-Samolot transportowy, ładunek użyteczny 23000kg (BWPS1 lub Rosomak), z rampą z tyłu kadłuba
+Samolot transportowy, ładunek użyteczny 23000 kg (BWP-1 lub Rosomak), z rampą z tyłu kadłuba
 75
 Samolot pasażerski 40 miejscowy, turbośmigłowy, dolnopłatowy
 76

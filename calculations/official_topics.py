@@ -161,7 +161,7 @@ def build_official_topics():
             elif 45 <= num <= 65:
                 cat = "dyspozycyjne"
                 # Liczba miejsc
-                m_pax_match = re.search(r'(\d+)\s*s?miejscowy', t_lower)
+                m_pax_match = re.search(r'(\d+)\s*[-s]?\s*miejscowy', t_lower)
                 pax_cnt = int(m_pax_match.group(1)) - 1 if m_pax_match else 5
                 n_pax = max(1, pax_cnt)
                 

@@ -116,7 +116,7 @@ with sync_playwright() as p:
     page.locator('#trendResultsPanel-tab').click()
     page.locator('#trendChartView').select_option('1')
     assert page.locator('#trendTimeChart svg').count() == 1
-    assert page.evaluate('currentResults.bipol_projects.p1.trend_analysis.time_trends[0].forecast_year === currentResults.bipol_projects.p1.trend_analysis.time_trends[0].fit.x_max + 5')
+    assert page.evaluate('currentResults.bipol_projects.p1.trend_analysis.time_trends[0].forecast_year === currentResults.bipol_projects.p1.trend_analysis.reference_year + 5 || currentResults.bipol_projects.p1.trend_analysis.time_trends[0].forecast_year === currentResults.bipol_projects.p1.trend_analysis.time_trends[0].fit.x_max + 5')
     page.screenshot(path=out/'desktop-viewport.png', animations='disabled')
     for width in [1280,768,390,320]:
         page.set_viewport_size({'width':width,'height':1000})

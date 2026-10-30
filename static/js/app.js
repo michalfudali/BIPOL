@@ -3433,8 +3433,8 @@ function hydrateSemesterProjectsData(res) {
       missTbody.innerHTML = p2.mission_profile.map(m => `
         <tr>
           <td>${escapeHtml(m.phase)}</td>
-          <td><b>${m.fraction}</b></td>
-          <td>${m.mass_end_kg} kg</td>
+          <td><b>${Number.isFinite(Number(m.fraction)) ? Number(m.fraction).toFixed(4) : m.fraction}</b></td>
+          <td>${Number.isFinite(Number(m.mass_end_kg)) ? Number(m.mass_end_kg).toFixed(1) : m.mass_end_kg} kg</td>
         </tr>
       `).join('');
     }
@@ -3693,10 +3693,11 @@ function hydrateSemesterProjectsData(res) {
       const el = document.getElementById(id);
       if (el && val !== undefined && val !== null) el.textContent = val;
     };
-    setTxt('p4_vekon', gp.v_ekon_kmh);
-    setTxt('p4_wmin', gp.w_min_ms);
-    setTxt('p4_vopt', gp.v_opt_kmh);
-    setTxt('p4_kmax', gp.k_max);
+    const fmtNum = (v, d) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) ? v : Number(v).toFixed(d);
+    setTxt('p4_vekon', fmtNum(gp.v_ekon_kmh, 1));
+    setTxt('p4_wmin', fmtNum(gp.w_min_ms, 2));
+    setTxt('p4_vopt', fmtNum(gp.v_opt_kmh, 1));
+    setTxt('p4_kmax', fmtNum(gp.k_max, 2));
 
     const gCompEl = document.getElementById('p4_glide_comparison_box');
     if (gCompEl && gp.comparison_paturski) {
@@ -3963,11 +3964,12 @@ function hydrateSemesterProjectsData(res) {
 
     const critTbody = document.getElementById('p5_critical_tbody');
     if (critTbody && Array.isArray(p5.critical_evaluation_table_5_1)) {
+      const fmtCell = v => (typeof v === 'number' && !Number.isInteger(v)) ? (Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(3).replace(/\.?0+$/, '')) : v;
       critTbody.innerHTML = p5.critical_evaluation_table_5_1.map(c => `
         <tr>
           <td><b>${escapeHtml(c.param)}</b></td>
-          <td>${c.project_assumed ?? '—'}</td>
-          <td><b>${c.actual_calc ?? '—'}</b></td>
+          <td>${fmtCell(c.project_assumed) ?? '—'}</td>
+          <td><b>${fmtCell(c.actual_calc) ?? '—'}</b></td>
           <td>${escapeHtml(c.comment)}</td>
         </tr>
       `).join('');

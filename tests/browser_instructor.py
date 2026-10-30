@@ -9,7 +9,8 @@ parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--base-url',default='http://127.0.0.1:5012')
 args=parser.parse_args();out=Path('work/instructor-qa');out.mkdir(parents=True,exist_ok=True)
 with sync_playwright() as p:
-    browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+    chrom_bin = '/usr/bin/chromium' if Path('/usr/bin/chromium').exists() else 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+    browser=p.chromium.launch(executable_path=chrom_bin,headless=True,args=['--no-sandbox'])
     context=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True)
     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(args.base_url);page.wait_for_function('currentResults!==null')
