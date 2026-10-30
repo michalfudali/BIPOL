@@ -273,6 +273,9 @@
     document.addEventListener('click',event=>{
       const fixBtn=event.target.closest('[data-focus-param]');
       if(fixBtn){event.preventDefault();window.focusDesignParameter?.(fixBtn.dataset.focusParam);return;}
+      // Przycisk prowadzący do akcji w innej zakładce: po przejściu pokaż i zaznacz tę akcję.
+      const revealBtn=event.target.closest('[data-reveal]');
+      if(revealBtn)requestAnimationFrame(()=>{const target=$(revealBtn.dataset.reveal);target?.scrollIntoView({block:'center',behavior:'instant'});target?.focus({preventScroll:true});});
       if(event.target.closest('[data-toggle-explanations]'))$('toggleDidacticHintsBtn').click();
       if(event.target.closest('[data-studio-target="tab-inputs"]')&&$('calculationStatus').classList.contains('is-error')) {
         const invalid=[...$('designForm').querySelectorAll('input[type=number]')].find(input=>!input.value.trim()||!Number.isFinite(Number(input.value))||!input.checkValidity());

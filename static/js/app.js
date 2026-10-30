@@ -1094,7 +1094,6 @@ function updateUI(res) {
           : `Weryfikacja Założeń Taktyczno-Technicznych (wszystkie ${passedCount}/${res.compliance_checks.length} spełnione ✓)`;
       }
       checksTbody.innerHTML = sortedChecks.map(c => {
-        const fixParam = !c.passed ? getComplianceFixParam(c) : '';
         return `
         <tr>
           <td><b>${c.parameter}</b><br><small style="color:#64748b;">${c.note}</small></td>
@@ -1104,7 +1103,7 @@ function updateUI(res) {
             <span class="badge ${c.passed ? 'badge-success' : (c.severity === 'warning' ? 'badge-warning' : 'badge-danger')}">
               ${c.passed ? '✓ Zgodne' : (c.severity === 'warning' ? 'Do oceny' : '✗ Niespełnione')}
             </span>
-            ${fixParam ? `<button type="button" class="compliance-fix-btn" data-focus-param="${escapeHtml(fixParam)}">Popraw →</button>` : ''}
+            ${complianceFixButton(c)}
           </td>
         </tr>`;
       }).join('');
@@ -1673,10 +1672,12 @@ const AIRCRAFT_CLASS_LABELS_PL = {
 
 function getComplianceFixParam(check) {
   const param = String(check?.parameter || '').toLowerCase();
+  // Zasięg i lot poziomy przy wymaganej prędkości poprawia bilans uściślony, nie obniżanie wymagań.
+  if (param.includes('zasięg') || param.includes('lot poziomy')) return 'refine';
+  if (param.includes('szybowc') || param.includes('prędkość maksymalna') || param.includes('moc silnika')) return 'engine_power_kw';
   if (param.includes('przeciągnięcia') || param.includes('vs0')) return 'v_stall_kmh';
   if (param.includes('wznoszenia') || param.includes('wy_max')) return 'climb_rate_ms';
-  if (param.includes('lot poziomy') || param.includes('dużej prędkości')) return 'cruise_speed_kmh';
-  if (param.includes('zasięg')) return 'range_km';
+  if (param.includes('dużej prędkości')) return 'cruise_speed_kmh';
   if (param.includes('długość startu')) return 'takeoff_distance_m';
   if (param.includes('długość lądowania')) return 'landing_distance_m';
   if (param.includes('stateczności') || param.includes('śc w locie')) return 'wing_config';
@@ -1686,6 +1687,18 @@ function getComplianceFixParam(check) {
   return 'aircraft_type';
 }
 window.getComplianceFixParam = getComplianceFixParam;
+
+function complianceFixButton(check) {
+  if (check?.passed) return '';
+  const param = getComplianceFixParam(check);
+  if (param === 'refine') {
+    return '<button type="button" class="compliance-fix-btn" data-studio-target="tab-coursework" data-reveal="courseworkIterate"'
+      + ' title="Pierwszy bilans liczy paliwo przy K = 0,94·Kmax. Bilans uściślony bierze biegunową z P4 i doskonałość przy wymaganej prędkości.">'
+      + 'Bilans uściślony P2←P4 →</button>';
+  }
+  return param ? `<button type="button" class="compliance-fix-btn" data-focus-param="${escapeHtml(param)}">Popraw →</button>` : '';
+}
+window.complianceFixButton = complianceFixButton;
 
 // Asystent Dydaktyczny wykrywający błędy koncepcyjne w projekcie studenta
 function updateDidacticAdvisor(res) {
