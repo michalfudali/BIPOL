@@ -447,7 +447,7 @@
     const value = String(field.value ?? '').trim();
     if (!value || field.type !== 'number') return value.length > 90 ? `${value.slice(0, 87)}…` : value;
     const unit = (String(info.symbol).match(/\[([^\]]+)\]/) || [])[1];
-    return value.replace('.', ',') + (unit && unit !== '-' ? ` ${unit}` : '');
+    return value.replace('.', ',') + (!unit || unit === '-' ? '' : unit === '°' ? unit : ` ${unit}`);
   }
 
   const STATE = { derived: 'wyliczona przez program', locked: 'zablokowane założenie', input: 'wpisana przez Ciebie' };
@@ -470,7 +470,8 @@
     const tech = (info.full_definition ? `<p class="didactic-popover-desc">${esc(info.full_definition)}</p>` : '')
       + (blank(info.formula) ? '' : `<div class="didactic-popover-formula">Wzór: ${esc(info.formula)}</div>`)
       + (info.effect_increase && info.effect_increase !== effect ? section('green', '📈 W obliczeniach:', info.effect_increase) : '')
-      + (blank(info.galinski_note) ? '' : section('amber', '💡 Wskazówka konstrukcyjna:', info.galinski_note));
+      + (blank(info.galinski_note) ? '' : section('amber', /Rozdz/.test(info.galinski_note)
+        ? '💡 Wskazówka konstrukcyjna (rozdziały wg kompendium prof. C. Galińskiego):' : '💡 Wskazówka konstrukcyjna:', info.galinski_note));
     return section('plain', 'Prosto mówiąc:', plainOf(info))
       + section('green', `${EFFECT_LABEL[kindOf(field)]}:`, effect)
       + section('blue', '📏 Typowo:', info.typical_ranges)
