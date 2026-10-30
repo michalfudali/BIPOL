@@ -154,13 +154,13 @@
       }
       if (!response.ok) throw Error(answer.message || 'Nie udało się obliczyć wariantu.');
       const name = `${origin.name} · P2←P4`;
-      const project = {...structuredClone(origin), id:`proj_${crypto.randomUUID()}`, name,
+      const project = {...structuredClone(origin), id:BipolStudio.uniqueId('proj_'), name,
         params:{...answer.result.params, name}, createdAt:new Date().toISOString(), summary:{},
         semesterChecklist:{}, iteration:{source_project_id:originId, before:answer.before, after:answer.after}};
       // A different variant has not received the source project's grades.
       project.params.coursework = {evidence:project.params.coursework?.evidence || {}};
       saveProject(project); switchActiveProject(project.id);
-      $('courseworkIterationStatus').textContent = `Utworzono „${name}”. MTOW: ${fmt(answer.mtow_before,1)} → ${fmt(answer.mtow_after,1)} kg. Sprawdź pozostałe wymagania i zaktualizuj odniesienia do opracowań.`;
+      $('courseworkIterationStatus').textContent = `Utworzono „${name}”. MTOW: ${fmt(answer.mtow_before,1)} → ${fmt(answer.mtow_after,1)} kg po ${answer.iterations.length} krokach bilansu uściślonego. Sprawdź pozostałe wymagania i zaktualizuj odniesienia do opracowań.`;
     } catch (error) {
       if (originId === getActiveProjectId()) $('courseworkIterationStatus').textContent = error.message;
     } finally { iterating = false; freshness(); }

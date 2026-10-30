@@ -541,10 +541,15 @@ def _p2(s, r):
                    r'\mathrm{kg/(W\,s)}', 4, 'Jednostkowe zużycie paliwa w jednostkach SI', check=lambda v: v.SFC / 3.6e9)
             s.given('eta_p', r'\eta_p', float(p.get('prop_efficiency', .82)), '', 2, 'Sprawność śmigła w przelocie',
                     SOURCES['B1'] + ': η ≈ 0,8')
-        s.given('k_K', 'k_K', ma['ld_factor'], '', 2, 'Udział maksymalnej doskonałości w przelocie',
-                'Wytyczne z zajęć: K = 0,94 Kmax')
-        s.calc('K_przel', r'K_{przel}', r'k_K K_{max}', r'[[k_K]]\cdot[[Kmax_1]]', trace['cruise_ld'] if trace else mass['ld_cruise_used'],
-               '', 3, 'Doskonałość w przelocie', check=lambda v: v.k_K * v.Kmax_1)
+        if ma.get('ld_source') == 'p4_cruise':
+            s.given('K_przel', r'K_{przel}', trace['cruise_ld'] if trace else mass['ld_cruise_used'], '', 3,
+                    'Doskonałość w przelocie', 'Bilans uściślony: biegunowa P4 przy wymaganej prędkości i wysokości',
+                    'Średnia doskonałość przelotu ze stałą prędkością (zasięg P5); zastępuje pierwsze oszacowanie 0,94 Kmax.')
+        else:
+            s.given('k_K', 'k_K', ma['ld_factor'], '', 2, 'Udział maksymalnej doskonałości w przelocie',
+                    'Wytyczne z zajęć: K = 0,94 Kmax')
+            s.calc('K_przel', r'K_{przel}', r'k_K K_{max}', r'[[k_K]]\cdot[[Kmax_1]]', trace['cruise_ld'] if trace else mass['ld_cruise_used'],
+                   '', 3, 'Doskonałość w przelocie', check=lambda v: v.k_K * v.Kmax_1)
         s.given('r_TO', r'\frac{m_1}{m_0}', mass['fuel_fractions_detail']['takeoff'], '', 3, 'Start i kołowanie',
                 SOURCES['B1'] + ', s. 4: 0,970–0,975')
         corke = ma['corke']

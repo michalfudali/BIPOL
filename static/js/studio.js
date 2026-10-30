@@ -448,7 +448,7 @@
           const variant = variants().find(v => v.id === button.dataset.loadVariant);
           if (!variant) return;
           saveEditorial();
-          const project = {id: `proj_${crypto.randomUUID()}`, name: variant.name, params: variant.params, summary: {}, createdAt: new Date().toISOString(), semesterChecklist: {}};
+          const project = {id: BipolStudio.uniqueId('proj_'), name: variant.name, params: variant.params, summary: {}, createdAt: new Date().toISOString(), semesterChecklist: {}};
           saveProject(project); switchActiveProject(project.id); navigate('tab-overview');
         } else if (button.dataset.deleteVariant) { projectStore.write(VARIANTS_KEY, variants().filter(v => v.id !== button.dataset.deleteVariant)); renderComparison(); }
         else if (button.dataset.exportVariant) {
