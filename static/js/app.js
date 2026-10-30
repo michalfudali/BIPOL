@@ -157,6 +157,13 @@ function syncFormPropulsionUI(triggerAutoSfc = false) {
   }
 }
 
+// CS 23.2005: poziom certyfikacji wynika z liczby miejsc pasażerskich, nie jest osobnym wyborem.
+const CS23_SEAT_LEVELS = [[1, 'cs23_level1'], [6, 'cs23_level2'], [9, 'cs23_level3'], [19, 'cs23_commuter']];
+function cs23LevelForPax(nPax) {
+  const n = Math.max(0, Math.round(Number(nPax) || 0));
+  return CS23_SEAT_LEVELS.find(([max]) => n <= max)?.[1] || null;
+}
+
 function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
   const pfx = isWizard ? 'wiz_' : '';
   const acEl = document.getElementById(pfx + 'aircraft_type');
@@ -181,8 +188,13 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
       if (isWizard) syncWizardPropulsionUI(true);
       else syncFormPropulsionUI(true);
     } else if (acEl?.value !== 'uav' && (categoryIsUas() || catEl?.value.startsWith('cs22_'))) {
-      catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : 'cs23_level2';
+      catEl.value = acEl.value === 'jet_transport' ? 'cs25_transport' : (cs23LevelForPax(paxEl?.value) || 'cs23_commuter');
     }
+  }
+  // Zmiana liczby pasażerów przestawia poziom CS-23 (L1–L4); kategorii akrobacyjnej, VLA, LSA itp. nie rusza.
+  if (source === 'pax' && catEl && CS23_SEAT_LEVELS.some(([, level]) => level === catEl.value)) {
+    const level = cs23LevelForPax(paxEl?.value);
+    if (level) catEl.value = level;
   }
   if (source === 'category') {
     if (catEl?.value === 'cs22_glider') {
@@ -221,7 +233,7 @@ function syncAircraftClassAndEASAUI(isWizard = false, source = null) {
     }
   } else {
     if (catEl && catEl.value.startsWith('easa_uas_')) {
-      catEl.value = (ac === 'jet_transport') ? 'cs25_transport' : (ac === 'turboprop_regional' ? 'cs23_commuter' : 'cs23_level2');
+      catEl.value = (ac === 'jet_transport') ? 'cs25_transport' : (ac === 'turboprop_regional' ? 'cs23_commuter' : (cs23LevelForPax(paxEl?.value) || 'cs23_commuter'));
     }
   }
 
@@ -354,6 +366,7 @@ function initSidebarModularity() {
       performCalculation();
     });
   }
+  document.getElementById('n_pax')?.addEventListener('change', () => syncAircraftClassAndEASAUI(false, 'pax'));
 
   if (form) {
     form.addEventListener('input', updateAccordionPills);
@@ -2613,6 +2626,7 @@ function initWizardSystem() {
       syncAircraftClassAndEASAUI(true, 'category');
     });
   }
+  document.getElementById('wiz_n_pax')?.addEventListener('change', () => syncAircraftClassAndEASAUI(true, 'pax'));
 
   // Live change listeners dla mechanizacji w kroku 4
   const flapSel = document.getElementById('wiz_flap_type');
