@@ -815,7 +815,7 @@ const PARAMETER_ENCYCLOPEDIA = {
     formula: "η_p = (T · V) / P_wału,   P_rozp = η_p · P_wału",
     effect_increase: "Wyższa sprawność śmigła (np. śmigło przestawialne w locie zamiast stałego) zwiększa prędkość wznoszenia wy_max, prędkość maksymalną V_max i zmniejsza zużycie paliwa na przelocie.",
     typical_ranges: "Śmigło o stałym skoku (drewniane/kompozytowe): 0.72 – 0.78 | Śmigło przestawialne Constant-Speed: 0.80 – 0.86.",
-    galinski_note: "W szybowcach z przednim napędem elektrycznym FES (Rozdz. 11.3, rys. 11.11) demontowalny kołpak śmigła na dziobie uniemożliwia wykorzystanie wierzchołka dziobu jako stałej bazy pomiarowej płaszczyzny Y'-Z'!"
+    galinski_note: "Śmigło stałego skoku ma najwyższą sprawność tylko w wąskim zakresie prędkości: skok dobrany do przelotu pogarsza start i wznoszenie, a dobrany do wznoszenia obniża prędkość przelotową. Śmigło przestawialne (constant-speed) utrzymuje η_p ≈ 0,8 od wznoszenia po przelot, kosztem masy i złożoności piasty."
   },
 
   flap_type: {

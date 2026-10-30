@@ -626,6 +626,7 @@ function showDidacticPopover(paramKey, anchorEl) {
   const info = PARAMETER_ENCYCLOPEDIA[paramKey];
   const popover = document.getElementById('didacticPopover');
   if (!info || !popover) return;
+  clearTimeout(popoverHideTimer);
 
   if (activeIconEl && activeIconEl !== anchorEl) {
     activeIconEl.classList.remove('active');
@@ -633,13 +634,17 @@ function showDidacticPopover(paramKey, anchorEl) {
   activeIconEl = anchorEl;
   anchorEl.classList.add('active');
 
+  // Okno modalne leży w warstwie górnej; kartoteka musi być w nim, żeby nie zniknęła pod spodem.
+  const host = anchorEl.closest('dialog[open]') || document.body;
+  if (popover.parentElement !== host) host.appendChild(popover);
+
   document.getElementById('popSymbol').textContent = info.symbol;
   document.getElementById('popTitle').textContent = info.title;
-  document.getElementById('popDesc').innerHTML = `<strong>Co to jest:</strong> ${info.short_desc}<br><span style="color:#475569;">${info.full_definition}</span>`;
-  document.getElementById('popFormula').textContent = `Wzór BIPOL I:  ${info.formula}`;
-  document.getElementById('popEffect').textContent = info.effect_increase;
-  document.getElementById('popRanges').textContent = info.typical_ranges;
-  document.getElementById('popGalinski').textContent = info.galinski_note;
+  // Treść karty i objaśnienia pod polem pochodzi z jednego miejsca (didactic_modes.js).
+  document.getElementById('popBody').innerHTML = window.BipolDidactic
+    ? window.BipolDidactic.cardHtml(paramKey, anchorEl)
+    : `<div class="didactic-popover-section green">${info.short_desc}</div>`;
+  popover.scrollTop = 0;
 
   popover.classList.add('visible');
   popover.setAttribute('aria-hidden', 'false');
