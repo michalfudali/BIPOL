@@ -47,3 +47,4 @@ def test_forward_sweep_reduces_divergence():
     res_fwd = estimate_aeroelastics(geom_fwd, aero, mass, envelope)
 
     assert res_fwd["divergence_speed_kmh"] < res_straight["divergence_speed_kmh"]
+

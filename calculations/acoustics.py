@@ -138,3 +138,4 @@ def estimate_aircraft_noise(params: dict, sizing: dict, perf: dict, geom: dict, 
                "Niski BPR (< 3.0) powoduje wysoki hałas gorącego strumienia wylotowego; zaleca się wyższy BPR lub tłumiki akustyczne.")
         )
     }
+

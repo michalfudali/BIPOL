@@ -40,3 +40,4 @@ def test_jet_aircraft_noise_and_bpr():
     assert ac["metric_unit"] == "EPNdB"
     assert "Rozdział 14" in ac["icao_standard"]
     assert ac["bypass_ratio"] is not None
+
