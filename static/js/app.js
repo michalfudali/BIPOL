@@ -3511,6 +3511,10 @@ function hydrateSemesterProjectsData(res) {
     if (afDescEl) {
       afDescEl.textContent = p3.airfoil_coordinates_note;
     }
+    const afSvgEl = document.getElementById("p3_airfoil_svg_container");
+    if (afSvgEl && p3.airfoil_200mm_svg) {
+      afSvgEl.innerHTML = p3.airfoil_200mm_svg;
+    }
 
     const coordsTbody = document.getElementById('p3_airfoil_coords_tbody');
     if (coordsTbody && Array.isArray(p3.airfoil_200mm_table)) {
@@ -4012,10 +4016,61 @@ function hydrateSemesterProjectsData(res) {
   }
 }
 
+async function fetchAirfoil200mm() {
+  const btn = document.getElementById('btn_fetch_airfoil');
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Pobieranie...';
+  }
+  try {
+    const afName = (typeof currentResults !== 'undefined' && currentResults?.params?.airfoil) ||
+                   (window.currentAircraftParams && window.currentAircraftParams.airfoil) || 'NACA 23012';
+    const tcRatio = (typeof currentResults !== 'undefined' && currentResults?.geometry?.wing?.tc_ratio) || 0.12;
+    const res = await fetch(`/api/airfoil/200mm?airfoil=${encodeURIComponent(afName)}&tc=${encodeURIComponent(tcRatio)}`);
+    const data = await res.json();
+    if (data.status === 'ok') {
+      const afDescEl = document.getElementById('p3_airfoil_desc');
+      if (afDescEl && data.note) afDescEl.textContent = data.note;
+      const afSvgEl = document.getElementById('p3_airfoil_svg_container');
+      if (afSvgEl && data.svg) afSvgEl.innerHTML = data.svg;
+      const coordsTbody = document.getElementById('p3_airfoil_coords_tbody');
+      if (coordsTbody && Array.isArray(data.table)) {
+        coordsTbody.innerHTML = data.table.map(pt => `
+          <tr>
+            <td>${pt.xc_pct}%</td>
+            <td><b>${pt.x_mm}</b></td>
+            <td>${pt.y_upper_mm}</td>
+            <td>${pt.y_lower_mm}</td>
+            <td>${pt.thick_mm}</td>
+          </tr>
+        `).join('');
+      }
+      const box = document.getElementById('airfoilCoordsBox');
+      if (box) box.style.display = 'block';
+    }
+  } catch (err) {
+    console.error('Błąd pobierania rzędnych profilu 200 mm:', err);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '📐 Zaktualizowano rzędne';
+      setTimeout(() => { if (btn) btn.innerHTML = origText || '📐 Wyznacz rzędne z biblioteki MEiL'; }, 2200);
+    }
+  }
+}
+
 function toggleAirfoilCoordsTable() {
   const box = document.getElementById('airfoilCoordsBox');
   if (!box) return;
-  box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+  const isHidden = (box.style.display === 'none' || box.style.display === '');
+  box.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const tbody = document.getElementById('p3_airfoil_coords_tbody');
+    if (tbody && tbody.children.length === 0) {
+      fetchAirfoil200mm();
+    }
+  }
 }
 
 function toggleMassTable31() {
@@ -4167,6 +4222,7 @@ window.setPortalMode = setPortalMode;
 window.selectSemesterProject = selectSemesterProject;
 window.updateSemesterScores = updateSemesterScores;
 window.toggleAirfoilCoordsTable = toggleAirfoilCoordsTable;
+window.fetchAirfoil200mm = fetchAirfoil200mm;
 window.toggleMassTable31 = toggleMassTable31;
 window.openIndividualProjectReport = openIndividualProjectReport;
 window.openFolderCoverReport = openFolderCoverReport;
