@@ -2383,10 +2383,11 @@
   </div>
 
   <!-- Floating Didactic Popover (wyświetlany po najechaniu na okrągłą ikonkę informacyjną 'i' przy nazwie parametru) -->
-  <div id="didacticPopover" class="didactic-popover" role="tooltip" aria-hidden="true">
+  <div id="didacticPopover" class="didactic-popover" role="dialog" aria-labelledby="popTitle" aria-hidden="true">
     <div class="didactic-popover-header">
       <span class="badge" style="background:#3b82f6; color:#fff;">📖 KARTOTEKA PARAMETRU</span>
       <span id="popSymbol" class="didactic-popover-symbol">---</span>
+      <button type="button" class="didactic-popover-close" aria-label="Zamknij kartotekę">×</button>
     </div>
     <div id="popTitle" class="didactic-popover-title">---</div>
     <div id="popBody"></div>

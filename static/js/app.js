@@ -679,19 +679,24 @@ function positionPopoverNearIcon(popover, anchorEl) {
   popover.style.top = `${Math.round(top)}px`;
 }
 
+// Jawne zamknięcie (×, Escape, dotknięcie obok) działa od razu; zjechanie kursorem — z opóźnieniem,
+// żeby dało się przejść z ikonki na kartę.
+function hideDidacticPopover() {
+  clearTimeout(popoverHideTimer);
+  const popover = document.getElementById('didacticPopover');
+  if (popover) {
+    popover.classList.remove('visible');
+    popover.setAttribute('aria-hidden', 'true');
+  }
+  if (activeIconEl) {
+    activeIconEl.classList.remove('active');
+    activeIconEl = null;
+  }
+}
+
 function scheduleHideDidacticPopover() {
   clearTimeout(popoverHideTimer);
-  popoverHideTimer = setTimeout(() => {
-    const popover = document.getElementById('didacticPopover');
-    if (popover) {
-      popover.classList.remove('visible');
-      popover.setAttribute('aria-hidden', 'true');
-    }
-    if (activeIconEl) {
-      activeIconEl.classList.remove('active');
-      activeIconEl = null;
-    }
-  }, 140);
+  popoverHideTimer = setTimeout(hideDidacticPopover, 140);
 }
 
 // Renderowanie Karty Plusów i Minusów wybranej Klapy, Lotki oraz Slotu (wg Rozdz. 16 i 17 prof. C. Galińskiego)

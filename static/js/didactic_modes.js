@@ -536,10 +536,14 @@
   // Delegacja zdarzeń dla dynamicznie dodanych ikonek
   const show = icon => window.showDidacticPopover?.(icon.dataset.param, icon);
   const hide = () => { if (typeof scheduleHideDidacticPopover === 'function') scheduleHideDidacticPopover(); };
-  document.addEventListener('keydown', e => {
-    const popover = document.getElementById('didacticPopover');
-    if (e.key === 'Escape' && popover?.classList.contains('visible')) hide();
-  });
+  const cardOpen = () => document.getElementById('didacticPopover')?.classList.contains('visible');
+  const close = () => { if (typeof hideDidacticPopover === 'function') hideDidacticPopover(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && cardOpen()) close(); });
+  // Na ekranie dotykowym nie ma „zjechania” kursorem: zamyka przycisk × albo dotknięcie poza kartą.
+  document.addEventListener('pointerdown', e => {
+    if (cardOpen() && !e.target.closest?.('#didacticPopover, .info-circle-icon')) close();
+  }, true);
+  document.addEventListener('click', e => { if (e.target.closest?.('.didactic-popover-close')) close(); });
   document.addEventListener('mouseover', e => { const i = e.target.closest?.('.info-circle-icon[data-dyn]'); if (i) show(i); });
   document.addEventListener('mouseout', e => { if (e.target.closest?.('.info-circle-icon[data-dyn]')) hide(); });
   document.addEventListener('focusin', e => { const i = e.target.closest?.('.info-circle-icon[data-dyn]'); if (i) show(i); });
