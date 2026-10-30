@@ -6,6 +6,12 @@ parametry właściwe dla swojej klasy, niezależnie od wcześniej otwartego samo
 Zasięg, prędkość, liczbę pasażerów i wymaganie VS0 można oznaczyć jako narzucone
 w temacie. Niezaznaczone wielkości pozostają założeniami roboczymi.
 
+Temat ustala też liczbę silników z tytułu albo układu napędu. VS0 i mechanizacja
+odpowiadają misji, np. 140 km/h dla odrzutowca dyspozycyjnego i 70 km/h dla ULM
+(limit UL-A: 83 km/h). Tematy STOL mają krótsze długości startu i lądowania.
+Gdy szacowana MTOW przekracza 8618 kg, temat otrzymuje CS-25 i dwie osoby załogi.
+Szczegóły: [`AUDYT_TEMATOW_2026-10-30.md`](AUDYT_TEMATOW_2026-10-30.md).
+
 ## Geometria
 
 | Wielkości wejściowe | Wielkość obliczana |

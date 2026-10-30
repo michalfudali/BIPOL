@@ -89,7 +89,7 @@ def build_official_topics():
                 range_km = 550.0
                 speed_kmh = 160.0
                 climb_ms = 4.0
-                span_limit = 9.0
+                # The topic prescribes no span: the wing follows from VS0 (UL-A ≤ 45 KCAS).
                 wing_config = "high" if "górnopłat" in t_lower or "grnopat" in t_lower else "low"
                 seats_config = "tandem" if "tandem" in t_lower else "side"
                 
@@ -118,7 +118,7 @@ def build_official_topics():
             # 5. Szkolne i szkolno-treningowe (30-38)
             elif 30 <= num <= 38:
                 cat = "szkolne"
-                n_pax = 5 if "6" in t_lower else 1
+                n_pax = 5 if "6" in t_lower else 0 if "1 miejscowy" in t_lower else 1
                 range_km = 750.0
                 if "odrzutowy" in t_lower:
                     ac_type = "jet_business"
@@ -245,15 +245,24 @@ def build_official_topics():
             # 12. Łodzie latające (95-98)
             elif 95 <= num <= 98:
                 cat = "lodzie_latajace"
-                ac_type = "turboprop_regional"
-                engine_type = "prop"
-                engine_loc = "wing"
-                n_pax = 3 if "cztero" in t_lower else 0
-                cargo_m = re.search(r'(\d+)\s*kg', t_lower)
-                m_cargo = float(cargo_m.group(1)) if cargo_m else 1000.0
-                range_km = 1200.0
-                speed_kmh = 260.0
                 wing_config = "high"
+                if "cztero" in t_lower:
+                    # Four-seat touring amphibian (Lake, Seawind class): pusher above the hull, no cargo.
+                    ac_type = "piston_ga"
+                    engine_type = "prop"
+                    engine_loc = "rear"
+                    n_pax = 3
+                    range_km = 900.0
+                    speed_kmh = 220.0
+                else:
+                    ac_type = "turboprop_regional"
+                    engine_type = "prop"
+                    engine_loc = "wing"
+                    n_pax = 0
+                    cargo_m = re.search(r'(\d+)\s*kg', t_lower)
+                    m_cargo = float(cargo_m.group(1)) if cargo_m else 1000.0
+                    range_km = 1200.0
+                    speed_kmh = 260.0
                 
             # 13. Szturmowe (99-102)
             elif 99 <= num <= 102:
@@ -302,6 +311,55 @@ def build_official_topics():
 ALL_TOPICS = build_official_topics()
 
 
+def _engine_count(topic, d, title):
+    """An explicit count in the title wins; otherwise the usual layout of the topic."""
+    if re.search(r'dwusilnik|dwa silniki|2 silniki', title):
+        return 2
+    if re.search(r'jednosilnik|1 silnik', title) or topic['category'] in ('odrzutowe_rekreacyjne', 'ultralight', 'motoszybowce'):
+        return 1
+    return 2 if d['engine_location'] == 'wing' or d['engine_type'] == 'jet' else 1
+
+
+def _low_speed_seed(topic, d, title):
+    """High-lift devices and VS0 typical of the topic's mission, not only of its class."""
+    category, cls = topic['category'], d['aircraft_type']
+    if category == 'motoszybowce':
+        return dict(aspect_ratio=24.0 if d['span_limit'] > 20 else 18.0, flap_type='flaperon',
+                    aileron_type='flaperon', slat_type='none', v_stall_kmh=72.0, takeoff_run_m=220.0)
+    if category == 'ultralight':
+        # UL-A requires VS0 ≤ 45 KCAS (83 km/h); 70 km/h keeps a margin for the mass estimate.
+        return dict(flap_type='single_slotted', aileron_type='differential', slat_type='none',
+                    v_stall_kmh=70.0, takeoff_run_m=200.0)
+    if cls == 'piston_ga':
+        if 'stol' in title:
+            return dict(flap_type='junkers', slat_type='fixed_slot', v_stall_kmh=75.0, takeoff_run_m=180.0)
+        return dict(flap_type='single_slotted', aileron_type='differential', slat_type='none',
+                    v_stall_kmh=90.0, takeoff_run_m=280.0)
+    if cls == 'jet_business':
+        # Jets stall well above piston trainers: Cirrus SF50 ≈ 124 km/h, L-39 ≈ 165 km/h.
+        light = category in ('odrzutowe_rekreacyjne', 'szkolne')
+        return dict(flap_type='single_slotted' if light else 'fowler', aileron_type='differential', slat_type='none',
+                    v_stall_kmh={'odrzutowe_rekreacyjne': 110.0, 'szkolne': 150.0, 'szturmowe': 170.0}.get(category, 140.0))
+    if cls == 'jet_transport':
+        return dict(flap_type='fowler', slat_type='slats_auto', v_stall_kmh=185.0, takeoff_run_m=1400.0)
+    if category == 'rolnicze_pozarnicze':
+        # Low working speed near the ground (Air Tractor, Thrush): Fowler flaps, no slats.
+        return dict(flap_type='fowler', slat_type='none', v_stall_kmh=110.0, takeoff_run_m=450.0)
+    if category in ('medyczne', 'lodzie_latajace', 'szturmowe') or (category == 'dyspozycyjne' and d['n_pax'] <= 3):
+        # Small turboprops without slats: TBM/PC-12 ≈ 120 km/h, Super Tucano ≈ 140 km/h.
+        return dict(flap_type='fowler', slat_type='none', takeoff_run_m=600.0,
+                    v_stall_kmh=140.0 if category == 'szturmowe' else 120.0)
+    return dict(flap_type='fowler', slat_type='slats_auto', v_stall_kmh=140.0, takeoff_run_m=750.0)
+
+
+def _estimated_m0(params):
+    from calculations.bipol1 import solve_mass
+    from calculations.validation import validate_parameters
+    p = validate_parameters(dict(params))
+    payload = p['n_pax'] * (p['m_pax'] + p['m_bag']) + p['m_cargo']
+    return solve_mass(p, payload, p['n_crew'] * p['m_crew_person'])['m0']
+
+
 def topic_parameters(topic):
     """Start each topic from its own class, never from the previous open aircraft."""
     from calculations.presets import AIRCRAFT_PRESETS
@@ -311,8 +369,10 @@ def topic_parameters(topic):
                 'turboprop_regional': 'regional_turboprop'}.get(d['aircraft_type'], 'ga_trainer')
     p = {**AIRCRAFT_PRESETS[baseline], **{k: v for k, v in d.items() if v is not None}}
     passengers = d['n_pax']
+    title = topic['title'].lower()
     p.update(name=topic['title'], topic_id=topic['num'], topic_origin='official',
              n_crew=2 if passengers > 19 else 1, m_pax=115.0, m_bag=0.0,
+             n_engines=_engine_count(topic, d, title),
              wingspan_m=d.get('span_limit') or 0, wing_area_m2=0,
              wing_input_mode='span_aspect' if d.get('span_limit') else 'loading',
              payload_input_mode='seats', power_input_mode='sized', engine_power_kw=0,
@@ -320,27 +380,26 @@ def topic_parameters(topic):
     p['category'] = ('cs22_motoglider' if topic['category'] == 'motoszybowce' else
                      'easa_optout_ul' if topic['category'] == 'ultralight' else
                      'cs25_transport' if d['aircraft_type'] == 'jet_transport' or passengers > 19 else
+                     'cs23_aerobatic' if 'akrobac' in title else
                      'cs23_commuter' if passengers > 9 else 'cs23_level3' if passengers > 6 else
                      'cs23_level2' if passengers > 1 else 'cs23_level1')
-    title = topic['title'].lower()
-    if topic['category'] == 'motoszybowce':
-        p.update(aspect_ratio=24.0 if d['span_limit'] > 20 else 18.0,
-                 flap_type='flaperon', aileron_type='flaperon', slat_type='none',
-                 v_stall_kmh=72.0, takeoff_run_m=220.0)
-    elif d['aircraft_type'] in ('jet_transport','turboprop_regional'):
-        p.update(flap_type='fowler', slat_type='slats_auto',
-                 v_stall_kmh=185.0 if d['aircraft_type'] == 'jet_transport' else 140.0,
-                 takeoff_run_m=1400.0 if d['aircraft_type'] == 'jet_transport' else 750.0)
-    elif 'stol' in title or 'rolnicz' in title:
-        p.update(flap_type='junkers', slat_type='fixed_slot', v_stall_kmh=75.0, takeoff_run_m=180.0)
-    else:
-        p.update(flap_type='single_slotted', aileron_type='differential', slat_type='none',
-                 v_stall_kmh=90.0, takeoff_run_m=280.0)
+    p.update(_low_speed_seed(topic, d, title))
+    if d['aircraft_type'] == 'jet_transport':
+        # Cruise near M 0.77 needs a swept wing (CRJ, E-Jet, A320: 23–27°), not the VLJ's 12°.
+        p['sweep_quarter_deg'] = 25.0
     # Full obstacle distances are distinct working assumptions, not renamed ground rolls.
     p['takeoff_distance_m'] = {'motoglider': 500, 'jet_transport': 2200,
                              'jet_business': 1600, 'turboprop_regional': 1300}.get(d['aircraft_type'], 600)
     p['landing_distance_m'] = {'jet_transport': 1800, 'jet_business': 1200,
                              'turboprop_regional': 1100}.get(d['aircraft_type'], 600)
+    if 'stol' in title and d['aircraft_type'] != 'piston_ga':
+        # Short-field requirement of the topic: DHC-7 ≈ 690/600 m, BAe 146 ≈ 1200/1100 m.
+        p['takeoff_distance_m'], p['landing_distance_m'] = (
+            (1300, 1200) if d['aircraft_type'] == 'jet_transport' else (800, 700))
+    # Heavy payload topics outgrow CS-23 (MTOM ≤ 8618 kg): certify them as transport aircraft.
+    from calculations.polish_law import CS23_MTOM_MAX_KG
+    if p['category'].startswith('cs23') and _estimated_m0(p) > CS23_MTOM_MAX_KG:
+        p.update(category='cs25_transport', n_crew=2)
     return p
 
 
