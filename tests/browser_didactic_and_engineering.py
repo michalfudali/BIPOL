@@ -2,7 +2,7 @@
 Kompleksowy test przeglądarkowy nowych funkcji:
 - Przełącznik trybu dydaktycznego / konstrukcyjnego,
 - Generator i wizualizator profilu 200 mm (SVG + tabela 25 stacji w trybie projektów P3),
-- Audyt inżynierski i symulator pytań obrony w panelu coursework,
+- Audyt inżynierski (w tym aeroelastyczność/flater i zdatność akustyczna ICAO) oraz symulator obrony w panelu coursework,
 - Wykres dopasowania (Matching Chart) i obwiednia Schrenka.
 """
 import argparse
@@ -54,13 +54,20 @@ with sync_playwright() as p:
     assert audit_card.count() > 0, "Brak karty #courseworkEngineeringAuditCard"
     audit_items = page.locator('#courseworkAuditList .audit-item-card').count()
     print(f"-> Znaleziono {audit_items} pozycji audytu inżynierskiego")
-    assert audit_items >= 4, f"Oczekiwano co najmniej 4 pozycji audytu, znaleziono {audit_items}"
+    assert audit_items >= 6, f"Oczekiwano co najmniej 6 pozycji audytu, znaleziono {audit_items}"
 
+    # Sprawdź obecność weryfikacji flatteru i hałasu w tekście audytu
+    audit_text = page.locator('#courseworkAuditList').inner_text()
+    assert 'flater' in audit_text.lower() or 'flatter' in audit_text.lower(), "Brak weryfikacji flatteru w audycie"
+    assert 'hałas' in audit_text.lower() or 'akustyczn' in audit_text.lower() or 'icao' in audit_text.lower(), "Brak weryfikacji akustycznej w audycie"
+    print("-> Weryfikacja flatteru i zdatności akustycznej ICAO obecna w audycie.")
+
+    # Sprawdź symulator pytań na obronę
     quiz_card = page.locator('#courseworkDefenseQuestionsCard')
     assert quiz_card.count() > 0, "Brak karty #courseworkDefenseQuestionsCard"
     questions_count = page.locator('#courseworkDefenseQuestionsList details').count()
     print(f"-> Znaleziono {questions_count} pytań symulatora obrony")
-    assert questions_count >= 3, f"Oczekiwano co najmniej 3 pytań, znaleziono {questions_count}"
+    assert questions_count >= 4, f"Oczekiwano co najmniej 4 pytań, znaleziono {questions_count}"
 
     # 3. TEST ZAKŁADKI P3: PROFIL 200 MM I TABELA WSPÓŁRZĘDNYCH W TRYBIE PROJEKTÓW
     print("3. Sprawdzanie panelu P3 w trybie projektów i generatora profilu 200 mm...")
