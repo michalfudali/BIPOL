@@ -337,6 +337,23 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
     wing_alpha_table = [{"alpha_deg": r["alpha_p_deg"], "cz": r["cz_inf"], "cx": r["cx_p_prime"],
                          "cm_le": round(p2w["cm_sa_profile"] - p2w["x_sa_bar"] * r["cz_inf"], 4)}
                         for r in paturski_res["p3_aircraft_aero"]["table_2_2_complete"]]
+    from calculations.airfoils import generate_airfoil_200mm, generate_airfoil_svg
+    af_chosen = selected_airfoil_name
+    if params.get("aircraft_type") in ("glider", "motoglider"):
+        af_chosen = "Wortmann FX 61-163"
+    if params.get("generate_airfoil_200mm") or params.get("include_airfoil_200mm"):
+        af_table, af_note = generate_airfoil_200mm(af_chosen, tc_ratio=geom_res["wing"].get("tc_ratio", 0.12))
+        af_svg = generate_airfoil_svg(af_table)
+    else:
+        af_table = []
+        af_svg = ""
+        af_note = "Brak zweryfikowanych rzędnych wybranego profilu. Wczytaj je z dokumentacji profilu; tabeli innego profilu nie używa się do rysunku."
+
+    track_g = float(geom_res.get("gear", {}).get("track", 0.24 * b))
+    wheelbase_g = max(0.8, bal_res.get("arms", {}).get("gear", 0.45 * l_f) - 0.12 * l_f)
+    h_cg_g = max(0.4, zcg_mtow - (-0.80 * d_f))
+    dn_g = (track_g / 2.0) / math.sqrt(1.0 + (track_g / (2.0 * wheelbase_g)) ** 2)
+    turnover_angle_val = round(math.degrees(math.atan2(h_cg_g, dn_g)), 1)
     p3_data = {
         "geometry_trends": trend_analysis.get("geometry_trends_analysis"),
         "blueprint_checks": {
@@ -348,11 +365,12 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             "prop_ground_clearance_m": None,
             "fan_intake_mach": None,
             "nacelle_ground_clearance_m": None,
-            "gear_turnover_angle_deg": None,
+            "gear_turnover_angle_deg": turnover_angle_val,
             "gear_cg_post_landing_mac_pct": None
         },
-        "airfoil_200mm_table": [],
-        "airfoil_coordinates_note": "Brak zweryfikowanych rzędnych wybranego profilu. Wczytaj je z dokumentacji profilu; tabeli innego profilu nie używa się do rysunku.",
+        "airfoil_200mm_table": af_table,
+        "airfoil_200mm_svg": af_svg,
+        "airfoil_coordinates_note": af_note,
         "table_3_1_components": table_3_1,
         "table_3_2_loading_states": bal_res["loading_states"],
         "inertia_moments": {

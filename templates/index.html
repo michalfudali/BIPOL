@@ -1362,7 +1362,11 @@
                     <div style="background:#f8fafc; padding:0.75rem; border-radius:6px; border:1px solid #e2e8f0; font-size:0.84rem;">
                       <strong>Rysunek wybranego profilu skrzydła (c = 200 mm):</strong>
                       <p id="p3_airfoil_desc" style="margin:4px 0;">Profil NACA 23012 do wykreślenia w skali na arkuszu A2/A3 zgodnie z wytycznymi MEiL PW.</p>
-                      <button type="button" class="btn btn-outline-sm" onclick="toggleAirfoilCoordsTable()">Pokaż / Ukryj tabelę współrzędnych [mm]</button>
+                      <div id="p3_airfoil_svg_container" style="margin:10px 0;"></div>
+                      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                        <button type="button" class="btn btn-outline-sm" onclick="toggleAirfoilCoordsTable()">Pokaż / Ukryj tabelę współrzędnych [mm]</button>
+                        <button type="button" class="btn btn-outline-sm" id="btn_fetch_airfoil" onclick="fetchAirfoil200mm()" style="border-color:#0284c7; color:#0284c7;">📐 Wyznacz rzędne z biblioteki MEiL</button>
+                      </div>
                     </div>
                   </div>
                   <div id="airfoilCoordsBox" style="display:none; overflow-x:auto; margin-bottom:1rem;">
