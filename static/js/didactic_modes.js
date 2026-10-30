@@ -465,7 +465,8 @@
     const effect = effectOf(info);
     const section = (cls, label, text) => text
       ? `<div class="didactic-popover-section ${cls}"><strong>${label}</strong> ${esc(text)}</div>` : '';
-    const value = currentValue(field, info), state = stateOf(key, field);
+    const shown = anchor?.closest('.kpi-card')?.querySelector('.kpi-value')?.textContent.trim() || '';
+    const value = currentValue(field, info) || (/\d/.test(shown) ? shown : ''), state = stateOf(key, field);
     const where = anchor?.closest('#aircraftEditorFields') ? 'W rekordzie bazy' : 'W Twoim projekcie';
     const tech = (info.full_definition ? `<p class="didactic-popover-desc">${esc(info.full_definition)}</p>` : '')
       + (blank(info.formula) ? '' : `<div class="didactic-popover-formula">Wzór: ${esc(info.formula)}</div>`)
