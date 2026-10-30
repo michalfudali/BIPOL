@@ -630,9 +630,12 @@ function showDidacticPopover(paramKey, anchorEl) {
 
   if (activeIconEl && activeIconEl !== anchorEl) {
     activeIconEl.classList.remove('active');
+    activeIconEl.setAttribute('aria-expanded', 'false');
   }
   activeIconEl = anchorEl;
   anchorEl.classList.add('active');
+  anchorEl.setAttribute('aria-expanded', 'true');
+  anchorEl.setAttribute('aria-controls', 'didacticPopover');
 
   // Okno modalne leży w warstwie górnej; kartoteka musi być w nim, żeby nie zniknęła pod spodem.
   const host = anchorEl.closest('dialog[open]') || document.body;
@@ -690,6 +693,7 @@ function hideDidacticPopover() {
   }
   if (activeIconEl) {
     activeIconEl.classList.remove('active');
+    activeIconEl.setAttribute('aria-expanded', 'false');
     activeIconEl = null;
   }
 }

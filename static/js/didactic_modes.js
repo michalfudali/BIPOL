@@ -497,6 +497,14 @@
   const SCOPES = '#designForm, #projectWizardBackdrop, #bipol1Panel, #trendControls, #tab-trends, #aircraftEditorFields, #semesterWorkstation, #tab-reports';
 
   function decorate() {
+    // Ikonki z szablonów: rola przycisku i nazwa dla czytnika; natywny dymek title zasłaniałby kartotekę.
+    document.querySelectorAll('.info-circle-icon[data-param]:not([role])').forEach(icon => {
+      const info = PARAMETER_ENCYCLOPEDIA[icon.dataset.param];
+      icon.setAttribute('role', 'button');
+      icon.setAttribute('aria-label', `Objaśnienie: ${info?.title || icon.title || icon.dataset.param}`);
+      icon.removeAttribute('title');
+      if (!icon.hasAttribute('tabindex')) icon.tabIndex = 0;
+    });
     document.querySelectorAll(SCOPES).forEach(scope => {
       scope.querySelectorAll('input[id], select[id], textarea[id]').forEach(field => {
         if (field.type === 'hidden' || field.type === 'checkbox' || field.type === 'file') return;
