@@ -197,7 +197,8 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
         ('Masa płatna m_payload', '+10%', {k: params.get(k, 0)*1.1 for k in ('m_pax','m_bag','m_cargo')}),
         ('Masa płatna m_payload', '-10%', {k: params.get(k, 0)*.9 for k in ('m_pax','m_bag','m_cargo')}),
         ('Zasięg obliczeniowy R', '+10%', {'range_km': params['range_km']*1.1}),
-        ('Doskonałość przelotowa K', '+10%', {'mission_ld_factor': params['mission_ld_factor']*1.1}),
+        ('Doskonałość przelotowa K', '+10%', {'cruise_ld_p4': params['cruise_ld_p4']*1.1} if params.get('cruise_ld_p4')
+                                             else {'mission_ld_factor': params['mission_ld_factor']*1.1}),
         ('Jednostkowe zużycie paliwa SFC', '+10%', {'sfc': params.get('sfc', 0)*1.1}),
     ]
     sensitivity_table = []
@@ -571,7 +572,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             f"Na wysokości {h_cr:.0f} m potrzebna moc przelotowa {cruise['required_w'] / 1000:.0f} kW przekracza dostępną "
             f"{cruise['available_w'] / 1000:.0f} kW" + (f"; lot poziomy jest możliwy do około {ra_cr['v_max_kmh']:.0f} km/h" if ra_cr else "")
             + f". Biegunowa z P4 ma Cx0 = {aero_res['cx0_clean']:.4f}, a dobór napędu w P2 przyjął Cx0 = {params['cx0']:.4f}. "
-            "Przyjmij w P2 wartości z P4 albo zmniejsz prędkość lub wysokość przelotu.")
+            "Przyjmij w P2 wartości z P4 (bilans uściślony P2←P4) albo zmniejsz prędkość lub wysokość przelotu.")
     if powered and cruise_ok and not range_ok and k_assumed:
         m_mid = paturski_res["p6_performance_paturski"]["range_endurance_6_5"].get("m_obl_avg_kg", m0)
         cz_cr = 2.0 * m_mid * G0 / (isa_cr["rho"] * S * v_cr_ms ** 2)
@@ -581,7 +582,7 @@ def calculate_all_bipol_projects(mass_res: dict, sizing_res: dict, geom_res: dic
             f"Bilans masy (P2) przyjął w przelocie K = 0,94·Kmax = {k_bilans:.1f}. Biegunowa z P4 przy {v_cr_kmh:.0f} km/h "
             f"na {h_cr:.0f} m daje K = {k_cr:.1f} (Cz = {cz_cr:.3f})"
             + (f"; największy zasięg odpowiada około {ra_cr['v_l_max_kmh']:.0f} km/h" if ra_cr else "")
-            + ". Zmniejsz prędkość przelotową w stronę prędkości największego zasięgu albo powtórz bilans paliwa z doskonałością z P4.")
+            + ". Zmniejsz prędkość przelotową w stronę prędkości największego zasięgu albo utwórz wariant z bilansem uściślonym P2←P4, który dobiera paliwo przy tej doskonałości.")
     if powered and not climb_ok:
         performance_findings.append("Prędkość wznoszenia jest mniejsza od wymaganej: zwiększ moc (ciąg) albo zmniejsz obciążenie powierzchni.")
     if powered and not takeoff_ok and takeoff_req:

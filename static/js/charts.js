@@ -48,7 +48,8 @@ function drawMatchingChart(canvasId, sizing) {
   const xMax = Math.max(...wsVals);
   
   const isJet = sizing.engine_type === 'jet';
-  const allY = [...sizing.curve_takeoff, ...sizing.curve_climb, ...sizing.curve_cruise];
+  const allY = [...sizing.curve_takeoff, ...sizing.curve_climb, ...sizing.curve_cruise,
+    ...(sizing.curve_vmax || []), ...(sizing.curve_tow || [])];
   const yMin = 0;
   const yMax = Math.max(1, ...allY.filter(Number.isFinite)) * 1.15;
   
@@ -119,6 +120,8 @@ function drawMatchingChart(canvasId, sizing) {
   drawLine(sizing.curve_takeoff, '#dc2626', takeoffLabel);
   drawLine(sizing.curve_climb, '#2563eb', 'Wznoszenie');
   drawLine(sizing.curve_cruise, '#059669', 'Przelot');
+  if (sizing.curve_vmax) drawLine(sizing.curve_vmax, '#c2410c', 'Vmax');
+  if (sizing.curve_tow) drawLine(sizing.curve_tow, '#db2777', 'Holowanie');
 
   // BIPOL_2: (8) minimum T/W for climb; (10) minimum speed; (3) landing; (11)/(12) best range
   if (Number.isFinite(sizing.climb_min)) {
@@ -171,6 +174,8 @@ function drawMatchingChart(canvasId, sizing) {
     { label: takeoffLabel, color: '#dc2626' },
     { label: 'Wznoszenie (w_y)', color: '#2563eb' },
     { label: 'Przelot (Vcr)', color: '#059669' },
+    ...(sizing.curve_vmax ? [{ label: 'Vmax przy ziemi', color: '#c2410c' }] : []),
+    ...(sizing.curve_tow ? [{ label: 'Holowanie szybowca', color: '#db2777' }] : []),
     { label: 'Vmin (Cz,max/1,1)', color: '#9333ea' },
     ...(Number.isFinite(sizing.ws_landing) ? [{ label: 'Lądowanie', color: '#0f766e' }] : []),
     ...(Number.isFinite(sizing.ws_max_range) ? [{ label: 'Max zasięg (B)', color: '#64748b' }] : [])

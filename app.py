@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 from flask import Flask, Response, render_template, request, jsonify, send_file, send_from_directory, abort
 from werkzeug.exceptions import BadRequest
-from calculations import run_bipol_project
+from calculations import run_bipol_project, refine_bipol_project
 from calculations.presets import AIRCRAFT_PRESETS
 from calculations.aircraft_store import export_source
 from calculations.official_topics import ALL_TOPICS, OFFICIAL_CATEGORIES
@@ -322,15 +322,10 @@ def coursework_grade():
 
 @app.post('/api/coursework/iterate-polar')
 def coursework_iterate_polar():
-    """One explicit design iteration; no project or catalogue is modified here."""
-    baseline = run_bipol_project(request.get_json(force=True))
-    params = baseline['params']
-    aero = baseline['aerodynamics']
-    updated = {**params, 'cx0': aero['cx0_clean'], 'oswald_e': aero['oswald_e'],
-               'preliminary_polar_mode': 'input'}
-    result = run_bipol_project(updated)
+    """Refined sizing P2←P4 to convergence; no project or catalogue is modified here."""
+    baseline, result, steps = refine_bipol_project(request.get_json(force=True))
     return jsonify(result=result, before=baseline['submission_review']['polar'],
-                   after=result['submission_review']['polar'],
+                   after=result['submission_review']['polar'], iterations=steps,
                    mtow_before=baseline['mass']['m0'], mtow_after=result['mass']['m0'])
 
 @app.route('/report', methods=['GET', 'POST'])

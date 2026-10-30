@@ -124,6 +124,16 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             return cr * (y_val ** 2) / 2.0 - ((cr - ct) / half_span) * (y_val ** 3) / 3.0
 
     # 2. Geometria kadłuba (wstępne oszacowanie z liczby pasażerów i rozpiętości)
+    # Freighters: the hold volume follows from the payload density (C-295 ≈ 140, C-130 ≈ 180 kg/m³),
+    # with height 0.9·width, length 4·width and room for an LD-3 container (2.0 m wide).
+    hold = None
+    hold_density = float(params.get('cargo_hold_density_kg_m3') or 0)
+    cargo_mass = float(params.get('m_cargo') or 0)
+    if hold_density and cargo_mass and ac_type in ('turboprop_regional', 'jet_business', 'jet_transport'):
+        volume = cargo_mass / hold_density
+        width = max(2.0, (volume / 3.6) ** (1 / 3))
+        hold = dict(volume_m3=round(volume, 1), width=round(width, 2), height=round(.9 * width, 2),
+                    length=round(volume / (.9 * width ** 2), 2), density_kg_m3=hold_density)
     if ac_type in ("glider", "motoglider"):
         fuselage_len = max(5.5, 0.45 * b)
         # Średnica zastępcza przekroju czołowego kabiny (z owiewką): jednomiejscowy
@@ -147,14 +157,14 @@ def calculate_geometry(m0: float, ws: float, params: dict):
     elif ac_type in ('turboprop_regional', 'jet_business'):
         # Explicit cabin-layout assumptions: seats + aisle + shell allowance.
         seats_abreast = 4 if n_pax > 19 else 2
-        fuselage_diam = seats_abreast * .48 + .45 + .30
+        fuselage_diam = max(seats_abreast * .48 + .45 + .30, 1.1 * hold['width'] + .4 if hold else 0)
         cabin_length = max(2, math.ceil(n_pax / seats_abreast)) * .80
-        fuselage_len = cabin_length + 4 * fuselage_diam
+        fuselage_len = cabin_length + (hold['length'] if hold else 0) + 4 * fuselage_diam
     else: # jet_transport
         seats_abreast = 6 if n_pax > 120 else 4
-        fuselage_diam = seats_abreast * .48 + .50 + .35
+        fuselage_diam = max(seats_abreast * .48 + .50 + .35, 1.1 * hold['width'] + .4 if hold else 0)
         cabin_length = max(2, math.ceil(n_pax / seats_abreast)) * .80
-        fuselage_len = cabin_length + 4 * fuselage_diam
+        fuselage_len = cabin_length + (hold['length'] if hold else 0) + 4 * fuselage_diam
         
     fuselage_fineness = fuselage_len / fuselage_diam
     
@@ -469,7 +479,8 @@ def calculate_geometry(m0: float, ws: float, params: dict):
             "length": round(fuselage_len, 2),
             "diameter": round(fuselage_diam, 2),
             "fineness": round(fuselage_fineness, 2),
-            "S_wet": round(s_wet_fus, 2)
+            "S_wet": round(s_wet_fus, 2),
+            "cargo_hold": hold,
         },
         "horizontal_tail": {
             "x_ac_m": .90 * fuselage_len,
